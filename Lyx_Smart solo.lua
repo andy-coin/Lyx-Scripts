@@ -135,7 +135,7 @@
 
         for abi=1, #sel_trs do
             local tr = sel_trs[abi]
-            if reaper.TrackFX_GetByName(tr, 'Superiror Drummer3', false) then --deal with drum vst routing
+            if reaper.TrackFX_GetByName(tr, 'Superior Drummer 3', false) >= 0 then --deal with drum vst routing
                 for abii=1, reaper.GetTrackNumSends( tr, 0) do
                     local found
                     local dist_tr = reaper.BR_GetMediaTrackSendInfo_Track(tr, 0, abii-1, 1)
@@ -162,6 +162,7 @@
             local parent = r.HaveParent(tr)
             if SOLO == 0 then
                 while(parent) do
+                    local skip = false
                     api.sot(parent)
                     r.cmd('_SWS_SELCHILDREN')
                     for abii=1, api.cst(0) do

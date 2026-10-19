@@ -28,35 +28,35 @@
 
     local function main()
         
-        local items, take, editor
-        
-        items= r.SaveItems()
+        local items, take, editor, n
 
-        if  #items ~= 0 then
+        reaper.Undo_BeginBlock()
+
+        -- prefer the takes open in the MIDI editor; fall back to selected items
+        editor = api.M()
+        n = 0
+        if  editor then
+            take = reaper.MIDIEditor_EnumTakes(editor, n, true)
+            while take do
+                SetShape(take)
+                n = n + 1
+                take = reaper.MIDIEditor_EnumTakes(editor, n, true)
+            end
+        end
+
+        if  n == 0 then
             
+            items= r.SaveItems()
             for abi = 1, #items do
-                
-                local item, take
-                
-                item = items[abi]
-                take = api.gatk(item)
-
-                if  take then
+                take = api.gatk(items[abi])
+                if  take and reaper.TakeIsMIDI(take) then
                     SetShape(take)
                 end
-                
-            end
-
-        else
-            
-            editor = api.M()
-            take = api.Mgt(editor)
-
-            if  take then
-                SetShape(take)
             end
 
         end
+
+        reaper.Undo_EndBlock('Set selected CC curve shape to '..shape, -1)
 
     end
 

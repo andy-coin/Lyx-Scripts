@@ -27,7 +27,7 @@
             reaper.MIDIEditor_OnCommand(editor,40671)--unselect all cc
             reaper.MIDIEditor_OnCommand(editor,40234)--next cc lane
             reaper.MIDIEditor_OnCommand(editor,40668)-- select all cc in lanes
-            has_events = reaper.MIDI_EnumSelCC(take,0)            
+            has_events = reaper.MIDI_EnumSelCC(take,-1)            
             abi = abi+1
         until has_events ~= -1 or abi > 128
 

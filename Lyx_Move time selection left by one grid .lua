@@ -20,16 +20,18 @@
           local active_tmsgn = reaper.FindTempoTimeSigMarker( 0, pos )
           _, _, _, _, tempo = reaper.GetTempoTimeSigMarker( 0, active_tmsgn )
         end
-        grid_duration = 60/tempo * division
+        grid_duration = 60/tempo * division -- = 1/4 grid on purpose: small probe steps so SnapToGrid lands on the next line
       end
       
-      local grid = pos
-      while (grid >= pos) do
+      local grid, n, start = pos, 0, pos
+      while (grid >= pos) and n < 64 do -- n: safety cap so it can never hang
           pos = pos - grid_duration
           grid = reaper.SnapToGrid(0, pos)
+          n = n + 1
       end
       
       reaper.Main_OnCommand(40756, 0) -- Snapping: Restore snap state
+      if grid >= start then return -1 end -- no earlier grid line (project start): main() stops
       return grid
   end
   

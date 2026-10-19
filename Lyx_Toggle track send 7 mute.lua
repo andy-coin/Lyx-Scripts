@@ -7,11 +7,13 @@
 
     local function main()
 
-        tr = api.gst(0,0)
-
-        mute = api.gtsv(tr,0,send_idx-1,"B_MUTE")
-
-        api.stsv(tr,0,send_idx-1,'B_MUTE',math.abs(mute-1))
+        for abi = 1, api.cst(0) do
+            local tr = api.gst(0,abi-1)
+            if  send_idx <= reaper.GetTrackNumSends(tr,0) then
+                local mute = api.gtsv(tr,0,send_idx-1,"B_MUTE")
+                api.stsv(tr,0,send_idx-1,'B_MUTE',math.abs(mute-1))
+            end
+        end
 
     end
 

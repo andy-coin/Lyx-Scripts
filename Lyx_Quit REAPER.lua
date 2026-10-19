@@ -77,9 +77,8 @@
   ::END::
   reaper.SetExtState("Project Movements",name,reaper.GetProjectStateChangeCount(0),true)
   
-  ori_color = api.load('timeline','color')
-  
-  ori_color = (ori_color ~= '' and ori_color) or 16757568
+  -- put back the theme's time-selection colour saved by "Set time selection to skip mode" (-1 = theme default)
+  ori_color = tonumber(api.load('timeline','color')) or -1
   
   reaper.SetThemeColor("col_tl_bgsel2",ori_color,0)
   reaper.UpdateTimeline()

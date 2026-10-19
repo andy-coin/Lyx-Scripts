@@ -146,13 +146,11 @@
          return
       end
       
-      reaper.PreventUIRefresh(1)
-      
       if play==0 or play==2 then
-         --grid=reaper.SnapToGrid(0,P)
-         --reaper.SetEditCurPos(grid,false,false)
+         grid=reaper.SnapToGrid(0,P)
+         reaper.SetEditCurPos(grid,false,false)
          reaper.Main_OnCommand(41842,0)
-         --reaper.SetEditCurPos(P,false,false)
+         reaper.SetEditCurPos(P,false,false)
          for abi=1,it_n do
             item=reaper.GetSelectedMediaItem(0,abi-1)
             SetFadesize(item)
@@ -171,11 +169,12 @@
          return
       end
       
-      reaper.PreventUIRefresh(-1)
-      
   end
   
   
   reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1) -- around main() so its early returns can't leave the UI frozen
   main()
+  reaper.PreventUIRefresh(-1)
+  reaper.UpdateArrange()
   reaper.Undo_EndBlock("Add stretch marker(s) at grid",-1)

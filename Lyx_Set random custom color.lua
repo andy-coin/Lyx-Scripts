@@ -1,18 +1,11 @@
    
-  r=reaper
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+  package.path = package.path..";"..script_path.."?.lua"
+  local r=require("_Lyx_HOME") -- palette: r.RandomColor()
   
-  local midi =18639925 --21004358
-  local audio=18696831
-  local video=29846082 --[orange] 28685749 [gray]
-  
-  
-  c_chart={25182272,25196864,21790784,21004396,20994432,
-  23085184,25182310,25187136,24346688,21004358,21004416,
-  20989568,24330368,25182291,25192000,23101504,21004377,
-  20999296,21774464,25182329,27487340,27500140,24617836,
-  23896979,23888547,25652387,27487373,27491436,26780524,
-  23896945,23896995,23884195,26766499,27487356,27495788,
-  25666412,23896962,23892899,24603811,27487390}
+  local midi =reaper.ColorToNative(28,108,53)|0x1000000
+  local audio=reaper.ColorToNative(29,73,127)|0x1000000
+  local video=reaper.ColorToNative(199,107,66)|0x1000000 --[orange]
   
   
   local function ResetColor(target,n)
@@ -61,11 +54,6 @@
 
   local function main()
     
-      local color = reaper.GetExtState("color","color",false)
-      
-      color=(type(tonumber(color))~="number" and 0) or tonumber(color)
-      
-      color=color%40+1
       toggle=0
       
       win,_,det=reaper.BR_GetMouseCursorContext()
@@ -128,9 +116,7 @@
           if  toggle==0 then
               for abi=1,it_n do
                 item=reaper.GetSelectedMediaItem(0,abi-1)
-                reaper.SetMediaItemInfo_Value(item,"I_CUSTOMCOLOR",c_chart[color])
-                color=color%40+1
-                reaper.SetExtState("color","color",color,false)
+                reaper.SetMediaItemInfo_Value(item,"I_CUSTOMCOLOR",r.RandomColor())
               end
               reaper.UpdateArrange()
               return 
@@ -152,9 +138,7 @@
           
               for abi=1,reaper.CountSelectedTracks(0) do
                   track=reaper.GetSelectedTrack(0,abi-1)
-                  reaper.SetMediaTrackInfo_Value(track,"I_CUSTOMCOLOR",c_chart[color])
-                  color=color%40+1
-                  reaper.SetExtState("color","color",color,false)
+                  reaper.SetMediaTrackInfo_Value(track,"I_CUSTOMCOLOR",r.RandomColor())
               end
               
               reaper.UpdateArrange()

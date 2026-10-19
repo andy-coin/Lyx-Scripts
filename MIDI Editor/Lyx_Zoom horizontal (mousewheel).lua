@@ -3,6 +3,7 @@
     script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
 
     ---CUSTOM---
 
@@ -40,14 +41,15 @@
         
         if abi % speed_factor == 0 then
             --zoom center to edit cursor
+            local zoommode = reaper.SNM_GetIntConfigVar("zoommode", -1) -- user's zoom center pref, restored below
             if out then api.cmd(api.name("_WOL_SETHZOOMC_EDITCUR"),0) end
             if  mouse_scroll > 0 then
                 reaper.MIDIEditor_OnCommand(E,1011)--increase
             else -- mouse_scroll > 0 
                 reaper.MIDIEditor_OnCommand(E,1012)--decrease
             end
-            --zoom center to mouse cursor
-            if  out then api.cmd(api.name("_WOL_SETHZOOMC_MOUSECUR"),0) end
+            --restore the user's zoom center
+            if  out and zoommode ~= -1 then reaper.SNM_SetIntConfigVar("zoommode", zoommode) end
         end
         abi=abi % speed_factor + 1
         api.save("abi","abi",abi,false)

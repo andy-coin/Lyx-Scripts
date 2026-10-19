@@ -59,8 +59,6 @@
       mouse=reaper.BR_GetMouseCursorContext_Position()
       it_n=reaper.CountSelectedMediaItems(0)
       
-      reaper.PreventUIRefresh(1)
-      
       if play~=5 then --or play==2 then
          grid=reaper.SnapToGrid(0,mouse)
          reaper.SetEditCurPos(grid-0.005,false,false)
@@ -101,10 +99,15 @@
          end--]]
       end
       
-      reaper.PreventUIRefresh(-1)
-      
   end
   
+  if not reaper.BR_GetMouseCursorContext then
+      reaper.MB("This script needs the SWS extension (install via ReaPack / sws-extension.org).","Lyx Scripts",0)
+      return
+  end
   reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1) -- around main() so its early returns can't leave the UI frozen
   main()
+  reaper.PreventUIRefresh(-1)
+  reaper.UpdateArrange()
   reaper.Undo_EndBlock("Add stretch marker(s) at grid near mouse",-1)

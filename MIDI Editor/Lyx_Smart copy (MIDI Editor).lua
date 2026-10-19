@@ -2,6 +2,7 @@
   script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
   package.path = package.path..";"..script_path.."?.lua"
   local L=require("_Lyx_HOME")
+  if not L.Need("SWS") then return end
 
   r=reaper
   

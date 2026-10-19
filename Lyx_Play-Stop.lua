@@ -54,7 +54,7 @@
             cursor = api.gpc()
             Start,End = reaper.GetSet_LoopTimeRange2(0,false,false,0,0,false)
             
-            if  math.abs(cursor-Start) < 2e-2 then
+            if  cursor >= Start and cursor < End then
                 local p = api.gec()
                 api.sec(End,false,true)
                 api.sec(p,false,false)
@@ -73,7 +73,7 @@
     
         for abi = 1,#trs do
             local tr = api.idt(0,trs[abi][1])
-            if  api.check(0,tr,"MeidaTrack*") then
+            if  api.check(0,tr,"MediaTrack*") then
                 for abii = 1, api.cti(tr) do
                     local item = api.gti(tr,abii-1) 
                     if  item then
@@ -104,8 +104,13 @@
             end
         end
 
-        reaper.SetThemeColor("col_mi_bg" ,audio,0)
-        reaper.SetThemeColor("col_mi_bg2",audio,0)
+        -- put back the theme's item background saved by Lyx_Record at record start
+        local bg = tonumber(api.load("Record","col_mi_bg"))
+        if  bg then
+            reaper.SetThemeColor("col_mi_bg" ,bg,0)
+            reaper.SetThemeColor("col_mi_bg2",tonumber(api.load("Record","col_mi_bg2")) or -1,0)
+            api.save("Record","col_mi_bg","",false)
+        end
         
         reaper.UpdateArrange()
 
@@ -234,9 +239,9 @@
     
     -------------------------------------RUN---------------------------------------
     
-    rec = 26607616
-    audio= 18696831
-    midi = 18639924
+    rec  = reaper.ColorToNative(150,0,0)|0x1000000
+    audio= reaper.ColorToNative(29,73,127)|0x1000000
+    midi = reaper.ColorToNative(28,108,52)|0x1000000
 
     reaper.Undo_BeginBlock() 
     if  api.load('practice mode','snapshot') == '1' then

@@ -94,8 +94,11 @@
       --reaper.ShowConsoleMsg(csv)
       local pointDiv,bpm,timeSig = csv:match("^(.*),(.*),(.*)$")
       
-      timeSig_num=timeSig:match("%d+")
-      timeSig_demon=timeSig:gsub(timeSig_num.."/","")
+      timeSig_num,timeSig_demon=timeSig:match("^%s*(%d+)%s*/%s*(%d+)%s*$")
+      if not timeSig_num or not tonumber(bpm) then
+          reaper.MB("Please enter a BPM number and a time signature like 4/4.","Oops",0)
+          return
+      end
       --reaper.ShowConsoleMsg(timeSig_num.."|"..timeSig_demon)
       
       if pointDiv=="1" then

@@ -26,18 +26,13 @@
                if n==0 then
                   reaper.SetMediaTrackInfo_Value(tr_all[abi+1],"I_AUTOMODE",0)
                else
+                  local has=false
                   for abii=1,n do
                       local item=reaper.GetSelectedMediaItem(0,abii-1)
                       local take=reaper.GetActiveTake(item)
-                      local env=reaper.CountTakeEnvelopes(take)
-                      if env>0 then
-                         reaper.SetMediaTrackInfo_Value(tr_all[abi+1],"I_AUTOMODE",1)
-                         break
-                      else
-                         reaper.SetMediaTrackInfo_Value(tr_all[abi+1],"I_AUTOMODE",0)
-                         break
-                      end
+                      if take and reaper.CountTakeEnvelopes(take)>0 then has=true break end
                   end
+                  reaper.SetMediaTrackInfo_Value(tr_all[abi+1],"I_AUTOMODE",(has and 1) or 0)
                end 
            end        
         end

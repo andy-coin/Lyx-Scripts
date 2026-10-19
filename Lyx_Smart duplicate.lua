@@ -7,8 +7,9 @@
   local function DuplicateRazorEnvelope(EL,ELP,x)
       
       for abigel=1,#ELP do
-          reaper.InsertEnvelopePoint(EL,ELP[abigel].time+x,ELP[abigel].value,ELP[abigel].shape,ELP[abigel].tension,true,false)  
+          reaper.InsertEnvelopePoint(EL,ELP[abigel].time+x,ELP[abigel].value,ELP[abigel].shape,ELP[abigel].tension,true,true)
       end
+      reaper.Envelope_SortPoints(EL)
 
   end
   
@@ -20,8 +21,8 @@
       local Tn=api.cst(0)
       local In=api.csi(0)
       local Env=reaper.GetSelectedEnvelope(0)
-      local IsRazor,razorMap=r.GetRazorEdits2()
-      if Tn==0 and In==0 and not Env and IsRazor then return end
+      local IsRazor,razorMap=r.GetRazorEdits()
+      if Tn==0 and In==0 and not Env and not IsRazor then return end
       
       reaper.Undo_BeginBlock()
       
@@ -46,7 +47,7 @@
           if  En>0 then
               min=math.huge
               max=0
-              for abi=1,En do
+              for abi=0,En-1 do
                   retval, point_time, value, shapeOut, tension, selected = reaper.GetEnvelopePoint(Env,abi)
                   if  selected then 
                       Act="Duplicate selected envelope points"

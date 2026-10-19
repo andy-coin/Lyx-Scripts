@@ -33,7 +33,7 @@
 
     local function toggle_track_arm(tr)
                         
-        if  reaper.TrackFX_GetInstrument(tr)==1 then
+        if  reaper.TrackFX_GetInstrument(tr) >= 0 then
             api.stv(tr,"I_RECINPUT",6112)
         end
         
@@ -82,6 +82,7 @@
                     for i = 0, cnt - 1 do
                         local output = reaper.GetTrackSendInfo_Value(tr, 1, i, "I_DSTCHAN")
                         kemper = math.abs(output - eg_io.kemper)<=8
+                        if kemper then break end
                     end
 
                     if input == eg_io.dry and kemper then
@@ -104,6 +105,7 @@
                     if dry then api.stv(dry,'B_MUTE',math.abs(rec_arm-1)) end
                     if wet then api.stv(wet,'B_MUTE',1) end
                 else
+                    if not dry or not wet then goto NORMAL end
                     rec_arm = (api.gtv(dry, "I_RECARM") == 0 and 1 ) or 0
                     api.cmd(40491,0) -- unram all tracks
                     api.stv(dry,'I_RECARM',rec_arm)

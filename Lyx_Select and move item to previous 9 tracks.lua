@@ -10,7 +10,7 @@
           reaper.GetSet_ArrangeView2(0,true,0,0,X,Y)
           
           tr=reaper.GetSelectedTrack(0,0)
-          reaper.SetMixerScroll(tr)
+          if tr then reaper.SetMixerScroll(tr) end
       end
   
   end

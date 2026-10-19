@@ -6,7 +6,7 @@
     
     tr=reaper.GetSelectedTrack(0,0)
 
-    reaper.SetMixerScroll(tr)
+    if tr then reaper.SetMixerScroll(tr) end
     
     reaper.Main_OnCommand(40913,0)
     

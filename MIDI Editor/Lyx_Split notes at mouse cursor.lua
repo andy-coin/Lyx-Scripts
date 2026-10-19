@@ -2,6 +2,7 @@
     script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
 
     -- notes selected : split the selected notes that cross the mouse position
     -- nothing selected: split every note that crosses the mouse position

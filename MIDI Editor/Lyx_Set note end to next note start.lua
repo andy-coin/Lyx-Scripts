@@ -14,7 +14,7 @@
         local state = api.load('Midi_editor','move note state')
         
         if  state == '1' or state == 'ON' then
-            api.Mcmd(editor,api.name('_RS7d3c_29381f109b4a1c8b2759ec74e1b5a17dff6c4e12'))--move note up
+            r.RunScript(script_path.."MIDI Editor/Lyx_Move notes up one semitone.lua", 32060)--move note up
             return
         end
         
@@ -31,25 +31,37 @@
             end
         until not take        
         
-        api.ubb()
-        
+        -- collect selected notes of all takes in project time, so notes in different takes compare correctly
+        local notes = {}
         for abi = 1,#midi_takes do
             local take = midi_takes[abi]
-            local _, noteCount = reaper.MIDI_CountEvts(take) 
-            --local _,selected,muted,last_startppqpos,last_endppqpos,chan,pitch,vel= reaper.MIDI_GetNote(take,noteCount-1)
-            for abii = noteCount-1,0,-1 do
-                local _,selected,muted,startppqpos,endppqpos,chan,pitch,vel= reaper.MIDI_GetNote(take,abii)
+            local _, noteCount = reaper.MIDI_CountEvts(take)
+            for abii = 0,noteCount-1 do
+                local _,selected,_,startppqpos,endppqpos = reaper.MIDI_GetNote(take,abii)
                 if  selected then
-                    if  last_startppqpos and last_endppqpos then
-                        local score_point = ((startppqpos >= last_startppqpos) and last_endppqpos) or last_startppqpos
-                        reaper.MIDI_SetNote(take,abii,selected,muted,startppqpos,score_point,chan,pitch,vel,true)
-                    end
-                    last_startppqpos = startppqpos
-                    last_endppqpos = endppqpos
+                    notes[#notes+1] = {take = take, idx = abii,
+                        s = reaper.MIDI_GetProjTimeFromPPQPos(take,startppqpos),
+                        e = reaper.MIDI_GetProjTimeFromPPQPos(take,endppqpos)}
                 end
             end
-            reaper.MIDI_Sort(take)
         end
+        if #notes < 2 then return end
+        table.sort(notes,function(a,b) return a.s < b.s end)
+
+        api.ubb()
+
+        -- walk from the last note backwards; only note ends change, so indices stay valid (noSort, sorted once after)
+        local last_s, last_e
+        for k = #notes,1,-1 do
+            local n = notes[k]
+            if  last_s then
+                local score_point = ((n.s >= last_s) and last_e) or last_s -- chord notes share the next note's end
+                reaper.MIDI_SetNote(n.take,n.idx,nil,nil,nil,reaper.MIDI_GetPPQPosFromProjTime(n.take,score_point),nil,nil,nil,true)
+                n.e = score_point
+            end
+            last_s, last_e = n.s, n.e
+        end
+        for abi = 1,#midi_takes do reaper.MIDI_Sort(midi_takes[abi]) end
 
         api.ueb(0,'Set notes end to next note start',-1)
     end

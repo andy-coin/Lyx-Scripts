@@ -2,6 +2,7 @@
   local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
+  if not r.Need("SWS","JS") then return end
   
   ---CUSTOM---
       zoom_adjust = 7 --integer and > 1

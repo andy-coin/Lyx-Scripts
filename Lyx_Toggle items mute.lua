@@ -4,6 +4,7 @@
   --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
+  if not r.Need("SWS") then return end
   
   local function main()
   

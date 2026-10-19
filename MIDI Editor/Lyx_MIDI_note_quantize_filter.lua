@@ -19,6 +19,7 @@
 --   js_ReaScriptAPI), HiDPI, theming. Requires ReaImGui.
 
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+script_path = script_path:gsub("[/\\]MIDI Editor[/\\]$", "/")   -- _Lyx_HOME lives one folder up
 package.path = package.path..";"..script_path.."?.lua"
 local ok_home, r_home = pcall(require, "_Lyx_HOME")
 
@@ -220,6 +221,8 @@ local S = {
     next_apply_at  = 0,     -- live preview throttle for very large selections
     drag_side      = nil,   -- timing-view drag: -1 early, 1 late, 0 both
     plot           = { pts = {}, total = 0, moved = 0, max_ticks = 0, max_ms = 0 },
+    snap_n         = 0,     -- bumped on every new baseline (indicator cache key)
+    undo_proj      = nil,   -- project the uncommitted MIDI was written in
 }
 
 local function status(msg, secs)
@@ -228,8 +231,12 @@ local function status(msg, secs)
 end
 
 local function add_undo(desc)
+    -- the undo point belongs to the project the MIDI was written in, even if
+    -- another project tab is active by now
+    local proj = S.undo_proj
+    if not (proj and reaper.ValidatePtr(proj, "ReaProject*")) then proj = 0 end
     if reaper.Undo_OnStateChange2 then
-        reaper.Undo_OnStateChange2(0, desc)
+        reaper.Undo_OnStateChange2(proj, desc)
     else
         reaper.Undo_OnStateChange(desc)
     end
@@ -696,6 +703,7 @@ end
 local function rebaseline(msg)
     if S.uncommitted then add_undo(UNDO_LABEL); S.uncommitted = false end
     for _, t in ipairs(S.takes) do S.sessions[t] = snapshot_take(t) end
+    S.snap_n = S.snap_n + 1          -- indicator redraws around the new notes
     S.bypassed, S.armed = true, false
     S.analysis_dirty = true
     if msg then status(msg, 5) end
@@ -708,7 +716,7 @@ local function apply_all()
         local sess = S.sessions[take]
         if sess and (not S.bypassed or sess.written) then
             local ok, wrote = apply_take(take, sess, S.bypassed)
-            if wrote then S.uncommitted = true end
+            if wrote then S.uncommitted = true; S.undo_proj = reaper.EnumProjects(-1) end
             if not ok then lost = true end
         end
     end
@@ -904,11 +912,16 @@ local function analyze()
 end
 
 -------------------------------------------------------------------------------
--- MIDI editor overlay (js_ReaScriptAPI): the filter window drawn around
--- every visible grid line, composited into the piano roll itself.
+-- MIDI editor overlay (js_ReaScriptAPI): the filter window drawn around the
+-- grid line of every selected note, only on that note's row, composited into
+-- the piano roll itself.
 -------------------------------------------------------------------------------
 local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
-              view = nil, view_t = -1, view_take = nil }
+              view = nil, view_t = -1, view_dt = 0.1, view_take = nil }
+-- Height of the ruler / marker area at the top of the piano roll (same value
+-- js_Mouse editing uses). Calibration knob: if the boxes sit a constant
+-- distance above/below the notes, adjust this.
+local IND_RULER_H = 62
 
 -- theme RGBA -> LICE ARGB. Compositing expects premultiplied alpha on
 -- Windows and straight alpha elsewhere (same convention as js_Multi Tool).
@@ -933,23 +946,37 @@ end
 -- (same parsing as js_Mouse editing - Multi Tool): the first field is always
 -- the leftmost tick; the zoom is pixels per tick in a beats timebase
 -- (CFGEDIT field 19 = 0 or 4) and pixels per second otherwise.
+local sect_cache = {}   -- take section bounds, reused while the chunk length is unchanged
 local function read_view(take)
     local item = reaper.GetMediaItemTake_Item(take)
     local ok, chunk = reaper.GetItemStateChunk(item, "", false)
     if not ok or not chunk then return nil end
-    local tn = toint(reaper.GetMediaItemTakeInfo_Value(take, "IP_TAKENUMBER"))
-    local a = 1
-    for _ = 1, tn do
-        a = chunk:find("\nTAKE[^\n]-\nNAME", a + 1)
-        if not a then return nil end
+    local a, b
+    local c = sect_cache
+    if c.take == take and c.len == #chunk and (c.a == 1 or chunk:sub(c.a, c.a + 4) == "\nTAKE")
+       and (not c.b or chunk:sub(c.b, c.b + 4) == "\nTAKE") then
+        a, b = c.a, c.b   -- same length: skip searching for the take (scroll/zoom digits are still read below)
+    else
+        local tn = toint(reaper.GetMediaItemTakeInfo_Value(take, "IP_TAKENUMBER"))
+        a = 1
+        for _ = 1, tn do
+            a = chunk:find("\nTAKE[^\n]-\nNAME", a + 1)
+            if not a then return nil end
+        end
+        b = chunk:find("\nTAKE[^\n]-\nNAME", a + 1)
+        c.take, c.len, c.a, c.b = take, #chunk, a, b
     end
-    local b = chunk:find("\nTAKE[^\n]-\nNAME", a + 1)
     local sect = chunk:sub(a, b)
-    local left, zoom = sect:match("\nCFGEDITVIEW (%S+) (%S+)")
-    left, zoom = tonumber(left), tonumber(zoom)
-    if not left or not zoom or zoom <= 0 then return nil end
+    -- fields 3/4: vertical scroll (rows from the top, 127 = top pitch 0) and
+    -- pixels per note row
+    local left, zoom, vs, rh = sect:match("\nCFGEDITVIEW (%S+) (%S+) (%S+) (%S+)")
+    left, zoom, vs, rh = tonumber(left), tonumber(zoom), tonumber(vs), tonumber(rh)
+    if not left or not zoom or zoom <= 0 or not vs or not rh or rh <= 0 then return nil end
     local tb = sect:match("\nCFGEDIT"..string.rep(" %S+", 18).." (%S+)")
-    return { left = left, zoom = zoom, beats = (tb == nil or tb == "0" or tb == "4") }
+    local lanes = 0   -- CC lanes below the notes (heights include their divider)
+    for lh in sect:gmatch("\nVELLANE %S+ (%d+)") do lanes = lanes + tonumber(lh) end
+    return { left = left, zoom = zoom, beats = (tb == nil or tb == "0" or tb == "4"),
+             top = 127 - vs, rh = rh, lanes = lanes }
 end
 
 local function ind_update()
@@ -966,8 +993,12 @@ local function ind_update()
     if not okc or not w or w < 8 or h < 8 then return end
 
     local now = reaper.time_precise()
-    if IND.view_take ~= take or now - IND.view_t > 0.15 then
-        IND.view, IND.view_t, IND.view_take = read_view(take), now, take
+    if IND.view_take ~= take or now - IND.view_t > IND.view_dt then
+        IND.view, IND.view_take = read_view(take), take
+        -- the item chunk can be MBs: re-read every 0.1 s when it is cheap,
+        -- backing off to 0.5 s for heavy items
+        local t1 = reaper.time_precise()
+        IND.view_t, IND.view_dt = t1, clamp((t1 - now) * 25, 0.1, 0.5)
     end
     local v = IND.view
     if not v then ind_detach(); return end
@@ -976,8 +1007,9 @@ local function ind_update()
     g, sw = g or 0, sw or 0
     local pe, pl = window_pct()
     local te, tl = pe * 0.01 * g * 0.5, pl * 0.01 * g * 0.5
-    local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d",
-        tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band)
+    local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d|%.4f|%.4f|%d|%d|%d",
+        tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band,
+        v.top, v.rh, v.lanes, settings.mode, S.snap_n)
     if key == IND.key and IND.hwnd == mv then return end
 
     if IND.hwnd ~= mv or IND.w ~= w or IND.h ~= h or not IND.bmp then
@@ -1007,26 +1039,52 @@ local function ind_update()
         grid_use(g, sw)
         local line = around(ql - te)
         if x_of(line + g) - x_of(line) >= 6 then          -- not too dense
-            local y0, hh = floor(h * 0.05), floor(h * 0.9)
+            -- Only around the selected notes: one box per note boundary and
+            -- grid line, 1.2 note rows tall, centred on the note's row.
             local fill = lice_color(theme.band, 0.10)
             local dash = lice_color(theme.band, 0.85)
-            local function dashed(x)
+            local ny0, ny1 = IND_RULER_H, h - v.lanes        -- notes area
+            local rh = v.rh
+            local half = rh * 0.6
+            local function dashed(x, y0, y1)
                 if x < 0 or x >= w then return end
-                for y = y0, y0 + hh - 1, 10 do
-                    reaper.JS_LICE_FillRect(bmp, x, y, 1, min(6, y0 + hh - y), dash, 1, "COPY")
+                for y = y0, y1 - 1, 10 do
+                    reaper.JS_LICE_FillRect(bmp, x, y, 1, min(6, y1 - y), dash, 1, "COPY")
                 end
             end
-            local count = 0
-            while line <= qr + tl and count < 1024 do
-                local il = floor(x_of(line - te) + 0.5)
-                local ir = floor(x_of(line + tl) + 0.5)
+            local qlo, qhi = ql - tl - g, qr + te + g
+            local seen, count = {}, 0
+            local function box(q, pitch, yc)
+                if q < qlo or q > qhi then return end
+                local X = nearest(q)
+                local k = X * 128 + pitch
+                if seen[k] then return end
+                seen[k] = true
+                local y0 = max(ny0, floor(yc - half + 0.5))
+                local y1 = min(ny1, floor(yc + half + 0.5))
+                if y1 - y0 < 1 then return end
+                local il = floor(x_of(X - te) + 0.5)
+                local ir = floor(x_of(X + tl) + 0.5)
                 if ir > il then
-                    reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, hh, fill, 1, "COPY")
+                    reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
                 end
-                if te > EPS then dashed(il) end
-                if tl > EPS then dashed(ir) end
-                line = next_line(line)
+                if te > EPS then dashed(il, y0, y1) end
+                if tl > EPS then dashed(ir, y0, y1) end
                 count = count + 1
+            end
+            local length_mode = settings.mode == 1
+            for _, t in ipairs(S.takes) do
+                local sess = S.sessions[t]
+                if sess then
+                    for _, nt in ipairs(sess.notes) do
+                        if count >= 4096 then break end   -- ponytail: hard cap, raise if huge visible selections get cut off
+                        local yc = ny0 + (v.top - nt.pitch + 0.5) * rh
+                        if yc + half > ny0 and yc - half < ny1 then
+                            box(nt.qs, nt.pitch, yc)
+                            if length_mode then box(nt.qe, nt.pitch, yc) end
+                        end
+                    end
+                end
             end
         end
     end
@@ -1534,7 +1592,7 @@ local function draw_main()
     if ci then settings.indicator = iv; save_settings() end
     if not HAS_JS then ImGui.EndDisabled(ctx) end
     if HAS_JS then
-        tip("Draw the filter window around every grid line inside the MIDI editor.")
+        tip("Draw the filter window around the selected notes inside the MIDI editor.")
     elseif ImGui.IsItemHovered(ctx, K(ImGui.HoveredFlags_AllowWhenDisabled) or 0) then
         ImGui.SetTooltip(ctx, "Needs js_ReaScriptAPI (ReaPack).")
     end
@@ -1620,9 +1678,13 @@ local function handle_keys(open)
     local cmd = (mods & MOD_CMD) ~= 0
     local shift = (mods & MOD_SHIFT) ~= 0
     if pressed("Key_Escape") then return false end
+    -- flush a pending (debounced) preview into its own undo point first, so
+    -- undo removes it instead of the poll adding a bogus point afterwards
     if cmd and pressed("Key_Z") then
+        if S.uncommitted then commit(S.commit_desc) end
         reaper.Main_OnCommand(shift and 40030 or 40029, 0)       -- redo / undo
     elseif cmd and pressed("Key_Y") then
+        if S.uncommitted then commit(S.commit_desc) end
         reaper.Main_OnCommand(40030, 0)
     elseif not cmd then
         if pressed("Key_Space") then reaper.Main_OnCommand(40044, 0) end  -- play/stop

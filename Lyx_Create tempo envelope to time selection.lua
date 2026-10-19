@@ -23,8 +23,11 @@
       --reaper.ShowConsoleMsg(csv)
       local bpm,timeSig,pointDiv = csv:match("^(.*),(.*),(.*)$")
       
-      timeSig_num=timeSig:match("%d+")
-      timeSig_demon=timeSig:gsub(timeSig_num.."/","")
+      timeSig_num,timeSig_demon=timeSig:match("^%s*(%d+)%s*/%s*(%d+)%s*$")
+      if not timeSig_num or not tonumber(bpm) then
+          reaper.MB("Please enter a BPM number and a time signature like 4/4.","Oops",0)
+          return
+      end
       --reaper.ShowConsoleMsg(timeSig_num.."|"..timeSig_demon)
       
       if pointDiv=="4" then 
@@ -66,6 +69,10 @@
       bpm,num,demon,div=prompt(starttime)
       
       if not bpm then return end
+
+      master=reaper.GetMasterTrack(0)
+      Env=reaper.GetTrackEnvelopeByChunkName(master,"<TEMPOENVEX")
+      if not Env then return end
       
       r.Undo("Create tempo envelope points to time selection", function()
           if starttime==endtime then
@@ -81,8 +88,6 @@
              --reaper.Main_OnCommand(41050,0)
           end
 
-          master=reaper.GetMasterTrack(0)
-          Env=reaper.GetTrackEnvelopeByName(master,"Tempo map")
           CBperM,CSig_D,CBPM=reaper.TimeMap_GetTimeSigAtTime(0,starttime-0.00000001)
           reaper.SetTempoTimeSigMarker(0,-1,starttime,-1,-1,CBPM,CBperM,CSig_D,false)
           reaper.DeleteEnvelopePointRange(Env,starttime,endtime)
@@ -100,6 +105,7 @@
              end
              step=60/bpm/div*num/4
              times=(endtime-starttime)/step
+             local lasttime=starttime
 
              for abi=1,times do
                  reaper.SetEditCurPos(starttime+abi*step,false,false)

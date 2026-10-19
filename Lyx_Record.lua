@@ -86,7 +86,7 @@
 
         for abi = 1,#trs do
             local tr = api.idt(0,trs[abi][1])
-            if  api.check(0,tr,"MeidaTrack*") then
+            if  api.check(0,tr,"MediaTrack*") then
                 for abii = 1, api.cti(tr) do
                     local item = api.gti(tr,abii-1) 
                     if  item then
@@ -131,21 +131,24 @@
         
     end
 
-    local function ChangeItemColor()
+    -- put back the theme's item background saved at record start (Play-Stop does the same)
+    local function RestoreItemTheme()
 
-        SwitchItemTint(0)
-        reaper.SetThemeColor("col_mi_bg" ,rec,0)
-        reaper.SetThemeColor("col_mi_bg2",rec,0) 
+        local bg = tonumber(api.load("Record","col_mi_bg"))
+        if  not bg then return end
+        reaper.SetThemeColor("col_mi_bg" ,bg,0)
+        reaper.SetThemeColor("col_mi_bg2",tonumber(api.load("Record","col_mi_bg2")) or -1,0)
+        api.save("Record","col_mi_bg","",false)
+        SwitchItemTint(1)
 
-        if  api.gps() ~= 5 then
-            SwitchItemTint(1)
-            reaper.SetThemeColor("col_mi_bg" ,audio,0)
-            reaper.SetThemeColor("col_mi_bg2",audio,0)
-            return
-        end
+    end
 
-        reaper.defer(ChangeItemColor)
-    
+    -- colours are set once at record start; this loop only waits for recording to end
+    local function WaitRecordEnd()
+
+        if  api.gps()&4 == 4 then return reaper.defer(WaitRecordEnd) end
+        RestoreItemTheme()
+
     end
 
     local function ChangeBufferSize()
@@ -248,10 +251,13 @@
                     reaper.Main_OnCommand(42702,0)-- New recording adds lanes
                 end                
 
+                if  api.load("Record","col_mi_bg") == "" then -- remember the theme colours once
+                    api.save("Record","col_mi_bg" ,reaper.GetThemeColor("col_mi_bg",0),false)
+                    api.save("Record","col_mi_bg2",reaper.GetThemeColor("col_mi_bg2",0),false)
+                end
                 reaper.SetThemeColor("col_mi_bg",rec,0)
                 reaper.SetThemeColor("col_mi_bg2",rec,0)
-        
-                --SwitchItemTint(0)
+                SwitchItemTint(0)
                 
                 rec_point=( play==1 and reaper.GetPlayPositionEx(0)) or reaper.GetCursorPositionEx(0)
                 
@@ -260,7 +266,7 @@
                 api.cmd(41186,0) -- New recording trims existing items (tape mode)
                 r.ShowHideTrackLaneNames('Hide')
                 reaper.Main_OnCommand(1013,0) --record
-                ChangeItemColor()
+                WaitRecordEnd()
                 api.cmd(40527,0)--Clear all peak indicators
                 
             else
@@ -279,8 +285,7 @@
             color_itemz = api.load("Record - 0 color item",pro_name)
             midi_tr = api.load("Record - midi track item",pro_name)
             RestoreItemColor(color_itemz) 
-             
-            --SwitchItemTint(1)
+            RestoreItemTheme()
              
             if auto_color then api.cmd(r.ScriptID("Lyx Scripts/Lyx_Set random color .lua"),0) end --change color
             if auto_group and api.csi(0)>1 then api.cmd(40032,0) end --group items
@@ -296,9 +301,9 @@
     
     -------------------------------------RUN---------------------------------------
     
-    rec   = 26607616
-    audio = 18696831
-    midi  = 18639924
+    rec   = reaper.ColorToNative(150,0,0)|0x1000000
+    audio = reaper.ColorToNative(29,73,127)|0x1000000
+    midi  = reaper.ColorToNative(28,108,52)|0x1000000
 
     reaper.Undo_BeginBlock() 
     api.cc()

@@ -3,23 +3,37 @@
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
     
-    local FX_windows  ={"FX: Track","FX: Item","FX: Monitoring","VST:","VSTi:",
-    "VST3:","VST3i:","AU:","AUi:","LV2:","LV2i:","JS:",
-    "CLAP:","CALPi:","ReWire"}
-
     --------------
-    local function WindowKiller(windows)
+    -- Close every floating FX window and FX chain window (track, input/monitoring, take FX)
+    local function CloseAllFXWindows()
 
-        local kill
-        for abi=1,#windows do
-            local hwnd=reaper.JS_Window_Find(windows[abi],false)
-            if  hwnd then kill=true end
-            while hwnd do
-                reaper.JS_Window_Destroy(hwnd)
-                hwnd=reaper.JS_Window_Find(windows[abi],false)
+        local function CloseTrack(track)
+            for fx = 0, reaper.TrackFX_GetCount(track) - 1 do
+                reaper.TrackFX_Show(track, fx, 2)
+            end
+            for fx = 0, reaper.TrackFX_GetRecCount(track) - 1 do
+                reaper.TrackFX_Show(track, fx + 0x1000000, 2)
+            end
+            if  reaper.TrackFX_GetChainVisible(track) ~= -1 then reaper.TrackFX_Show(track, 0, 0) end
+            if  reaper.TrackFX_GetRecChainVisible(track) ~= -1 then reaper.TrackFX_Show(track, 0x1000000, 0) end
+        end
+
+        CloseTrack(reaper.GetMasterTrack(0))
+        for t = 0, reaper.CountTracks(0) - 1 do
+            CloseTrack(reaper.GetTrack(0, t))
+        end
+        for i = 0, reaper.CountMediaItems(0) - 1 do
+            local item = reaper.GetMediaItem(0, i)
+            for tk = 0, reaper.CountTakes(item) - 1 do
+                local take = reaper.GetTake(item, tk)
+                if  take then
+                    for fx = 0, reaper.TakeFX_GetCount(take) - 1 do
+                        reaper.TakeFX_Show(take, fx, 2)
+                    end
+                    if  reaper.TakeFX_GetChainVisible(take) ~= -1 then reaper.TakeFX_Show(take, 0, 0) end
+                end
             end
         end
-        return kill
 
     end
 
@@ -73,7 +87,7 @@
         show_plugins=api.name("_S&M_WNTSHW3")
         api.cmd(show_plugins,0)
         if  FXs == GetAllFloatingFXWindows() then
-            WindowKiller(FX_windows)
+            CloseAllFXWindows()
             return
         end
 

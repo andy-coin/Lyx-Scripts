@@ -145,8 +145,8 @@
     
                 local visible = api.gtv(track,'B_SHOWINMIXER')
                 -- Append new tracks
-                if visible and track ~= old_sel_track then
-                    states = states .. track_guid .. visible .. '\n'
+                if visible == 1 and track ~= old_sel_track then
+                    states = states .. track_guid .. '1' .. '\n'
                     api.stv(track, 'B_SHOWINMIXER', 0)
                 end
             end
@@ -180,5 +180,4 @@
     
     reaper.defer(init)
     reaper.defer(Main)
-    reaper.atexit(RestoreTracks)
-    --reaper.atexit(Exit)
+    reaper.atexit(Exit) -- restore tracks in all project tabs

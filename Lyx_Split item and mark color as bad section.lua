@@ -8,7 +8,7 @@
 
         range = 1 --second
         pre_offset = (api.gps()~=0 and 0.5) or 0 --second
-        target_color = 26317201 --gray (RGB)
+        target_color = reaper.ColorToNative(145,145,145)|0x1000000 --gray
 
     --------------
     local function ToggleItemGroups()
@@ -51,7 +51,8 @@
         for abi=1,#itemz do
             
             local item = itemz[abi]
-            if  reaper.TakeIsMIDI(reaper.GetActiveTake(item))  then goto NEXT end
+            local take = reaper.GetActiveTake(item)
+            if  not take or reaper.TakeIsMIDI(take) then goto NEXT end -- skip empty and MIDI items
 
             local target_item = reaper.SplitMediaItem(item,edge_s)
 
@@ -97,7 +98,6 @@
             ToggleItemGroups()
         end
         
-        api.pur(-1)
         api.ua()
 
         r.RestoreItems((#new_itemz>0 and new_itemz) or itemzzz )

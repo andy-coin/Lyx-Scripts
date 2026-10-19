@@ -31,15 +31,18 @@ local function main()
         end
         if  visible then
             api.sot(target)
-            local mainHWND,windowHWND,_,ori_scroll,TCPY
+            local mainHWND,windowHWND,_,ori_scroll,TCPY,TCPH,top,bottom,view_h
             TCPY = api.gtv(target,"I_TCPY")
-            if TCPY < 100 then
+            TCPH = api.gtv(target,"I_TCPH")
+            mainHWND = reaper.GetMainHwnd()
+            windowHWND = reaper.JS_Window_FindChildByID(mainHWND,1000)
+            _,_,top,_,bottom = reaper.JS_Window_GetClientRect(windowHWND)
+            view_h = math.abs(bottom - top) -- real arrange view height (works with any screen size / scaling)
+            if TCPY < 0 then
                 api.cmd(40913,0)
-            elseif TCPY > 800 then
-                mainHWND = reaper.GetMainHwnd()
-                windowHWND = reaper.JS_Window_FindChildByID(mainHWND,1000)
+            elseif TCPY + TCPH > view_h then
                 _,ori_scroll = reaper.JS_Window_GetScrollInfo( windowHWND, "v" )
-                reaper.JS_Window_SetScrollPos( windowHWND, "v",math.floor( ori_scroll + TCPY - 800 ))
+                reaper.JS_Window_SetScrollPos( windowHWND, "v",math.floor( ori_scroll + TCPY + TCPH - view_h ))
             end
             break
         else

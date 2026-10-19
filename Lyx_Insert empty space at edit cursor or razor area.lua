@@ -17,15 +17,10 @@
             local pos = api.giv(item,"D_POSITION")
             if pos >=Start then
                 api.siv(item, "D_POSITION", pos + (End - Start))
-                api.siv(item, "D_POSITION", pos + (End - Start))
             else
-                local item = reaper.SplitMediaItem(item, Start)
-                if  item then
-                    api.sis(item,true)
-                    api.cmd(40362,0)
-                    local item = api.gsi(0,0)
-                    local pos = api.giv(item,"D_POSITION")
-                    api.siv(item, "D_POSITION", pos + (End - Start))
+                local right = reaper.SplitMediaItem(item, Start) -- right half (nil if item ends before Start)
+                if  right then
+                    api.siv(right, "D_POSITION", api.giv(right,"D_POSITION") + (End - Start))
                 end
             end
         end
@@ -46,11 +41,11 @@
                 time = api.now()
                 idx = AIs - 1
 
-                while idx > 0 do 
+                while idx >= 0 do 
                     local pos = reaper.GetSetAutomationItemInfo(env, idx , "D_POSITION", 0, false)
                     local len = reaper.GetSetAutomationItemInfo(env, idx , "D_LENGTH", 0, false)
                     if pos >= Start then
-                        r.GetSetAIinfo(env, idx , _, pos + (End - Start), _, _, _, true)
+                        r.GetSetAIinfo(env, idx , nil, pos + (End - Start), nil, nil, nil, true)
                     elseif pos + len > Start then
                         reaper.GetSetAutomationItemInfo(env, idx, "D_UISEL", 1, true) 
                         api.cmd(42087,0)--Split automation items
@@ -83,7 +78,7 @@
 
     local function main()
 
-        razor,razorArea = r.GetRazorEdits2()--return IsRazor,areaMap={areaStart,areaEnd,track,items,isEnvelope,envelope,envelopeName,envelopePoints,GUID}
+        razor,razorArea = r.GetRazorEdits()--return IsRazor,areaMap={areaStart,areaEnd,track,items,isEnvelope,envelope,envelopeName,envelopePoints,GUID}
         
         local starttime, endtime = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
         

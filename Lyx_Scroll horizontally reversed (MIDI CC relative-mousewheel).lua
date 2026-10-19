@@ -21,7 +21,7 @@
         
         mouse_wheel = (reverse and -mouse_wheel) or mouse_wheel
             
-        times=math.abs(math.floor(mouse_wheel*speed))
+        times=math.floor(math.abs(mouse_wheel*speed)) -- round toward 0, same feel both directions
         
         if mouse_wheel>0 then
             for abi=1,times do

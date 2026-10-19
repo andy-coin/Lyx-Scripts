@@ -7,6 +7,8 @@
         default_icon = reaper.GetResourcePath()..'/Data/track_icons/Logic//Effects/fx.png' 
 
     
+    if  api.cst(0) == 0 then return end
+
     reaper.Undo_BeginBlock()
     api.pur( 1 )
     
@@ -15,9 +17,7 @@
     local bus = api.gt(0,api.ct(0)-1)
     api.stv( bus, "I_CUSTOMCOLOR", 30759958)
     api.ts ( bus, "P_NAME", "RETURN", true )
-    api.ts ( bus, "P_ICON",default_icon,true)
-    
-    if  api.cst(0) == 0 then return end
+    if  reaper.file_exists(default_icon) then api.ts ( bus, "P_ICON",default_icon,true) end
     
     -- Loop through all tracks in the project
     for abi=1,api.cst(0) do
@@ -37,4 +37,4 @@
     reaper.TrackList_AdjustWindows( false )
     api.ua()
     
-    reaper.Undo_EndBlock("Create bus after selected tracks and reroute them", 0)
+    reaper.Undo_EndBlock("Create return track and send selected tracks to it", -1)

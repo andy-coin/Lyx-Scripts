@@ -22,15 +22,7 @@
         last_duration ..'\30' ..  last_ratio ..'\30')
         if not ret then return end 
 
-        api.ubb()
-        --api.pur(1)
-        r.SaveTracks(true)
-
         item = api.gsi(0,0)
-        item_track = api.git(item)
-        api.sot(item_track)
-        api.cmd(40698,0)--copy item
-
         P = api.giv(item,'D_POSITION')
         E = P + api.giv(item,'D_LENGTH')
         VOL = api.giv(item,'D_VOL')
@@ -60,7 +52,16 @@
             duration = api.Tqt(0,qn+1)-P
         end
 
-        ratio = r.NumberCage(answer[2],0.01,0.99,false)
+        ratio = r.NumberCage(answer[2],0.01,0.99,false) or 0.75
+        if not duration then return end
+
+        api.ubb()
+        --api.pur(1)
+        r.SaveTracks(true)
+
+        item_track = api.git(item)
+        api.sot(item_track)
+        api.cmd(40698,0)--copy item
         
         local count,time
 

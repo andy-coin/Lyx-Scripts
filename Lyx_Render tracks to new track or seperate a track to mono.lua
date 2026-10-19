@@ -12,6 +12,7 @@
       if it_n==1 then
          item=reaper.GetSelectedMediaItem(0,0)
          take=reaper.GetActiveTake(item)
+         if not take then return end -- empty item: nothing to render
          if not reaper.TakeIsMIDI(take) then
             fx_n=reaper.TakeFX_GetCount(take)
             if fx_n==0 then

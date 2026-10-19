@@ -9,7 +9,6 @@
     --local lyx=require("_Lyx_HOME")
 --]]
 
-local Lyx_computer = true --reaper.GetResourcePath():find("/Users/andy/") or reaper.GetResourcePath():find("/Users/will/")
 
 pro_name = reaper.GetProjectName(0) 
 pro_name = (#pro_name > 0 and pro_name) or "Unsaved project"
@@ -29,8 +28,7 @@ end
 DE_BUG_MODE = false
 REAPER_ini = reaper.get_ini_file()
 
-sys = {tab_h = math.floor(12 * ((Lyx_computer and 0.75) or 1))
-      }
+sys = {tab_h = 12}
 
 ----------------------------
 ------------API-------------
@@ -69,7 +67,7 @@ api = {
         idt  = reaper.BR_GetMediaTrackByGUID, -- proj, guid
         gtC  = reaper.GetTrackStateChunk,
         stC  = reaper.SetTrackStateChunk,
-        ctl  = function(track) reaper.GetMediaTrackInfo_Value(track, 'I_NUMFIXEDLANES') end,
+        ctl  = function(track) return reaper.GetMediaTrackInfo_Value(track, 'I_NUMFIXEDLANES') end,
 
         --item
         ci   = reaper.CountMediaItems,
@@ -194,6 +192,24 @@ api = {
       }       
 
 local FUN={}
+
+    -- Missing-extension check, at the top of a script:  if not r.Need("SWS","JS") then return end
+    -- Shows one message listing what is missing and returns false; true when all are installed.
+    local NEED = {
+        SWS   = {"BR_GetMouseCursorContext", "SWS extension: Extensions > ReaPack > Browse packages > \"SWS\" (or download from sws-extension.org)"},
+        JS    = {"JS_Window_FindChildByID",  "js_ReaScriptAPI: Extensions > ReaPack > Browse packages > \"js_ReaScriptAPI\""},
+        ImGui = {"ImGui_CreateFontFromFile", "ReaImGui 0.10 or newer: Extensions > ReaPack > Browse packages > \"ReaImGui\" (update it if already installed)"},
+    }
+    function FUN.Need(...)
+        local miss = {}
+        for _, name in ipairs({...}) do
+            local n = NEED[name]
+            if n and not reaper[n[1]] then miss[#miss+1] = "- "..n[2] end
+        end
+        if #miss == 0 then return true end
+        reaper.MB("This script needs:\n\n"..table.concat(miss, "\n").."\n\nNo ReaPack yet? Get it at reapack.com, then restart REAPER after installing.", "Lyx Scripts", 0)
+        return false
+    end
 
 ----------------------------
 ------BASIC FUNCTION--------
@@ -340,7 +356,13 @@ local FUN={}
         local font,x,y,FOCUS,S0,dpi,emoji,str_w,str_h,rect_w
         local fix_mode,fix_x,fix_y,btn_x,btn_y,btn_size,last_click
 
-        font = 'WenQuanYiZenHei'
+        -- no js_ReaScriptAPI: plain console message instead of the billboard window
+        if not reaper.JS_Window_Find then reaper.ShowConsoleMsg(tostring(str).."\n") return end
+
+        local os_name = reaper.GetOS()
+        font = (os_name:find("OSX") or os_name:find("mac")) and 'PingFang TC'
+            or os_name:find("Win") and 'Microsoft JhengHei'
+            or 'WenQuanYiZenHei'
         -- 讀取持久化的 lock 狀態 / read the saved lock state
         fix_mode = api.load("billboard","fix_mode") == "true"
         fix_x = tonumber(api.load("billboard","fix_x"))
@@ -584,13 +606,12 @@ local FUN={}
 
         tr_fold,tr_min = reaper.NF_GetThemeDefaultTCPHeights()
 
-        tr_min=(Lyx_computer and tr_min*0.75) or tr_min
-                
+        -- calibration knob: theme heights vs real track heights (ExtState "Lyx"/"tcp_scale", e.g. 0.75)
+        tr_min = tr_min * (tonumber(reaper.GetExtState("Lyx","tcp_scale")) or 1)
+
         main_window = reaper.GetMainHwnd()
         arrange = reaper.JS_Window_FindChildByID(main_window,1000)
-        _,_,t,_,b=reaper.JS_Window_GetRect(arrange)
-        
-        arrange_max = math.abs(t-b)-sys.tab_h
+        _,_,arrange_max = reaper.JS_Window_GetClientSize(arrange) -- visible track area height
         
         return arrange_max,tr_min,tr_fold
 
@@ -675,206 +696,82 @@ local FUN={}
 
         -- api.ua()
     end
-    -------------seperate table
-    function FUN.GetRazorEdits(clear,check) 
+    --------------
+    -- One table, two ways to read it:
+    --   per area : areaMap[i] = {areaStart,areaEnd,track,items,isEnvelope,envelope,envelopeName,envelopePoints,GUID}
+    --   combined : areaMap.track (tracks), .item (items, no duplicates), .envelope ({env,name,point,guid}),
+    --              .left_edge / .right_edge (area starts/ends), .min, .max
+    -- An item counts when it overlaps an area (long items spanning the area are included).
+    -- check=true returns true as soon as any razor area exists. clear=true clears all razor areas.
+    function FUN.GetRazorEdits(clear,check)
             if  DE_BUG_MODE then
                 reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.GetRazorEdits\n')
             end
 
-        local Trz,Itz,Envz,razor,razor_area,Start,End,min,max
+        local areaMap = {track={},item={},envelope={},left_edge={},right_edge={}}
+        local seen_item = {}
 
-        Trz={}
-        Itz={}
-        Envz={}
-        Start={}
-        End={}
-        
-        for abi=1,reaper.CountTracks(0) do
-            local track=reaper.GetTrack(0,abi-1)
-            local _,area=reaper.GetSetMediaTrackInfo_String(track,"P_RAZOREDITS_EXT","",false)
-            
-            if  area~='' then
-                if  check then return true end
-                
-                razor = true
-
-                Trz[#Trz+1]=track
-
-                local String={}
-                
-                for str in area:gmatch('[^,]+')do
-                    table.insert(String,str)
-                end
-                
-                razor_area={}
-                for abi=1, #String do
-                    razor_area={}
-                    for j in String[abi]:gmatch("%S+") do
-                        table.insert(razor_area,j)
-                    end
-                    --area data
-                    Start[#Start+1]=tonumber(razor_area[1])
-                    End[#End+1]=tonumber(razor_area[2])
-                    min=((not min or min>Start[#Start]) and Start[#Start]) or min
-                    max=((not max or max<End[#End]) and End[#End]) or max
-                    local GUID=razor_area[3]
-                    local isEnvelope=GUID~='""'
-                    --get item/envelope data
-                    local envelopeName, envelope,envelopePoints
-
-                    if  not isEnvelope then
-                        local function GetItemsInRange(track,areaStart,areaEnd,item_table,all_lanes)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  GetItemsInRange\n')
-            end
-                            for abi=1,reaper.CountTrackMediaItems(track) do 
-
-                                local item=reaper.GetTrackMediaItem(track,abi-1)
-                                if  not all_lanes then
-                                    if  reaper.GetMediaItemInfo_Value(item,"B_FIXEDLANE_HIDDEN")==0 then
-                                        local Pos=reaper.GetMediaItemInfo_Value(item,"D_POSITION")
-                                        local End=Pos+reaper.GetMediaItemInfo_Value(item,"D_LENGTH")
-                                        if  FUN.NumberCage(Pos,areaStart,areaEnd)==Pos or FUN.NumberCage(End,areaStart,areaEnd)==End then
-                                            table.insert(item_table,item)
-                                        end
-                                    end
-                                end
-
-                            end
-                        end
-                        GetItemsInRange(track,Start[#Start],End[#End],Itz,false)
-                    else
-                        local function GetEnvelopePointsInRange(envelopeTrack,areaStart,areaEnd)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  GetEnvelopePointsInRange\n')
-            end
-                            local envelopePoints={}
-                            for abi=1,reaper.CountEnvelopePoints(envelopeTrack) do
-                                local _,time,value,shape,tension,selected=reaper.GetEnvelopePoint(envelopeTrack,abi-1)
-                                if time>=areaStart and time<=areaEnd then
-                                    envelopePoints[#envelopePoints + 1]={
-                                        idx=abi-1 ,
-                                        time=time,
-                                        value=value,
-                                        shape=shape,
-                                        tension=tension,
-                                        selected=selected
-                                    }
-                                end
-                            end
-                            return envelopePoints
-                        end
-                        envelope=reaper.GetTrackEnvelopeByChunkName(track,GUID:sub(2,-2))
-                        _,envelopeName=reaper.GetEnvelopeName(envelope)
-                        envelopePoints=GetEnvelopePointsInRange(envelope,Start[#Start],End[#End])
-                        Envz[#Envz+1]={env=envelope,name=envelopeName,point=envelopePoints,guid=GUID}
-                    end
-                end
-            end
-        end
-        if clear then api.cmd(42406,0) end--clear all razor
-        local areaMap={track=Trz,item=Itz,envelope=Envz,left_edge=Start,right_edge=End,min=min,max=max}
-        return razor,areaMap
-    end --return israzor,areaMap{Trz={},Itz={},Envz={},Start={},End={},min,max}
-    --------------in one table
-    function FUN.GetRazorEdits2(clear,check)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.GetRazorEdits2\n')
-            end
-
-        local trackCount = reaper.CountTracks(0)
-        local areaMap = {}
-        local min,max
-
-        for i = 0, trackCount - 1 do
-            --msg('I\'m track'..i)
+        for i = 0, reaper.CountTracks(0) - 1 do
             local track = reaper.GetTrack(0, i)
             local _,area=reaper.GetSetMediaTrackInfo_String(track,"P_RAZOREDITS_EXT","",false)
-            
+
             if  area~='' then
-                if  check then return true  end
+                if  check then return true end
 
-                local String={}
-                
-                count = 0
-                for str in area:gmatch('[^,]+')do
-                    --msg('I\'m count'..count)
-                    count = count + 1
-                    table.insert(String,str)
-                end
-                
-                --FILL AREA DATA
-                for abi=1, #String do
+                areaMap.track[#areaMap.track+1] = track
 
-                    --msg('I\'m abi'..abi)
-                    local razor_area,Start,End,GUID,isEnvelope,items,envelope,envelopeName,envelopePoints
-                    
-                    razor_area = {}
-                    for j in String[abi]:gmatch("%S+") do
-                        --msg('I\'m j'..j)
-                        table.insert(razor_area,j)
+                for str in area:gmatch('[^,]+') do
+                    local razor_area = {}
+                    for j in str:gmatch("%S+") do
+                        razor_area[#razor_area+1] = j
                     end
-                    --area data
-                    Start = tonumber(razor_area[1])
-                    End = tonumber(razor_area[2])
-                    min=((not min or min>Start) and Start) or min
-                    max=((not max or max<End ) and End) or max
-                    GUID = razor_area[3]
-                    isEnvelope = GUID ~= '""'
+                    local Start = tonumber(razor_area[1])
+                    local End = tonumber(razor_area[2])
+                    local GUID = razor_area[3] or '""'
+                    local isEnvelope = GUID ~= '""'
+                    local items,envelope,envelopeName,envelopePoints
 
-                    --get item/envelope data                   
+                    areaMap.min=((not areaMap.min or areaMap.min>Start) and Start) or areaMap.min
+                    areaMap.max=((not areaMap.max or areaMap.max<End) and End) or areaMap.max
+                    areaMap.left_edge[#areaMap.left_edge+1] = Start
+                    areaMap.right_edge[#areaMap.right_edge+1] = End
+
                     if  not isEnvelope then
-                        local function GetItemsInRange(track,areaStart,areaEnd)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  GetItemsInRange\n')
-            end
-                            local items = {}
-                            for abi=1,reaper.CountTrackMediaItems(track) do 
-                                local item=reaper.GetTrackMediaItem(track,abi-1)
-                                if  reaper.GetMediaItemInfo_Value(item,"B_FIXEDLANE_HIDDEN")==0 then
-                                    local Pos=reaper.GetMediaItemInfo_Value(item,"D_POSITION")
-                                    local End=Pos+reaper.GetMediaItemInfo_Value(item,"D_LENGTH")
-                                    if  FUN.NumberCage(Pos,areaStart,areaEnd)==Pos or FUN.NumberCage(End,areaStart,areaEnd)==End then
-                                        table.insert(items,item)
+                        items = {}
+                        for abi=1,reaper.CountTrackMediaItems(track) do
+                            local item=reaper.GetTrackMediaItem(track,abi-1)
+                            if  reaper.GetMediaItemInfo_Value(item,"B_FIXEDLANE_HIDDEN")==0 then
+                                local Pos=reaper.GetMediaItemInfo_Value(item,"D_POSITION")
+                                local iEnd=Pos+reaper.GetMediaItemInfo_Value(item,"D_LENGTH")
+                                if  Pos < End and iEnd > Start then
+                                    items[#items+1] = item
+                                    if  not seen_item[item] then
+                                        seen_item[item] = true
+                                        areaMap.item[#areaMap.item+1] = item
                                     end
                                 end
                             end
-                            return items
                         end
-                        items = GetItemsInRange(track,Start,End,items,false)
                     else
-                        local function GetEnvelopePointsInRange(envelopeTrack,areaStart,areaEnd)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  GetEnvelopePointsInRange\n')
-            end
-                            local envelopePoints={}
-                            for abi=1,reaper.CountEnvelopePoints(envelopeTrack) do
-                                local _,time,value,shape,tension,selected=reaper.GetEnvelopePoint(envelopeTrack,abi-1)
-                                if time>=areaStart and time<=areaEnd then
-                                    envelopePoints[#envelopePoints + 1]={
-                                        idx=abi-1 ,
-                                        time=time,
-                                        value=value,
-                                        shape=shape,
-                                        tension=tension,
-                                        selected=selected
-                                    }
+                        envelope=reaper.GetTrackEnvelopeByChunkName(track,GUID:sub(2,-2))
+                        envelopePoints = {}
+                        if  envelope then
+                            _,envelopeName=reaper.GetEnvelopeName(envelope)
+                            for abi=1,reaper.CountEnvelopePoints(envelope) do
+                                local _,time,value,shape,tension,selected=reaper.GetEnvelopePoint(envelope,abi-1)
+                                if  time>=Start and time<=End then
+                                    envelopePoints[#envelopePoints+1]={idx=abi-1,time=time,value=value,shape=shape,tension=tension,selected=selected}
                                 end
                             end
-                            return envelopePoints
+                            areaMap.envelope[#areaMap.envelope+1]={env=envelope,name=envelopeName,point=envelopePoints,guid=GUID}
                         end
-                        envelope=reaper.GetTrackEnvelopeByChunkName(track,GUID:sub(2,-2))
-                        _,envelopeName=reaper.GetEnvelopeName(envelope)
-                        envelopePoints=GetEnvelopePointsInRange(envelope,Start,End)--idx=abi-1, time=time, value=value, shape=shape, tension=tension, selected=selected
                     end
 
                     areaMap[#areaMap+1]={
                                         areaStart = Start,
                                         areaEnd = End,
-                                        
                                         track = track,
                                         items = items,
-                                        
                                         --envelope data
                                         isEnvelope = isEnvelope,
                                         envelope = envelope,
@@ -884,15 +781,12 @@ local FUN={}
                         }
                 end
             end
-
         end
-        areaMap.min = min
-        areaMap.max = max
 
         if clear then api.cmd(42406,0) end--clear all razor
 
         return #areaMap>0, areaMap
-    end --return IsRazor,areaMap={areaStart,areaEnd,track,items,isEnvelope,envelope,envelopeName,envelopePoints,GUID}
+    end
     --------------
     function FUN.ScriptID(path, section, quiet)
         -- command id of a script found by its file path, instead of a hard-coded _RS id
@@ -1082,7 +976,7 @@ local FUN={}
                 reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.SameTCPH\n')
             end
         
-        local tcph,height,Step,step,trz
+        local trz
 
         if  KeepTr then
             trz={}
@@ -1105,33 +999,16 @@ local FUN={}
                     reaper.SetTrackSelected(tr[abi],true)
                 end
             end
-            cmd=reaper.NamedCommandLookup("_SWS_MINTRACKS")
-            reaper.Main_OnCommand(cmd,0)
-            tcph=api.gtv(api.gst(0,0),"I_TCPH")
         else
             if not reaper.ValidatePtr2(0,tr,"MediaTrack*") then return end
             reaper.SetOnlyTrackSelected(tr)
-            tcph=reaper.GetMediaTrackInfo_Value(tr,"I_TCPH")
-        end
-        
-        height=target-tcph
-
-        Step=(height>0 and 41325) or 41326
-        step=(height>0 and 41327) or 41328
-        
-        local times=math.abs(height/2)
-        
-        local bug=((Lyx_computer and 0 ) or 1) 
-
-        for abi=1,times/4+bug do
-            reaper.Main_OnCommand(Step,0)
         end
 
-        for abi=1,times%4 do
-            reaper.Main_OnCommand(step,0)
+        -- set the real height directly (no zoom-action stepping, so no per-screen/DPI guesswork)
+        for abi=1,reaper.CountSelectedTracks(0) do
+            reaper.SetMediaTrackInfo_Value(reaper.GetSelectedTrack(0,abi-1),"I_HEIGHTOVERRIDE",math.floor(target+0.5))
         end
-
-        ::END::
+        reaper.TrackList_AdjustWindows(false)
 
         if  KeepTr then
             reaper.Main_OnCommand(40297,0)--unselect all track
@@ -1283,8 +1160,10 @@ local FUN={}
 
         tr=api.gst(0,0) or api.gt(0,0)
 
+        local count = api.ct(0)
         api.cmd(api.name("_S&M_ADD_TRTEMPLATE"..slot),0)
-        
+        if api.ct(0) == count then return end -- empty slot: nothing inserted, leave tracks alone
+
         new_tr=api.gst(0,0)
 
         folder = ( tr and api.gtv(tr,"I_FOLDERDEPTH")) or 0
@@ -1379,16 +1258,15 @@ local FUN={}
 
         if  type(item) == 'table' then
             name = {}
-            for abi=1,#items do
-                local item = item[abi]
-                if  reaper.ValidatePtr2(0,item,'MediaItem*') then
-                    local take = api.gat(item)
-                    local name = (take and api.gtkn(take)) or ''
-                    name[#name+1]= name
+            for abi=1,#item do
+                local it = item[abi]
+                if  reaper.ValidatePtr2(0,it,'MediaItem*') then
+                    local take = api.gatk(it)
+                    name[#name+1] = (take and api.gtkn(take)) or ''
                 end
             end
         elseif  reaper.ValidatePtr2(0,item,'MediaItem*') then
-            local take = api.gat(item)
+            local take = api.gatk(item)
             name = (take and api.gtkn(take)) or ''
         end
 
@@ -1729,33 +1607,6 @@ local FUN={}
 ----AUTOMATION FUNCTION-----
 ----------------------------
 
-    function FUN.SearchSameAI(ENV,AI_id,want)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.SearchSameAI\n')
-            end
-
-        local tr,env,NAME,FindList
-        FindList={"idx","pool_id"}
-        NAME=reaper.GetEnvelopeName(ENV)
-
-        AI={Name={},idx={}}
-        for abi=1,reaper.CountTracks(0) do
-            tr=reaper.GetTrack(0,abi-1)
-            for abii=1,reaper.CountTrackEnvelopes(tr) do
-                env=reaper.GetTrackEnvelope(tr,abii-1)
-                for abiii=0,reaper.CountAutomationItems(env) do
-                    if  abiii<reaper.CountAutomationItems(env) and reaper.GetSetAutomationItemInfo(env,abiii,"D_UISEL",0,false)==1 then
-                        local _,name=reaper.GetEnvelopeName(env)
-                        table.insert(AI.Name,name)
-                        table.insert(AI.Pool,reaper.GetSetAutomationItemInfo(env,abiii,"D_POOL_ID",0,false))
-                    end
-                end
-            end
-        end
-        return AI,false
-
-    end
-    -------------
     function FUN.OrderAI(env)
             if  DE_BUG_MODE then
                 reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.OrderAI\n')
@@ -2105,11 +1956,10 @@ local FUN={}
             return
         end
         
-        min = (m<M and m) or M
-        max = (m<M and M) or m
-
-        min = (type(min)~="number" and -math.huge) or min
-        max = (type(max)~="number" and  math.huge) or max
+        m = tonumber(m) or -math.huge
+        M = tonumber(M) or  math.huge
+        min = math.min(m, M)
+        max = math.max(m, M)
         
         x=(x < min and min) or x
         x=(x > max and max) or x
@@ -2118,11 +1968,11 @@ local FUN={}
             if  integer then 
                 x = math.floor(x)
             end
-        elseif type(integer) == 'str' then
+        elseif type(integer) == 'string' then
             if  integer == 'ceil' or integer == 'up' then
                 integer = math.ceil
             else
-                integer = matg.floor
+                integer = math.floor
             end
             x = integer(x)
         elseif type(integer) == 'number' then
@@ -2308,37 +2158,6 @@ local FUN={}
         return #tbl ~= #result, result
     end
     ------------
-    function FUN.SearchFiles(directory,extension)
-            if  DE_BUG_MODE then
-                reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.SearchFiles\n')
-            end
-
-        local found_files = {}
-        local i = 0
-        while true do
-            -- 使用 reaper.EnumerateFiles 和 reaper.EnumerateSubdirectories 函數 / using reaper.EnumerateFiles and reaper.EnumerateSubdirectories
-            local file = reaper.EnumerateFiles(directory, i)
-            local subdir = reaper.EnumerateSubdirectories(directory, i)
-
-            -- 如果沒有更多檔案或資料夾，跳出迴圈 / stop when there are no more files or folders
-            if not file and not subdir then break end
-
-            -- 檢查檔案是否符合指定的副檔名 / check the file extension
-            if  file and file:match(extension .. "$") then
-                table.insert(found_files, directory .. "/" .. file)
-            end
-
-            -- 如果是資料夾，遞迴搜尋 / folder: search it recursively
-            if  subdir then
-                search_files(directory .. "/" .. subdir, extension)
-            end
-
-            i = i + 1
-        end
-        
-        return found_files
-    end
-    ------------   
     function FUN.DeepCopy(orig)
         local orig_type = type(orig)
         local copy
@@ -2811,7 +2630,7 @@ local FUN={}
     function FUN.ClampToScreen(x, y, w, h)
         -- keep a window (x,y = native SetPosition origin, w,h) on the nearest monitor;
         -- a saved position on a monitor that still exists is kept as is
-        w, h = w or 0, h or 0
+        x, y, w, h = math.floor(x), math.floor(y), math.floor(w or 0), math.floor(h or 0) -- my_getViewport wants integers
         local l, t, r, b = reaper.my_getViewport(0, 0, 0, 0, x, y, x + math.max(w,1), y + math.max(h,1), true)
         local y0, y1 = math.min(t, b), math.max(t, b)
         x = math.max(l, math.min(x, r - w))
@@ -2882,6 +2701,19 @@ local FUN={}
         end
     end
     
+    -- ImGui font with CJK coverage for this OS (PingFang / Microsoft JhengHei / Noto CJK), else sans-serif
+    function FUN.ImGuiFont()
+        local os_name = reaper.GetOS()
+        local file = ((os_name:find("OSX") or os_name:find("mac")) and "/System/Library/Fonts/PingFang.ttc")
+                  or (os_name:find("Win") and "C:/Windows/Fonts/msjh.ttc")
+                  or "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+        if reaper.file_exists(file) then
+            local ok, font = pcall(reaper.ImGui_CreateFontFromFile, file, 0)
+            if ok and font then return font end
+        end
+        return reaper.ImGui_CreateFont("sans-serif")
+    end
+
     -- Drop-in replacement for reaper.GetUserInputs() — ReaImGui-based.
     -- Signature:  ok, csv = FUN.GetUserInputs(title, num_inputs, captions_csv, retvals_csv [, opts])
     -- opts (optional): { bg_color, text_color, accent, scale, native }  overrides ExtState
@@ -2893,7 +2725,8 @@ local FUN={}
         opts = opts or {}
         local SECTION = "Lyx_GetUserInputs"
 
-        if opts.native or not reaper.ImGui_CreateContext or not coroutine.isyieldable() then
+        -- needs ReaImGui 0.10+ (CreateFontFromFile, PushFont with size...); older -> native dialog
+        if opts.native or not reaper.ImGui_CreateFontFromFile or not coroutine.isyieldable() then
             return reaper.GetUserInputs(title or "", num_inputs, captions_csv or "", retvals_csv or "")
         end
 
@@ -2969,9 +2802,7 @@ local FUN={}
 
         ---------- context + font ----------
         local ctx  = reaper.ImGui_CreateContext(title or "Lyx")
-        -- PingFang has full CJK coverage; dynamic font system loads glyphs on demand.
-        local font = reaper.ImGui_CreateFont("/System/Library/Fonts/PingFang.ttc", 0)
-                  or reaper.ImGui_CreateFont("sans-serif", 0)
+        local font = FUN.ImGuiFont()
         reaper.ImGui_Attach(ctx, font)
 
         -- Disable keyboard navigation so arrow keys (and Tab) stay inside the
@@ -2989,6 +2820,7 @@ local FUN={}
         -- forget a saved spot whose monitor is gone (ImGui coords -> native, then ask the OS)
         if saved_x and saved_y and reaper.ImGui_PointConvertNative then
             local nx, ny = reaper.ImGui_PointConvertNative(ctx, saved_x, saved_y, true)
+            nx, ny = math.floor(nx), math.floor(ny) -- my_getViewport wants integers
             local l, t, r, b = reaper.my_getViewport(0, 0, 0, 0, nx, ny, nx + 1, ny + 1, true)
             if nx < l or nx > r or ny < math.min(t, b) or ny > math.max(t, b) then saved_x, saved_y = nil, nil end
         end
@@ -3157,10 +2989,10 @@ local FUN={}
                 if wx and wy then cur_x, cur_y = math.floor(wx), math.floor(wy) end
 
                 reaper.ImGui_PopItemFlag(ctx)
+                reaper.ImGui_End(ctx) -- ReaImGui: End only when Begin returned true
             end
 
             if not open then closed = true end
-            reaper.ImGui_End(ctx)
             reaper.ImGui_PopStyleVar(ctx, NVAR)
             reaper.ImGui_PopStyleColor(ctx, NCOL)
             reaper.ImGui_PopFont(ctx)
@@ -3171,7 +3003,7 @@ local FUN={}
         while not closed do coroutine.yield() end
 
         FUN._frame = nil
-        if cur_x and cur_y and cur_x >= 0 and cur_y >= 0 then
+        if cur_x and cur_y then -- negative is fine (monitor left of / above the main one)
             reaper.SetExtState(SECTION, "win_x", tostring(cur_x), true)
             reaper.SetExtState(SECTION, "win_y", tostring(cur_y), true)
         end
@@ -3211,6 +3043,28 @@ local FUN={}
         reaper.defer(step)
     end
 
+
+    -------------
+    -- 64 well-separated colours {r,g,b}, pre-shuffled so each entry differs clearly from the next.
+    FUN.Palette = {
+        {163,82,82}, {70,199,78}, {70,78,199}, {199,142,70}, {50,77,112}, {110,199,70}, {199,70,191}, {136,209,209},
+        {199,70,94}, {158,199,70}, {110,70,199}, {199,94,70}, {70,199,126}, {158,70,199}, {112,85,50}, {70,126,199},
+        {145,209,136}, {199,70,142}, {70,175,199}, {199,191,70}, {153,82,163}, {70,199,175}, {112,62,50}, {200,209,136},
+        {92,82,163}, {50,112,77}, {209,136,163}, {173,209,136}, {50,54,112}, {163,112,82}, {173,136,209}, {92,163,82},
+        {112,50,62}, {82,163,163}, {122,82,163}, {153,163,82}, {82,133,163}, {163,82,143}, {122,163,82}, {136,154,209},
+        {136,209,182}, {112,50,85}, {93,112,50}, {145,136,209}, {136,209,154}, {209,136,136}, {70,50,112}, {82,163,102},
+        {209,136,191}, {209,191,136}, {93,50,112}, {50,112,54}, {136,182,209}, {112,50,108}, {70,112,50}, {200,136,209},
+        {50,101,112}, {163,143,82}, {163,82,112}, {82,163,133}, {82,102,163}, {209,163,136}, {50,112,101}, {112,108,50},
+    }
+
+    -- Next palette colour as a native custom colour (correct on Windows BGR and mac/Linux RGB).
+    -- Walks the shuffled list in order, so two picks in a row never get the same or a similar colour.
+    function FUN.RandomColor()
+        local i = (tonumber(reaper.GetExtState("color","color")) or 0) % #FUN.Palette + 1
+        reaper.SetExtState("color","color",i,true)
+        local c = FUN.Palette[i]
+        return reaper.ColorToNative(c[1],c[2],c[3])|0x1000000
+    end
 
     -------------
     FUN.billboard = BBB

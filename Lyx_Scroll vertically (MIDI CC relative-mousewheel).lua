@@ -12,7 +12,8 @@
       
       --if not reaper.MIDIEditor_GetActive() and editor=="1" then return end
       
-      times=math.floor(mouse_wheel/speed_control)
+      local t=mouse_wheel/speed_control
+      times=(t>=0 and math.floor(t)) or math.ceil(t) -- round toward 0, same feel both directions
       reaper.CSurf_OnScroll(0,-times)
 
   end

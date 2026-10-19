@@ -4,6 +4,7 @@
   local r=require("_Lyx_HOME")
   
   ---CUSTOM---
+  -- MCP layout names below must exist in your current theme (these are from Andy's theme); edit them to match yours.
   
      ---mixer--- 
         layout_M="A - Analog"
@@ -26,6 +27,7 @@
   local function ScrollMixer()
   
       local tr=reaper.GetSelectedTrack(0,0) or reaper.GetTrack(0,0)
+      if not tr then return end
 
       local num=api.gtv(tr,"IP_TRACKNUMBER")
       if num>=14 then
@@ -80,6 +82,11 @@
          reaper.Main_OnCommand(40078,0)
          mixer = reaper.JS_Window_Find("Mixer",true)
       end 
+      
+      if not mixer then
+          reaper.MB("Mixer window not found (this script looks for a window titled \"Mixer\"; non-English language packs are not supported).","Lyx Scripts",0)
+          return
+      end
       
       dock_state = reaper.DockIsChildOfDock(mixer)
       

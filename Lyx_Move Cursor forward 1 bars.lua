@@ -18,7 +18,7 @@
 
         _,bar,_,beats = reaper.TimeMap2_timeToBeats(0,cursor)
         
-        --beats = reaper.TimeMap_timeToQN_abs(0,cursor)
+        beats = reaper.TimeMap_timeToQN_abs(0,cursor) -- quarter notes (timeToBeats counts in time-sig denominators)
         
         _, division = reaper.GetSetProjectGrid( 0, 0, 0, 0, 0 )
         
