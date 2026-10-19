@@ -4,13 +4,18 @@
     Physics: a ball bouncing with coefficient of restitution e.
       flight time between hits  T(k) = T0 · e^k
       impact speed (loudness)   v(k) = v0 · e^k   -> velocity = V0 · e^(k·curve)
-    Stops when the gap is shorter than "min gap" or velocity falls under "floor".
+    Stops when the gap is shorter than "Min gap" or velocity falls under "Min velocity".
 
-    Source:
-      Edit cursor     — one bounce sequence at the edit cursor (pitch slider)
-      Selected notes  — every selected note becomes the first hit of its own bounce
-                        (keeps its pitch / velocity / channel)
+    Start at:
+      Edit cursor     — one bounce sequence at the edit cursor (Pitch / Velocity sliders)
+      Selected notes  — every selected note stays as the first hit of its own bounce
+                        (pitch / velocity / channel / mute come from the note)
       Time selection  — fits the whole bounce into the time selection
+
+    Item edges:
+      notes past the item end extend the item; in a looped item (one that really
+      repeats) the bounce is written into the loop and notes past the loop end are dropped.
+    Insert (Enter) = one undo point. Cancel / Esc changes nothing.
 ]]
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
@@ -25,33 +30,77 @@ local function lcg(seed) -- tiny deterministic RNG so preview == inserted result
 end
 
 -- p: first (s), e, v0, vfloor, curve, min_gap (s), max_n, len_pct, jit_t (s), jit_v, seed
+-- -> { {t, len, vel}, ... } in seconds from the first hit. The first hit is the anchor:
+-- never jittered. Notes stay in order and never overlap each other.
 local function bounces(p)
-    local out, t, dt, k = {}, 0, p.first, 0
+    local out = {}
+    if not (p.first > 0 and p.e > 0 and p.e < 1) then return out end
+    local t, dt, k = 0, p.first, 0
     local rnd = lcg(p.seed or 1)
-    while k < (p.max_n or 64) and dt > 0 do
+    while k < (p.max_n or 64) do
         local vel = p.v0 * p.e ^ (k * p.curve)
-        if vel < p.vfloor then break end
-        local jt = (k > 0) and (rnd() * 2 - 1) * (p.jit_t or 0) or 0
-        local jv = (rnd() * 2 - 1) * (p.jit_v or 0)
-        out[#out + 1] = { t = math.max(0, t + jt), len = math.max(0.001, dt * p.len_pct),
+        if k > 0 and vel < p.vfloor then break end  -- never drop the first hit itself
+        local jt, jv = 0, 0
+        if k > 0 then -- ±40% of the (shorter) next gap at most, so hits can't swap places
+            jt = (rnd() * 2 - 1) * math.min(p.jit_t or 0, 0.4 * dt)
+            jv = (rnd() * 2 - 1) * (p.jit_v or 0)
+        end
+        out[#out + 1] = { t = t + jt, len = math.max(0.001, dt * p.len_pct),
                           vel = math.max(1, math.min(127, math.floor(vel + jv + 0.5))) }
         if dt < p.min_gap then break end
         t, dt, k = t + dt, dt * p.e, k + 1
     end
+    for i = 1, #out - 1 do out[i].len = math.min(out[i].len, out[i + 1].t - out[i].t) end
     return out
 end
 
-if not reaper then -- self-check: lua "Lyx_Insert free fall midi notes .lua"
+-- notes {s, e, vel} in PPQ (first = anchor), L = loop length in PPQ:
+-- move the set into the first loop pass, drop / trim what passes the loop end.
+local function fit_loop(notes, L)
+    local shift = math.floor(notes[1].s / L) * L
+    local out = {}
+    for _, n in ipairs(notes) do
+        local s = n.s - shift
+        if s < L then out[#out + 1] = { s = s, e = math.min(n.e - shift, L), vel = n.vel } end
+    end
+    return out, #notes - #out
+end
+
+if not reaper then -- self-check: lua5.4 "Lyx_Insert free fall midi notes .lua"
     local b = bounces({ first = 1, e = 0.5, v0 = 100, vfloor = 1, curve = 1, min_gap = 0.1, len_pct = 0.5 })
     assert(#b == 5 and b[2].t == 1 and b[3].t == 1.5 and b[5].t == 1.875)
     assert(b[1].vel == 100 and b[2].vel == 50 and b[3].vel == 25)
     assert(b[2].len == 0.25)
     local c = bounces({ first = 1, e = 0.9, v0 = 100, vfloor = 40, curve = 1, min_gap = 0.001, len_pct = 1 })
-    for _, n in ipairs(c) do assert(n.vel >= 40) end
-    local p = { first = 0.5, e = 0.7, v0 = 110, vfloor = 5, curve = 1, min_gap = 0.02, len_pct = 0.8,
-                jit_t = 0.01, jit_v = 5, seed = 42 }
+    for i, n in ipairs(c) do assert(i == 1 or n.vel >= 40) end
+    assert(#bounces({ first = 1, e = 0.5, v0 = 8, vfloor = 12, curve = 1, min_gap = 0.1, len_pct = 0.5 }) == 1)
+    -- bad input never loops forever / never inserts garbage
+    for _, bad in ipairs({ { first = 0, e = 0.5 }, { first = -1, e = 0.5 }, { first = 1, e = 1 },
+                           { first = 1, e = 1.5 }, { first = 1, e = 0 }, { first = 1, e = -0.5 } }) do
+        bad.v0, bad.vfloor, bad.curve, bad.min_gap, bad.len_pct = 100, 1, 1, 0.01, 0.5
+        assert(#bounces(bad) == 0)
+    end
+    -- jitter: deterministic, first hit untouched, order kept, no overlaps (even at 100 % length)
+    local p = { first = 0.5, e = 0.7, v0 = 110, vfloor = 5, curve = 1, min_gap = 0.005, len_pct = 1,
+                jit_t = 0.02, jit_v = 20, seed = 42 }
     local x, y = bounces(p), bounces(p)
     assert(#x == #y and x[3].t == y[3].t and x[4].vel == y[4].vel)
+    assert(x[1].t == 0 and x[1].vel == 110)
+    for seed = 1, 200 do
+        p.seed = seed
+        local s = bounces(p)
+        for i = 1, #s - 1 do
+            assert(s[i + 1].t > s[i].t, "order")
+            assert(s[i].t + s[i].len <= s[i + 1].t + 1e-12, "overlap")
+            assert(s[i].len > 0)
+        end
+    end
+    -- looped item: start in pass 3 of a 1000-tick loop -> moved into pass 1, tail dropped / trimmed
+    local f, d = fit_loop({ { s = 2900, e = 2950, vel = 1 }, { s = 2980, e = 3050, vel = 2 },
+                            { s = 3100, e = 3150, vel = 3 } }, 1000)
+    assert(d == 1 and #f == 2 and f[1].s == 900 and f[2].s == 980 and f[2].e == 1000)
+    f, d = fit_loop({ { s = 100, e = 200, vel = 1 } }, 1000)
+    assert(d == 0 and f[1].s == 100 and f[1].e == 200)
     return print("Free fall self-check OK")
 end
 
@@ -60,6 +109,14 @@ require("_Lyx_HOME")
 local G = require("_Lyx_GUI")
 local R = reaper
 local EXT = "Lyx_FreeFall"
+
+-- slider ranges; also used to sanitise saved values
+local RANGE = {
+    e = { 0.30, 0.95 }, v0 = { 1, 127 }, vfloor = { 1, 127 }, curve = { 0.3, 2.5 },
+    len_pct = { 5, 100 }, min_gap = { 5, 80 }, jit_t = { 0, 20 }, jit_v = { 0, 20 },
+    first_beats = { 0.0625, 8 }, first_ms = { 20, 4000 },
+}
+local INT = { v0 = true, vfloor = true, len_pct = true, min_gap = true, jit_t = true, jit_v = true, src = true, unit = true }
 
 local function ld(k, d) return tonumber(R.GetExtState(EXT, k)) or d end
 local S = {
@@ -74,9 +131,17 @@ local S = {
     min_gap = ld("min_gap", 15),   -- ms
     jit_t   = ld("jit_t", 0),      -- ms
     jit_v   = ld("jit_v", 0),
-    pitch   = -1,
+    pitch   = 60,
     seed    = 1,
 }
+local function clamp(v, r) return math.max(r[1], math.min(r[2], v)) end
+do -- saved values may be stale or hand-edited
+    S.src  = math.floor(clamp(S.src, { 0, 2 }))
+    S.unit = (S.unit == 1) and 1 or 0
+    S.first = clamp(S.first, RANGE[S.unit == 0 and "first_beats" or "first_ms"])
+    for k, r in pairs(RANGE) do if S[k] then S[k] = clamp(S[k], r) end end
+    for k in pairs(INT) do S[k] = math.floor(S[k] + 0.5) end
+end
 local function save()
     for k, v in pairs(S) do
         if k ~= "pitch" and k ~= "seed" then R.SetExtState(EXT, k, tostring(v), true) end
@@ -97,7 +162,7 @@ local function editor_take()
     if tk and R.ValidatePtr(tk, "MediaItem_Take*") then return tk, me end
 end
 
--- start time (s) of the sequence + seconds per beat there
+-- first gap in seconds (beats are measured from the start position, so tempo is respected)
 local function first_gap_seconds(at)
     if S.unit == 1 then return S.first / 1000 end
     local qn = R.TimeMap2_timeToQN(0, at)
@@ -106,61 +171,129 @@ end
 
 local function params(at, total)
     local first = first_gap_seconds(at)
-    if total and total > 0 then first = total * (1 - S.e) end
+    if total and total > 0 then first = total * (1 - S.e) end -- geometric series sums to `total`
     return { first = first, e = S.e, v0 = S.v0, vfloor = S.vfloor, curve = S.curve,
              min_gap = S.min_gap / 1000, max_n = 128, len_pct = S.len_pct / 100,
              jit_t = S.jit_t / 1000, jit_v = S.jit_v, seed = S.seed }
 end
 
--- list of { at, pitch, vel, chan, total, src_idx }
+-- list of { at, pitch, chan, [vel, idx, e_ppq, muted] (selected notes), [total] (time sel) }
 local function seeds(take)
     local list = {}
-    if S.src == 1 and take then
+    if S.src == 1 then
         local i = R.MIDI_EnumSelNotes(take, -1)
         while i ~= -1 do
-            local _, _, _, s, _, ch, p, v = R.MIDI_GetNote(take, i)
-            list[#list + 1] = { at = R.MIDI_GetProjTimeFromPPQPos(take, s), pitch = p, vel = v, chan = ch, idx = i }
+            local _, _, mu, s, e, ch, p, v = R.MIDI_GetNote(take, i)
+            list[#list + 1] = { at = R.MIDI_GetProjTimeFromPPQPos(take, s), pitch = p, vel = v, chan = ch,
+                                idx = i, e_ppq = e, muted = mu }
             i = R.MIDI_EnumSelNotes(take, i)
         end
-    else
-        local me = R.MIDIEditor_GetActive()
-        local chan = me and R.MIDIEditor_GetSetting_int(me, "default_note_chan") or 0
-        local at, total = R.GetCursorPosition(), nil
-        if S.src == 2 then
-            local a, b = R.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
-            if b > a then at, total = a, b - a end
-        end
-        list[1] = { at = at, pitch = S.pitch, chan = chan, total = total }
+        if #list == 0 then return nil, "No notes selected" end
+        return list
     end
+    local me = R.MIDIEditor_GetActive()
+    local chan = me and R.MIDIEditor_GetSetting_int(me, "default_note_chan") or 0
+    local at, total = R.GetCursorPosition(), nil
+    if S.src == 2 then
+        local a, b = R.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
+        if b <= a then return nil, "No time selection" end
+        at, total = a, b - a
+    end
+    list[1] = { at = at, pitch = S.pitch, chan = chan, total = total }
     return list
 end
 
-local function insert(take)
+-- Everything Insert will write, computed the same way for the preview.
+-- -> plan { sets = { {sd, seq, notes(ppq)} }, count, dropped, extend_to, item, ipos } | nil, reason
+local function plan(take)
+    if not take then return nil, "Open a MIDI editor first" end
+    local list, err = seeds(take)
+    if not list then return nil, err end
     local item = R.GetMediaItemTake_Item(take)
-    R.Undo_BeginBlock()
-    local last_end = 0
-    local list = seeds(take)
-    -- remove source notes (they become the first hit), highest index first
-    if S.src == 1 then
-        for i = #list, 1, -1 do R.MIDI_DeleteNote(take, list[i].idx) end
+    local ipos = R.GetMediaItemInfo_Value(item, "D_POSITION")
+    local iend = ipos + R.GetMediaItemInfo_Value(item, "D_LENGTH")
+
+    -- loop length (PPQ) only when the item really repeats; a default single-pass MIDI
+    -- item also has "Loop source" on, and that one simply gets extended.
+    local L
+    if R.GetMediaItemInfo_Value(item, "B_LOOPSRC") == 1 then
+        local qn = R.GetMediaSourceLength(R.GetMediaItemTake_Source(take))
+        local rate = R.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+        local tpq = (R.MIDI_GetPPQPosFromProjQN(take, 1) - R.MIDI_GetPPQPosFromProjQN(take, 0)) / rate
+        local src = qn * tpq
+        if src > 0 and R.MIDI_GetPPQPosFromProjTime(take, iend) > src + 1 then L = src end
     end
-    for _, sd in ipairs(list) do
+
+    local pl = { sets = {}, count = 0, dropped = 0, item = item, ipos = ipos }
+    local last_end = 0
+    for i, sd in ipairs(list) do
+        if not sd.idx and (sd.at < ipos - 1e-9 or sd.at >= iend) then
+            return nil, (S.src == 2) and "Time selection starts outside the MIDI item"
+                                      or "Edit cursor is outside the MIDI item"
+        end
         local p = params(sd.at, sd.total)
+        p.seed = S.seed + i - 1 -- each selected note gets its own humanize
         if sd.vel then p.v0 = sd.vel end
-        for _, n in ipairs(bounces(p)) do
+        local seq = bounces(p)
+        local notes = {}
+        for _, n in ipairs(seq) do
             local s, e = sd.at + n.t, sd.at + n.t + n.len
-            R.MIDI_InsertNote(take, false, false, R.MIDI_GetPPQPosFromProjTime(take, s),
-                R.MIDI_GetPPQPosFromProjTime(take, e), sd.chan, sd.pitch, n.vel, true)
+            notes[#notes + 1] = { s = R.MIDI_GetPPQPosFromProjTime(take, s),
+                                  e = R.MIDI_GetPPQPosFromProjTime(take, e), vel = n.vel }
             if e > last_end then last_end = e end
+        end
+        if sd.idx and seq[1] then -- the selected note itself stays; show its real (trimmed) length
+            local len = R.MIDI_GetProjTimeFromPPQPos(take, sd.e_ppq) - sd.at
+            seq[1].len = seq[2] and math.min(len, seq[2].t) or len
+            if seq[1].len > last_end - sd.at then last_end = sd.at + seq[1].len end
+        end
+        if L and #notes > 0 then
+            local d
+            notes, d = fit_loop(notes, L)
+            pl.dropped = pl.dropped + d
+        end
+        pl.sets[i] = { sd = sd, seq = seq, notes = notes }
+        pl.count = pl.count + #notes
+    end
+    if not L and last_end > iend + 1e-9 then pl.extend_to = last_end end
+    if pl.count == 0 then return nil, "Nothing to insert" end
+    return pl
+end
+
+local function insert(take, pl)
+    R.Undo_BeginBlock()
+    R.PreventUIRefresh(1)
+    -- the inserted notes become the note selection
+    local i = R.MIDI_EnumSelNotes(take, -1)
+    while i ~= -1 do
+        R.MIDI_SetNote(take, i, false, nil, nil, nil, nil, nil, nil, true)
+        i = R.MIDI_EnumSelNotes(take, i)
+    end
+    -- selected notes stay as the first hit (shortened only if they'd overlap hit 2);
+    -- done before any insert so the note indices are still valid
+    for _, set in ipairs(pl.sets) do
+        local sd, n2 = set.sd, set.notes[2]
+        if sd.idx then
+            R.MIDI_SetNote(take, sd.idx, true, nil, nil, n2 and math.min(sd.e_ppq, n2.s) or nil,
+                nil, nil, nil, true)
+        end
+    end
+    for _, set in ipairs(pl.sets) do
+        local sd = set.sd
+        for k = sd.idx and 2 or 1, #set.notes do
+            local n = set.notes[k]
+            R.MIDI_InsertNote(take, true, sd.muted or false, n.s, n.e, sd.chan, sd.pitch, n.vel, true)
         end
     end
     R.MIDI_Sort(take)
-    local ipos = R.GetMediaItemInfo_Value(item, "D_POSITION")
-    if last_end > ipos + R.GetMediaItemInfo_Value(item, "D_LENGTH") then
-        R.MIDI_SetItemExtents(item, R.TimeMap2_timeToQN(0, ipos), R.TimeMap2_timeToQN(0, last_end))
+    if pl.extend_to then
+        R.MIDI_SetItemExtents(pl.item, R.TimeMap2_timeToQN(0, pl.ipos), R.TimeMap2_timeToQN(0, pl.extend_to))
     end
     local me = R.MIDIEditor_GetActive()
-    if me then R.MIDIEditor_OnCommand(me, 40659) end -- correct overlapping notes
+    if me and R.MIDIEditor_GetTake(me) == take then
+        R.MIDIEditor_OnCommand(me, 40659) -- correct overlapping notes (only the selection = ours)
+    end
+    R.PreventUIRefresh(-1)
     R.UpdateArrange()
     R.Undo_EndBlock("Insert free fall MIDI notes", -1)
 end
@@ -172,10 +305,13 @@ local ctx = G.new("Free fall")
 if not ctx then return end
 do
     local tk, me = editor_take()
-    S.pitch = me and R.MIDIEditor_GetSetting_int(me, "active_note_row") or 60
+    if me then S.pitch = R.MIDIEditor_GetSetting_int(me, "active_note_row") end
     if tk and R.MIDI_EnumSelNotes(tk, -1) ~= -1 then S.src = 1
     elseif S.src == 1 then S.src = 0 end
 end
+
+local LABEL_W = 110 -- left label column (same as Randomize...)
+local CLAMP = R.ImGui_SliderFlags_AlwaysClamp()
 
 local function graph(ctx, seq)
     local dl = R.ImGui_GetWindowDrawList(ctx)
@@ -197,7 +333,7 @@ local function graph(ctx, seq)
     local g0 = (seq[2] and (seq[2].t - seq[1].t)) or 1
     for i = 1, #seq - 1 do
         local a, b = seq[i].t, seq[i + 1].t
-        local apex = maxh * ((b - a) / g0) ^ 2
+        local apex = maxh * math.min(1, ((b - a) / g0) ^ 2)
         local px, py = X(a), base
         for s = 1, 16 do
             local u = s / 16
@@ -217,97 +353,113 @@ local function graph(ctx, seq)
     end
 end
 
-local function slider_d(ctx, label, key, mn, mx, fmt, tip)
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
-    local c, v = R.ImGui_SliderDouble(ctx, label, S[key], mn, mx, fmt)
-    if c then S[key] = v end
+-- "Label      [slider.............]" row; `off` = text shown instead of the value while disabled
+local function label(ctx, text, tip)
+    R.ImGui_AlignTextToFramePadding(ctx)
+    R.ImGui_Text(ctx, text)
     if tip then R.ImGui_SetItemTooltip(ctx, tip) end
+    R.ImGui_SameLine(ctx, G.S(LABEL_W))
 end
-local function slider_i(ctx, label, key, mn, mx, fmt, tip)
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
-    local c, v = R.ImGui_SliderInt(ctx, label, S[key], mn, mx, fmt)
+local function slider(ctx, text, key, fmt, tip, off)
+    label(ctx, text, tip)
+    R.ImGui_BeginDisabled(ctx, off ~= nil)
+    R.ImGui_SetNextItemWidth(ctx, -1)
+    local r, f = RANGE[key], off or fmt
+    local c, v
+    if INT[key] then c, v = R.ImGui_SliderInt(ctx, "##" .. key, S[key], r[1], r[2], f, CLAMP)
+    else             c, v = R.ImGui_SliderDouble(ctx, "##" .. key, S[key], r[1], r[2], f, CLAMP) end
     if c then S[key] = v end
+    R.ImGui_EndDisabled(ctx)
     if tip then R.ImGui_SetItemTooltip(ctx, tip) end
 end
 
 G.run(ctx, "Free fall MIDI notes", function(ctx)
     local take = editor_take()
-    local list = seeds(take)
-    local sd = list[1]
-    local seq = {}
-    if sd then
-        local p = params(sd.at, sd.total)
-        if sd.vel then p.v0 = sd.vel end
-        seq = bounces(p)
-    end
+    local pl, err = plan(take)
+    local seq = pl and pl.sets[1].seq or bounces(params(R.GetCursorPosition()))
 
     graph(ctx, seq)
-    local dur = (#seq > 0) and (seq[#seq].t + seq[#seq].len) or 0
-    G.dim_text(ctx, ("%d notes · total %.2f s%s"):format(#seq, dur,
-        (#list > 1) and ("  · ×" .. #list .. " sets") or ""))
+    if pl then
+        local dur = (#seq > 0) and (seq[#seq].t + seq[#seq].len) or 0
+        local info = ("%d notes  ·  %.2f s"):format(pl.count, dur)
+        if #pl.sets > 1 then info = info .. ("  ·  %d bounces"):format(#pl.sets) end
+        if pl.extend_to then info = info .. "  ·  item will be extended" end
+        if pl.dropped > 0 then info = info .. ("  ·  %d past the loop end dropped"):format(pl.dropped) end
+        G.dim_text(ctx, info)
+    else
+        G.color_text(ctx, G.warn, err)
+    end
 
     R.ImGui_SeparatorText(ctx, "Start")
-    local srcs = { "Edit cursor", "Selected notes", "Time selection (fill)" }
-    for i, name in ipairs(srcs) do
+    label(ctx, "Start at")
+    local srcs = {
+        { "Edit cursor",    "One bounce starting at the edit cursor" },
+        { "Selected notes", "Each selected note becomes the first hit of its own bounce\n(pitch, velocity, channel and mute come from the note)" },
+        { "Time selection", "Fit the whole bounce into the time selection" },
+    }
+    for i, s in ipairs(srcs) do
         if i > 1 then R.ImGui_SameLine(ctx) end
-        if R.ImGui_RadioButton(ctx, name, S.src == i - 1) then S.src = i - 1 end
+        if R.ImGui_RadioButton(ctx, s[1], S.src == i - 1) then S.src = i - 1 end
+        R.ImGui_SetItemTooltip(ctx, s[2])
     end
+    local from_note = (S.src == 1) and "From each selected note" or nil
+    label(ctx, "Pitch", "Note of the bounce (starts on the MIDI editor's active note row)")
+    R.ImGui_BeginDisabled(ctx, from_note ~= nil)
+    R.ImGui_SetNextItemWidth(ctx, -1)
+    local pc, pv = R.ImGui_SliderInt(ctx, "##pitch", S.pitch, 0, 127,
+        from_note or pitch_label(take, S.pitch):gsub("%%", "%%%%"), CLAMP)
+    if pc then S.pitch = pv end
+    R.ImGui_EndDisabled(ctx)
+    slider(ctx, "Velocity", "v0", "%d", "Velocity of the first hit", from_note)
 
     R.ImGui_SeparatorText(ctx, "Bounce")
-    if S.src ~= 2 then
-        R.ImGui_SetNextItemWidth(ctx, -G.S(190))
-        local c, v
-        if S.unit == 0 then
-            c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, 0.0625, 8, "First gap %.3f beats", R.ImGui_SliderFlags_Logarithmic())
-        else
-            c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, 20, 4000, "First gap %.0f ms", R.ImGui_SliderFlags_Logarithmic())
-        end
-        if c then S.first = v end
-        R.ImGui_SameLine(ctx)
-        if R.ImGui_RadioButton(ctx, "Beats", S.unit == 0) and S.unit ~= 0 then
-            S.unit = 0; S.first = 1
-        end
-        R.ImGui_SameLine(ctx)
-        if R.ImGui_RadioButton(ctx, "ms", S.unit == 1) and S.unit ~= 1 then
-            S.unit = 1; S.first = 500
-        end
-    end
-    slider_d(ctx, "Bounciness", "e", 0.30, 0.95, "%.2f", "Restitution: higher bounces longer, gaps shrink slower")
-    slider_i(ctx, "Min gap", "min_gap", 5, 80, "%d ms", "Stops when the gap gets shorter (the ball comes to rest)")
+    local fit = (S.src == 2)
+    label(ctx, "First gap", "Time between the first and second hit")
+    R.ImGui_BeginDisabled(ctx, fit)
+    R.ImGui_SetNextItemWidth(ctx, -G.S(118))
+    local flags = R.ImGui_SliderFlags_Logarithmic() | CLAMP
+    local r = RANGE[S.unit == 0 and "first_beats" or "first_ms"]
+    local fmt = fit and "Fits the time selection" or (S.unit == 0 and "%.3f beats" or "%.0f ms")
+    local c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, r[1], r[2], fmt, flags)
+    if c then S.first = v end
+    R.ImGui_SetItemTooltip(ctx, "Time between the first and second hit")
+    R.ImGui_SameLine(ctx)
+    if R.ImGui_RadioButton(ctx, "Beats", S.unit == 0) and S.unit ~= 0 then S.unit = 0; S.first = 1 end
+    R.ImGui_SetItemTooltip(ctx, "Follows the project tempo at the start point")
+    R.ImGui_SameLine(ctx)
+    if R.ImGui_RadioButton(ctx, "ms", S.unit == 1) and S.unit ~= 1 then S.unit = 1; S.first = 500 end
+    R.ImGui_EndDisabled(ctx)
+    slider(ctx, "Bounciness", "e", "%.2f", "How much of each gap is left for the next one.\nHigher = more hits, gaps shrink slower")
+    slider(ctx, "Min gap", "min_gap", "%d ms", "Stops when the gap gets shorter than this (the ball comes to rest)")
 
     R.ImGui_SeparatorText(ctx, "Velocity & length")
-    if S.src ~= 1 then slider_i(ctx, "Start velocity", "v0", 1, 127, "%d") end
-    slider_i(ctx, "Min velocity", "vfloor", 1, 127, "%d", "Stops when velocity drops below this")
-    slider_d(ctx, "Decay curve", "curve", 0.3, 2.5, "%.2f", "1 = physically correct; >1 fades faster; <1 louder tail")
-    slider_i(ctx, "Length", "len_pct", 5, 100, "%d %%", "Each note's share of the gap to the next one")
-    if S.src ~= 1 then
-        R.ImGui_SetNextItemWidth(ctx, -G.S(110))
-        local c, v = R.ImGui_SliderInt(ctx, "Pitch", S.pitch, 0, 127, pitch_label(take, S.pitch))
-        if c then S.pitch = v end
-    end
+    slider(ctx, "Min velocity", "vfloor", "%d", "Stops when the velocity drops below this")
+    slider(ctx, "Decay curve", "curve", "%.2f", "1 = physically correct\n> 1 fades faster, < 1 keeps the tail louder")
+    slider(ctx, "Note length", "len_pct", "%d %%", "Each note's share of the gap to the next hit")
 
     R.ImGui_SeparatorText(ctx, "Humanize")
-    slider_i(ctx, "Timing jitter", "jit_t", 0, 20, "± %d ms")
-    slider_i(ctx, "Velocity jitter", "jit_v", 0, 20, "± %d")
-    if S.jit_t > 0 or S.jit_v > 0 then
-        if R.ImGui_Button(ctx, "Reroll") then S.seed = math.random(1, 2147483646) end
-    end
+    slider(ctx, "Timing", "jit_t", "± %d ms", "Random timing offset (never on the first hit, never enough to swap hits)")
+    slider(ctx, "Velocity", "jit_v", "± %d", "Random velocity offset (never on the first hit)")
 
-    R.ImGui_Dummy(ctx, 1, G.S(4))
-    local can = take ~= nil and #seq > 0 and not (S.src == 1 and #list == 0)
-    if not can then
-        G.color_text(ctx, G.warn, take and (S.src == 1 and "No notes selected" or "Nothing to insert") or "Open a MIDI editor first")
-    end
-    R.ImGui_BeginDisabled(ctx, not can)
-    local go = G.button(ctx, "Insert (Enter)", G.S(110))
-        or (can and R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Enter()) and not R.ImGui_IsAnyItemActive(ctx))
+    R.ImGui_Separator(ctx)
+    R.ImGui_BeginDisabled(ctx, S.jit_t == 0 and S.jit_v == 0)
+    if R.ImGui_Button(ctx, "Reroll") then S.seed = math.random(1, 2147483646) end
     R.ImGui_EndDisabled(ctx)
+    R.ImGui_SetItemTooltip(ctx, "New random humanize with the same settings")
     R.ImGui_SameLine(ctx)
-    if R.ImGui_Button(ctx, "Cancel", G.S(80)) then return false end
+    local bw = G.S(90)
+    R.ImGui_SetCursorPosX(ctx, R.ImGui_GetWindowWidth(ctx) - bw * 2 - G.S(20))
+    R.ImGui_BeginDisabled(ctx, not pl)
+    local go = G.button(ctx, "Insert", bw)
+        or (R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Enter()) and not R.ImGui_IsAnyItemActive(ctx))
+    R.ImGui_EndDisabled(ctx)
+    R.ImGui_SetItemTooltip(ctx, "Insert the notes and close (Enter)")
+    R.ImGui_SameLine(ctx)
+    if R.ImGui_Button(ctx, "Cancel", bw) then return false end
+    R.ImGui_SetItemTooltip(ctx, "Close without changing anything (Esc)")
 
-    if go then
-        save()
-        insert(take)
-        return false
+    if go and pl then
+        insert(take, pl)
+        return false -- on_close saves the settings
     end
-end, { w = 440, h = 640, on_close = save })
+end, { w = 480, h = 680, on_close = save })

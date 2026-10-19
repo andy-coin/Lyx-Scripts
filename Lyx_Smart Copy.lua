@@ -18,7 +18,7 @@
 
             razorData=razorMap[abi]
 
-            if  razorData.isenvelope then
+            if  razorData.isEnvelope then
 
                 local points=razorData.envelopePoints
 
@@ -72,8 +72,7 @@
         else
             local _,chunk=reaper.GetEnvelopeStateChunk(Env,"", false)
             local _,name=reaper.GetEnvelopeName(Env)
-            DATA['type']="Line"
-            DATA={chunk,name}
+            DATA={chunk,name,type="Line"}
             DATA=serialize(DATA)
         end
 
@@ -90,7 +89,7 @@
         tr_n=reaper.CountSelectedTracks(0)
         it_n=reaper.CountSelectedMediaItems(0)
         FX,trackidx,itemidx,takeidx,fxidx,parm = reaper.GetTouchedOrFocusedFX(1)
-        razor,razorMap=r.GetRazorEdits2(false,false)
+        razor,razorMap=r.GetRazorEdits(false,false)
         copy_chart={"Copy Track","Copy Item","Copy Razor area","Copy Envelope","Copy Track's FX Chain","Copy Focus FX Data"}
         win=reaper.BR_GetMouseCursorContext()
         

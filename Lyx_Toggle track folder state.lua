@@ -91,10 +91,12 @@
         end
 
         if  not comping then 
+            local done = {} -- each parent toggles only once
             for abi=1,#trz do
                 local parent,key,B_AUTO,children
                 parent = (reaper.GetMediaTrackInfo_Value(trz[abi],"I_FOLDERDEPTH")==1 and trz[abi]) or r.HaveParent(trz[abi],false)
-                if  parent then
+                if  parent and not done[parent] then
+                    done[parent] = true
                     reaper.SetOnlyTrackSelected(parent)
                     key=reaper.GetMediaTrackInfo_Value(parent,"I_FOLDERCOMPACT")
 

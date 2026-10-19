@@ -1,5 +1,6 @@
   
   r=reaper
+  if not reaper.BR_GetMouseCursorContext then reaper.MB("This script needs the SWS extension (install via ReaPack / sws-extension.org).","Lyx Scripts",0) return end
   
   local function main()
       

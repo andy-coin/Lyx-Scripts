@@ -46,8 +46,8 @@
                 local item,take,ori_name,new_name,pos
                 item=reaper.GetSelectedMediaItem(0,abi-1)
                 take=reaper.GetActiveTake(item)
-                _,ori_name=reaper.GetSetMediaItemTakeInfo_String(take,"P_NAME","",false)
                 if not take then goto NEXT end
+                _,ori_name=reaper.GetSetMediaItemTakeInfo_String(take,"P_NAME","",false)
                 
                 if  string.len(answer[2])>0 then
                     new_name=ori_name:gsub(ESCPattern(answer[2]),answer[3])

@@ -19,7 +19,7 @@
         api.cmd(40528,0) --sel ect items under mouse cursor
 
         if  item_group then api.cmd(40034,0) end --select items in group        
-        if  snap and api.gps(0) == 0 then api.sec(cursor,false,false) end
+        if  mouse >= 0 and snap and api.gps(0) == 0 then api.sec(cursor,false,false) end
         if auto_change_fx_window and api.mcw() == 'tcp' then r.SwitchFxWindow(api.gst(0,0)) end
 
         api.ua()

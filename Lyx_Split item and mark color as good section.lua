@@ -7,7 +7,7 @@
     
         range = 2 --second
         pre_offset = (api.gps()~=0 and 0.5) or 0 --second
-        target_color = 33549568 --gray (RGB)
+        target_color = reaper.ColorToNative(255,236,0)|0x1000000 --yellow
 
     local function main()
 
@@ -28,7 +28,8 @@
         for abi=1,#itemz do
             
             local item = itemz[abi]
-            if  reaper.TakeIsMIDI(reaper.GetActiveTake(item))  then goto NEXT end
+            local take = reaper.GetActiveTake(item)
+            if  not take or reaper.TakeIsMIDI(take) then goto NEXT end -- skip empty and MIDI items
 
             local target_item = reaper.SplitMediaItem(item,edge_s)
 

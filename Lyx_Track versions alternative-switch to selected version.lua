@@ -4,7 +4,6 @@
 
     -- Track versions on REAPER 7 fixed lanes: play the lane under the mouse
     -- and show its lane name in the track name ("Vox   [ Take 3 ]").
-    -- Also used by "Lyx_Click with shift add tracks selection" (require'd, returns SwitchVersion).
     -- (old folder-track version system removed; it is in git history)
     local function SwitchVersion(track)
         if not track then return false end

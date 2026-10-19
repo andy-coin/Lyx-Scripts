@@ -5,6 +5,8 @@
     local r=require("_Lyx_HOME")
 
     TCP_max = r.GetTCP_Size()
+    local FATTY_name = "\30\31\30\31\30\31" -- invisible spacer track under the MIDI editor
+    local ZoomToNotes = require("MIDI Editor/Lyx_Zoom to notes")
     
     mainHWND = reaper.GetMainHwnd()
     windowHWND = reaper.JS_Window_FindChildByID(mainHWND,1000)
@@ -26,22 +28,23 @@
                  
     --------------
     local function Kill_Dummy_Space()
-        
-        --local FATTY_name = "I'm HAPPY BEAUTY FATTY KIWI"
-        local FATTY_name = "\30\31\30\31\30\31"
-
-        if  FATTY_name then
-            repeat
-                tr=reaper.GetTrack(0,reaper.CountTracks(0)-1)
-                _,name=reaper.GetTrackName(tr)
-                if  name == FATTY_name then
-                    reaper.DeleteTrack(tr)
-                else
-                    break
-                end
-            until not tr
+        while true do
+            local tr = reaper.GetTrack(0, reaper.CountTracks(0)-1)
+            if not tr then break end
+            local _, name = reaper.GetTrackName(tr)
+            if name ~= FATTY_name then break end
+            reaper.DeleteTrack(tr)
         end
+    end
 
+    -- set track heights directly (replaces r.SameTCPH, which stepped zoom actions dozens of times)
+    local function SetHeights(trz, h)
+        for _, tr in ipairs(trz) do
+            if reaper.ValidatePtr2(0, tr, "MediaTrack*") then
+                reaper.SetMediaTrackInfo_Value(tr, "I_HEIGHTOVERRIDE", math.floor(h))
+            end
+        end
+        reaper.TrackList_AdjustWindows(false)
     end
 
     --------------
@@ -49,7 +52,7 @@
         local e = {}
         for v in api.load("Item Editor","midi editor window position"):gmatch("(-?[%d.]+)|") do e[#e+1] = tonumber(v) end
         if  #e == 4 then -- saved spot, kept only while its monitor is still connected
-            local cx, cy = (e[1]+e[3])/2, (e[2]+e[4])/2
+            local cx, cy = math.floor((e[1]+e[3])/2), math.floor((e[2]+e[4])/2) -- my_getViewport wants integers
             local vl, vt, vr, vb = reaper.my_getViewport(0, 0, 0, 0, cx, cy, cx+1, cy+1, true)
             if cx >= vl and cx <= vr and cy >= math.min(vt,vb) and cy <= math.max(vt,vb) then
                 return e[1], e[2], e[3], e[4]
@@ -106,11 +109,14 @@
         local TR_code = {}
         local TR_TCPH = {}
         for abi = 1,#tracks do
+            if  api.gtv(tracks[abi],"C_LANESCOLLAPSED")==0 then
+                reaper.Main_OnCommand(43100,0)--small lane (acts on all selected tracks, once is enough)
+                break
+            end
+        end
+        for abi = 1,#tracks do
             local tr = tracks[abi]
             _,TR_code[abi] = reaper.GetSetMediaTrackInfo_String(tr,"GUID","",false)
-            if  api.gtv(tr,"C_LANESCOLLAPSED")==0 then
-                reaper.Main_OnCommand(43100,0)--small lane
-            end
             TR_TCPH[abi] = reaper.GetMediaTrackInfo_Value(tr,"I_TCPH")
         end
 
@@ -149,7 +155,7 @@
         for abi=1,#code do
             trz[#trz+1]=reaper.BR_GetMediaTrackByGUID(0,code[abi])
             if  not TCPH[abi+1] or TCPH[abi]~=TCPH[abi+1] then
-                r.SameTCPH(trz,TCPH[abi],false)
+                SetHeights(trz,TCPH[abi])
                 trz={}
           end
         end 
@@ -176,128 +182,6 @@
 
         --api.save("Item Editor",pro_name.."__toggle",0,true)
 
-    end
-    
-    ----------------------------------VERTICAL ZOOM TO MIDI NOTE--------------------------------
-    local function ZoomInMidiNote(E,midi_item)
-
-        local low=127
-        local high=0
-        local n = {}
-        
-        if  #midi_item==1 then
-            t = reaper.MIDIEditor_GetTake(E)
-            _,ALL,_,_ = reaper.MIDI_CountEvts(t)
-            
-            for abii=1,ALL do 
-                local _,selected,_,_,_,_,pitch,_ = reaper.MIDI_GetNote(t,abii-1)
-                if  high<pitch then high=pitch end
-                if  low>pitch then low=pitch end
-                if  selected then 
-                    n[#n+1] = pitch 
-                end
-            end
-            goto Sort
-        else
-            for abi=1,#midi_item do
-                t = reaper.GetActiveTake(midi_item[abi])
-                _,ALL,_,_ = reaper.MIDI_CountEvts(t)
-                
-                if  ALL == 0 then goto NEXT end
-                
-                for abii =1,ALL do 
-                    local _,selected,_,_,_,_,pitch,_ = reaper.MIDI_GetNote(t,abii-1)
-                    if  high<pitch then high=pitch end
-                    if  low>pitch then low=pitch end
-                    if  selected then 
-                        n[#n+1] = pitch 
-                    end
-                end
-                ::NEXT::
-            end
-        end
-        
-        t = reaper.MIDIEditor_GetTake(E)
-        
-        ::Sort::
-        local ori_curs = reaper.MIDIEditor_GetSetting_int(E, 'active_note_row')
-        local ZoomChart={112,94,80,70,63,56,51,47,43,40,37,35,33,31,29,28,26,25,24,23,22,21,20,19,18,0}
-        
-        channel=reaper.MIDIEditor_GetSetting_int(E,"default_note_chan")
-        
-        reaper.MIDI_InsertNote(t,false,true,0,60*16,channel,0,127,false)
-        reaper.MIDI_InsertNote(t,false,true,0,60*16,channel,127,127,false)
-        
-        reaper.MIDIEditor_OnCommand(E,40466)--zoom to content
-        
-        local abi=0
-        local FOUND=false
-        local found=false
-        
-        local time=api.now()
-        
-        repeat
-            local _,_,mute,_,_,_,pitch,velocity = reaper.MIDI_GetNote(t, abi )
-            if pitch==127 and mute and velocity==127 then
-                A_9=abi
-                FOUND=true
-            end
-            if pitch==0 and mute and velocity==127 then
-                C_0=abi
-                found=true
-            end
-            abi=abi+1
-        until (FOUND and found) or (api.now()-time)>1.5
-        
-        if  FOUND and found then
-            reaper.MIDI_DeleteNote(t,A_9)
-            reaper.MIDI_DeleteNote(t,C_0)
-        end
-        
-        if  #n ==0 then --whole midi note
-        
-            center=math.floor((low+high)/2)
-            range=high-low+10
-            goto Zoom
-        end
-        
-        table.sort(n)
-        
-        if  #n>=2 and n[#n]-n[1]+10 >ZoomChart[1] then
-            reaper.MIDIEditor_OnCommand(E,40725)--zoom to selected note
-            reaper.MIDIEditor_OnCommand(E,40214)--unselect all note
-            return 
-        end
-        
-        if  #n==1 then
-            center=n[1]
-            range=11
-        else
-            center=math.floor((n[#n]+n[1])/2)
-            range=n[#n]-n[1]+10
-        end
-        
-        ::Zoom::
-        reaper.MIDIEditor_SetSetting_int(E,'active_note_row',center)
-        cmd=reaper.NamedCommandLookup("_WOL_SETHZOOMC_EDITCUR")
-        reaper.Main_OnCommand(cmd,0)
-        for abi=2,#ZoomChart do
-            if  range >ZoomChart[abi] then
-                local times=math.min(abi-1,13)
-                for abii=1,times do
-                    reaper.MIDIEditor_OnCommand(E,40111)
-                end
-                break
-            end
-        end
-        reaper.MIDIEditor_OnCommand(E,40725)--zoom to selected note
-        cmd=reaper.NamedCommandLookup("_WOL_SETHZOOMC_EDITCUR")
-        reaper.Main_OnCommand(cmd,0)
-        reaper.MIDIEditor_OnCommand(E,1011)
-        cmd=reaper.NamedCommandLookup("_WOL_SETHZOOMC_MOUSECUR")
-        reaper.Main_OnCommand(cmd,0)
-        reaper.MIDIEditor_SetSetting_int(E,'active_note_row',ori_curs)
-        reaper.MIDIEditor_OnCommand(E,40214)--unselect all note
     end
     
     ----------------
@@ -342,19 +226,7 @@
         if  reaper.MIDIEditor_GetActive() then
             reaper.defer(RefreshMIDIEditor)
         else
-            if  FATTY_name then
-                local tr,_,name
-                repeat
-                    tr=reaper.GetTrack(0,reaper.CountTracks(0)-1)
-                    if not tr then break end
-                    _,name=reaper.GetTrackName(tr)
-                    if  name == FATTY_name then
-                        reaper.DeleteTrack(tr)
-                    else
-                        break
-                    end
-                until not tr
-            end
+            Kill_Dummy_Space()
             
             if  api.load("MIDI_OPEN",pro_name)=="1" then
                 api.save("MIDI_OPEN",pro_name,0,false)
@@ -439,7 +311,7 @@
             ceiling=midi_editor.screen_height-target*#target_trs
         end
                 
-        r.SameTCPH(target_trs,target,false)
+        SetHeights(target_trs,target)
 
         if  max-min < 2 then
             local center = (max+min)/2
@@ -483,7 +355,7 @@
 
         if  midi then
             
-            local starttime, endtime, V_zoom, H_zoom
+            local starttime, endtime, H_zoom
             
             starttime, endtime = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
             
@@ -505,8 +377,7 @@
             H_zoom = 40151
             
             reaper.MIDIEditor_OnCommand(MIDI,H_zoom)
-            --ZoomInMidiNote(MIDI,itemz)
-            --reaper.MIDIEditor_OnCommand(MIDI,V_zoom)
+            ZoomToNotes(MIDI) -- notes in the time selection are selected now: fit to them, else to all notes
             reaper.MIDIEditor_OnCommand(MIDI,40214)--unselect all notes
             reaper.GetSet_LoopTimeRange2(0, true, false,starttime, endtime, false)
             
@@ -520,7 +391,7 @@
             reaper.InsertTrackAtIndex(idx,false)
             local tr=reaper.GetTrack(0,idx-1)
             local _,chunk=reaper.GetTrackStateChunk(tr,"",false)
-            chunk=chunk:gsub('NAME ""','NAME "'.. "\30\31\30\31\30\31" ..'"')
+            chunk=chunk:gsub('NAME ""','NAME "'.. FATTY_name ..'"')
             chunk=chunk:gsub("(TRACKHEIGHT )%d+",'%1'..tostring(FATTY))
             reaper.SetTrackStateChunk(tr,chunk,false)
 
@@ -653,7 +524,7 @@
     ---------EXECUTE--------
     ------------------------
 
-    main()
+    main() -- no PreventUIRefresh here: scroll restore needs the live track layout
     r.AdjustGrid()
     
     reaper.defer(function()end)

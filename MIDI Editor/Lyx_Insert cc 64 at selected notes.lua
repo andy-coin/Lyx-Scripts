@@ -3,6 +3,7 @@
     script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
     
     --------------
      
@@ -17,9 +18,9 @@
         silence = true --peakL+peakR < 0.003
 
         editor = reaper.MIDIEditor_GetActive()
-        --if not editor or api.gps() ~= 0  or not silence  then return end
+        if not editor then return end
         
-        --api.ubb()--undo begin block
+        api.ubb()--undo begin block
         
         time = api.now()
         timeout = 1
@@ -58,10 +59,12 @@
                 end
             end
                      
+            reaper.MIDI_DisableSort(tk) -- sort once after all inserts, not after each one
             for abii = 1, #point, 2 do
                 reaper.MIDI_InsertCC(tk,true,false,point[abii] + abii%2 ,176,0,cc_lane, 0)
                 reaper.MIDI_InsertCC(tk,true,false,point[abii] + abii%2 + lookahead*4 ,176,0,cc_lane, 127)
             end
+            reaper.MIDI_Sort(tk)
                 
             ::NEXT::                
             
@@ -73,12 +76,12 @@
                 
         end
          
-        cmd = api.name("_BR_ME_SET_CC_LANES_HEIGHT_200")
+        local cmd = api.name("_BR_ME_SET_CC_LANES_HEIGHT_200")
         api.Mcmd(editor,cmd)
         
         reaper.MIDIEditor_OnCommand(editor,40669)--Unselect all CC events in last clicked lane
         
-        --api.ueb(0,"Insert cc events at the start and the end of selected notes",-1)
+        api.ueb(0,"Insert CC64",-1)
     end
     
     main()

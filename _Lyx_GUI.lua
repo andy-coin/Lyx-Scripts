@@ -41,12 +41,18 @@ G.load_theme()
 function G.S(v) return v * G.scale end
 
 function G.new(title)
-    if not R.ImGui_CreateContext then
-        R.MB("This script needs the ReaImGui extension.\nInstall \"ReaImGui: ReaScript binding for Dear ImGui\" with ReaPack.", title or "Lyx", 0)
+    if not R.ImGui_CreateFontFromFile then -- ReaImGui 0.10+ API (PushFont with size, PushItemFlag...)
+        R.MB("This script needs:\n\n- ReaImGui 0.10 or newer: Extensions > ReaPack > Browse packages > \"ReaImGui\" (update it if already installed)\n\nNo ReaPack yet? Get it at reapack.com, then restart REAPER after installing.", "Lyx Scripts", 0)
         return
     end
     local ctx = R.ImGui_CreateContext(title or "Lyx")
-    local ok, font = pcall(R.ImGui_CreateFontFromFile, "/System/Library/Fonts/PingFang.ttc", 0)
+    -- CJK-capable font for this OS, else sans-serif
+    local os_name = R.GetOS()
+    local file = ((os_name:find("OSX") or os_name:find("mac")) and "/System/Library/Fonts/PingFang.ttc")
+              or (os_name:find("Win") and "C:/Windows/Fonts/msjh.ttc")
+              or "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+    local ok, font = false, nil
+    if R.file_exists(file) then ok, font = pcall(R.ImGui_CreateFontFromFile, file, 0) end
     if not ok or not font then font = R.ImGui_CreateFont("sans-serif") end
     R.ImGui_Attach(ctx, font)
     G.font = font

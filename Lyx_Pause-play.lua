@@ -57,7 +57,10 @@
                 reaper.SetEditCurPos(A,false,false)
             end
             
-            if not Update_record_content(midi_tr) and api.csi(0)==0 then return end
+            if not Update_record_content(midi_tr) and api.csi(0)==0 then
+                reaper.Undo_EndBlock2(0,"Stop recording",-1) -- keep the undo block balanced
+                return
+            end
             
             reaper.Undo_EndBlock2(0,"",-1)
             reaper.Undo_DoUndo2(0)
@@ -81,12 +84,15 @@
 
             if  pause_mode~="1" then  
                 pause_mode=0
-                reaper.SetThemeColor("col_cursor" ,2154964,0)
-                reaper.SetThemeColor("col_cursor2",2278362,0)
-                reaper.SetThemeColor("col_cursor2",2278362,0)
+                -- entering pause mode: remember the theme's own cursor colours, then tint them cyan
+                api.save("Play mode","col_cursor" ,reaper.GetThemeColor("col_cursor",0),false)
+                api.save("Play mode","col_cursor2",reaper.GetThemeColor("col_cursor2",0),false)
+                reaper.SetThemeColor("col_cursor" ,reaper.ColorToNative(32,225,212),0)
+                reaper.SetThemeColor("col_cursor2",reaper.ColorToNative(34,195,218),0)
             else
-                reaper.SetThemeColor("col_cursor" ,16167531,0)
-                reaper.SetThemeColor("col_cursor2",16171834,0)
+                -- leaving pause mode: put the theme's cursor colours back (-1 = theme default)
+                reaper.SetThemeColor("col_cursor" ,tonumber(api.load("Play mode","col_cursor")) or -1,0)
+                reaper.SetThemeColor("col_cursor2",tonumber(api.load("Play mode","col_cursor2")) or -1,0)
             end
             
             reaper.UpdateTimeline()

@@ -8,11 +8,11 @@
     --------------
     local function main()
         
-        reaper.Undo_BeginBlock()
-
         r.SelTrackFilter()
         
         if api.cst(0) == 0 then return end
+
+        reaper.Undo_BeginBlock()
         
         pan_data = {}
         for abi=1,api.cst(0) do

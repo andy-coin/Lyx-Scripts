@@ -48,63 +48,80 @@
         return ENV
     end
 
-    local function PastePoint(ENV,DATA,cursor,point_offset)
-        
-        if  #ENV>0 then
-            for sun=1,#DATA do
-                for suni=1,#DATA[sun]-2 do
-                    local point_time,value,shapeOut,tension,values,free_env,armed,defaultShape,faderScaling
-                    values={}
-                    for data in DATA[sun][suni]:gmatch("(.-)|") do
+    -- GROUPS[n] = list of "time|value|shape|tension|" strings, pasted into ENV[n]
+    local function PastePoint(ENV,GROUPS,cursor,point_offset)
+
+        for sun=1,math.min(#GROUPS,#ENV) do
+            local env=ENV[sun]
+            for _,str in ipairs(GROUPS[sun]) do
+                if  type(str)=="string" and str:find("|") then
+                    local values={}
+                    for data in str:gmatch("(.-)|") do
                         values[#values+1]=tonumber(data)
                     end
-                    point_time=values[1]+cursor-point_offset
-                    value=values[2]
-                    shapeOut=values[3]
-                    tension=values[4]
-                    if sun>#ENV then return end
-                    reaper.InsertEnvelopePoint(ENV[sun],point_time,value,shapeOut,tension,false,true)
-                    reaper.Envelope_SortPoints(ENV[sun])
-                    free_env=reaper.BR_EnvAlloc(ENV[sun],false)
-                    _,_,armed,_,_,defaultShape,_,_,_,_,faderScaling=reaper.BR_EnvGetProperties(free_env)
-                    reaper.BR_EnvSetProperties(free_env,true,true,armed,true,128,defaultShape,faderScaling)
-                    reaper.BR_EnvFree(free_env,true)
+                    reaper.InsertEnvelopePoint(env,values[1]+cursor-point_offset,values[2],values[3],values[4],false,true)
                 end
             end
+            reaper.Envelope_SortPoints(env)
+            local free_env=reaper.BR_EnvAlloc(env,false)
+            local _,_,armed,_,_,defaultShape,_,_,_,_,faderScaling=reaper.BR_EnvGetProperties(free_env)
+            reaper.BR_EnvSetProperties(free_env,true,true,armed,true,128,defaultShape,faderScaling)
+            reaper.BR_EnvFree(free_env,true)
         end
+    end
+
+    -- envelope under mouse / selected (plus following visible lanes); else first envelope of each selected track
+    local function PasteToTargets(GROUPS,point_offset)
+        local cursor=reaper.GetCursorPosition()
+        reaper.BR_GetMouseCursorContext()
+        local ENV=FindVisEnv(reaper.GetSelectedEnvelope(0) or reaper.BR_GetMouseCursorContext_Envelope())
+        if  #ENV>0 then
+            PastePoint(ENV,GROUPS,cursor,point_offset)
+            return true
+        end
+        local pasted
+        for _,tr in ipairs(r.SaveTracks()) do
+            local env=reaper.GetTrackEnvelope(tr,0)
+            if  env then
+                PastePoint(FindVisEnv(env),GROUPS,cursor,point_offset)
+                pasted=true
+            end
+        end
+        return pasted
+    end
+
+    -- razor copy: DATA = { {points..., areaStart}, ..., with_item="true"/"nil" }
+    local function PasteRazorEnvelope()
+        local DATA=unserialize(reaper.GetExtState("EnvCopyBuff","EnvCopyBuff"))
+        if  DATA.with_item=="true" or #DATA==0 then return false end
+        local offset=math.huge
+        for _,group in ipairs(DATA) do
+            local s=tonumber(group[#group])
+            if s and s<offset then offset=s end
+        end
+        if offset==math.huge then return false end
+        PasteToTargets(DATA,offset)
+        return true
     end
     --------------
     local function PasteEnvelope()
-        
-        local DATA,ENV,Env,_,Env_name,Env_tr,trackz,pasted_item
+
+        local DATA,trackz,pasted_item
 
         pasted_item="nothing..."
 
-        DATA=reaper.GetExtState("EnvCopyBuff","EnvCopyBuff",false)
-        
-        if not DATA then return pasted_item end
-        
-        DATA=unserialize(DATA)
-        
-        --if true then return end
-        --local withItem = DATA.withItem
-        --table.remove(DATA)
-
+        DATA=unserialize(reaper.GetExtState("EnvCopyBuff","EnvCopyBuff"))
         trackz=r.SaveTracks()
-        reaper.BR_GetMouseCursorContext()
-        Env=reaper.GetSelectedEnvelope(0) or reaper.BR_GetMouseCursorContext_Envelope() 
-        ENV=FindVisEnv(Env)
 
-        
         if  DATA.type=="Line" then
+            local env_name=DATA[2]
             for sun=1,#trackz do
-                local pasted,tr,env,env_n,free_env,visble,armed,inLane,LaneHeight,defaultShape,faderScaling
+                local pasted,tr,env,free_env,visble,armed,inLane,LaneHeight,defaultShape,faderScaling
                 tr=trackz[sun]
-                env_n=reaper.CountTrackEnvelopes(tr)
-                for suni=1,env_n do
+                for suni=1,reaper.CountTrackEnvelopes(tr) do
                     env=reaper.GetTrackEnvelope(tr,suni-1)
                     local _,name=reaper.GetEnvelopeName(env)
-                    if  name==DATA[#DATA-1] then
+                    if  name==env_name then
                         reaper.SetEnvelopeStateChunk(env,DATA[1],true)
                         pasted=true
                         break
@@ -112,42 +129,33 @@
                 end
                 if  not pasted then
                     reaper.SetOnlyTrackSelected(tr)
-                    if     DATA[#DATA-1] == "Volume" then reaper.Main_OnCommand(40406, 0) -- show track volume envelope
-                    elseif DATA[#DATA-1] == "Pan" then reaper.Main_OnCommand(40407, 0)    -- show track pan envelope
-                    elseif DATA[#DATA-1] == "Mute" then reaper.Main_OnCommand(40867, 0)   -- show track mute envelope
-                    elseif DATA[#DATA-1] == "Volume (Pre-FX)" then reaper.Main_OnCommand(40408, 0) -- show track pre-FX volume envelope
-                    elseif DATA[#DATA-1] == "Pan (Pre-FX)" then reaper.Main_OnCommand(40051, 0) -- show track pre-FX pan envelope
+                    if     env_name == "Volume" then reaper.Main_OnCommand(40406, 0) -- show track volume envelope
+                    elseif env_name == "Pan" then reaper.Main_OnCommand(40407, 0)    -- show track pan envelope
+                    elseif env_name == "Mute" then reaper.Main_OnCommand(40867, 0)   -- show track mute envelope
+                    elseif env_name == "Volume (Pre-FX)" then reaper.Main_OnCommand(40408, 0) -- show track pre-FX volume envelope
+                    elseif env_name == "Pan (Pre-FX)" then reaper.Main_OnCommand(40051, 0) -- show track pre-FX pan envelope
                     end
-                    env=reaper.GetTrackEnvelopeByName(tr,DATA[#DATA-1])
-                    reaper.SetEnvelopeStateChunk(env,DATA[1],true)
+                    env=reaper.GetTrackEnvelopeByName(tr,env_name)
+                    if env then reaper.SetEnvelopeStateChunk(env,DATA[1],true) end
                 end
-                reaper.Envelope_SortPoints(env)
-                free_env=reaper.BR_EnvAlloc(env,false)
-                _,visble,armed,inLane,LaneHeight,defaultShape,_,_,_,_,faderScaling=reaper.BR_EnvGetProperties(free_env)
-                reaper.BR_EnvSetProperties(free_env,visble,true,armed,inLane,LaneHeight,defaultShape,faderScaling)
-                reaper.BR_EnvFree(free_env,true)
+                if  env then
+                    reaper.Envelope_SortPoints(env)
+                    free_env=reaper.BR_EnvAlloc(env,false)
+                    _,visble,armed,inLane,LaneHeight,defaultShape,_,_,_,_,faderScaling=reaper.BR_EnvGetProperties(free_env)
+                    reaper.BR_EnvSetProperties(free_env,visble,true,armed,inLane,LaneHeight,defaultShape,faderScaling)
+                    reaper.BR_EnvFree(free_env,true)
+                end
             end
             pasted_item="Line"
-        -- elseif DATA[1].type and DATA[1].type == "Point" then
-        --     local point_offset=tonumber(DATA[1][#DATA[1]-1])
-        --     local cursor=reaper.GetCursorPosition()
-        --     if  #ENV>0 then
-        --         PastePoint(ENV,DATA,cursor,point_offset)
-        --     else
-        --         for sun=1,#trackz do
-        --             local env=reaper.GetTrackEnvelope(trackz[sun],0)
-        --             local ENV=FindVisEnv(env)
-        --             PastePoint(ENV,DATA,cursor,point_offset)
-        --         end
-        --     end
-        --     pasted_item="Points"
+        elseif DATA.type=="Point" and tonumber(DATA.start) then
+            if  PasteToTargets({DATA},tonumber(DATA.start)) then pasted_item="Points" end
         end
 
         r.RestoreTracks(trackz)
         reaper.UpdateArrange()
-        return "Envelope "..pasted_item,withItem
+        return "Envelope "..pasted_item
     end
-    
+
     -----
     function main()
         
@@ -171,13 +179,10 @@
         
         elseif state == "Razor area" then
 
-          local withItem
-
-          --state,withItem = PasteEnvelope()
-
-          --if  withItem then 
+          -- envelope-only razor copy is stored by Smart Copy; anything with items uses REAPER's paste
+          if  not PasteRazorEnvelope() then
               reaper.Main_OnCommand(42398,0)--paste items
-          --end
+          end
           
           --reaper.Main_OnCommand(42406,0)--clear razor area
         

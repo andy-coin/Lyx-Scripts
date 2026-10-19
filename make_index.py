@@ -11,6 +11,9 @@ from xml.sax.saxutils import escape, quoteattr
 
 REPO = "andy-coin/Lyx-Scripts"
 SKIP = re.compile(r"Test|Temp|^Script-")  # ponytail: name filter, move to a list file if it grows
+# personal drafts / unfinished: stay in the local folder, not published
+PRIVATE = {"Lyx_Empty.lua", "Lyx_Add number in drum map.lua", "Lyx_New.lua",
+           "Lyx_Track versions alternative-move selected item(s) to comp track.lua"}
 
 def git(*a): return subprocess.check_output(["git", *a], text=True)
 
@@ -21,6 +24,7 @@ def pick(f):
     if modes.get(f) not in ("100644", "100755") or not f.endswith(".lua") or SKIP.search(f.rsplit("/", 1)[-1]):
         return None
     name = f.rsplit("/", 1)[-1]
+    if name in PRIVATE: return None
     if f.startswith("MIDI Editor/") and f.count("/") == 1: return ("MIDI Editor", "midi_editor")
     if "/" in f: return None
     if name.startswith("Lyx_"): return ("Main", "main")

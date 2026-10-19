@@ -11,18 +11,16 @@
       
       if Start==End then return end
       
-      ori_color = api.load('timeline','color')
+      skip_color = reaper.ColorToNative(251,0,220) --purple
+      current_color = reaper.GetThemeColor("col_tl_bgsel2",0)
       
-      COLOR = {yellow = 16757568, --16626441
-               purple = 16449756,
-               green = 2293527,}
-                    
-      current_color = reaper.GetThemeColor("col_tl_bgsel2")
-      
-      ori_color = (ori_color ~= '' and ori_color) or COLOR.yellow
-      skip_color = COLOR.purple
-      
-      color = (current_color ~= skip_color and skip_color) or ori_color
+      if  current_color ~= skip_color then
+          -- remember the theme's own time-selection colour before switching to purple
+          api.save('timeline','color',current_color,false)
+          color = skip_color
+      else
+          color = tonumber(api.load('timeline','color')) or -1 -- -1 = theme default
+      end
       
       reaper.SetThemeColor("col_tl_bgsel2",color,0)
       

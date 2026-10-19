@@ -16,6 +16,7 @@ local CMD_PLAY = 1007
 ---------------
 local function collect_targets()
     
+    local razor, razor_data = r.GetRazorEdits(false)
     api.mcw()
     local start_pos = (razor and razor_data.min) or api.mcp()
     
@@ -28,7 +29,6 @@ local function collect_targets()
         end
     end
 
-    local razor, razor_data = r.GetRazorEdits(false)
     local mouse_tr = reaper.BR_TrackAtMouseCursor()
 
     local tracks

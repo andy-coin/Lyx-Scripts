@@ -3,6 +3,7 @@
     script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
     
     local function main()
 
@@ -77,17 +78,19 @@
 
         --horizontal fit
         reaper.MIDIEditor_OnCommand(editor,40725)--zoom to selected note
+        local zoommode = reaper.SNM_GetIntConfigVar("zoommode", -1) -- user's zoom center pref, restored below
         api.cmd(api.name("_WOL_SETHZOOMC_EDITCUR"),0)--zoom center to edit cursor
         for abi=1,3 do
             reaper.MIDIEditor_OnCommand(editor,1011)
         end
-        api.cmd(api.name("_WOL_SETHZOOMC_MOUSECUR"),0)--zoom center to mouse cursor
+        if zoommode ~= -1 then reaper.SNM_SetIntConfigVar("zoommode", zoommode) end--restore the user's zoom center
         
-        --unselect all notes
-        reaper.MIDIEditor_OnCommand(editor,40214)
-        -- for abi=1,#midi_takes do
-        --     reaper.MIDI_SelectAll(midi_takes[abi],false)
-        -- end
+        --undo the temporary select-all (notes and CC); keep the user's own selection
+        if  not has_select then
+            for abi=1,#midi_takes do
+                reaper.MIDI_SelectAll(midi_takes[abi],false)
+            end
+        end
 
         api.ueb(0,"Toggle zoom to selected notes",-1)
     end

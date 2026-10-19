@@ -56,13 +56,15 @@ local _, _, section_id, cmd_id = reaper.get_action_context()
 reaper.SetToggleCommandState(section_id, cmd_id, 1)
 reaper.RefreshToolbar2(section_id, cmd_id)
 
-local has_written = false
+local UNDO_NAME   = "Lyx: MIDI velocity compress/expand"
+local has_written = false   -- velocities written that no undo point covers yet
+local last_write  = 0       -- time of the last write (undo point follows 0.5 s after the GUI is let go)
 
 local function atexit()
     reaper.SetToggleCommandState(section_id, cmd_id, 0)
     reaper.RefreshToolbar2(section_id, cmd_id)
     if has_written then
-        reaper.Undo_OnStateChange("Lyx: MIDI velocity compress/expand")
+        reaper.Undo_OnStateChange2(0, UNDO_NAME)
     end
 end
 reaper.atexit(atexit)
@@ -233,12 +235,11 @@ local function collect_takes()
     local takes = {}
     local seen = {}
     local me = reaper.MIDIEditor_GetActive()
-    if me then
-        local t = reaper.MIDIEditor_GetTake(me)
-        if is_valid_take(t) then
-            takes[#takes+1] = t
-            seen[t] = true
-        end
+    if not me then return takes end   -- no MIDI editor: nothing to process
+    local t = reaper.MIDIEditor_GetTake(me)
+    if is_valid_take(t) then
+        takes[#takes+1] = t
+        seen[t] = true
     end
     local sel_cnt = reaper.CountSelectedMediaItems(0)
     for i = 0, sel_cnt-1 do
@@ -258,19 +259,21 @@ local function refresh_take_data(take, rebuild_orig)
     local _, note_cnt = reaper.MIDI_CountEvts(take)
     local data = takes_data[take]
     if not data then
-        data = { orig_vels={}, start_ppq={}, end_ppq={}, sel_set={}, hum_offs={}, note_cnt=0, hash="" }
+        data = { orig_vels={}, cur_vels={}, start_ppq={}, end_ppq={}, sel_set={}, hum_offs={}, note_cnt=0, hash="" }
         takes_data[take] = data
         rebuild_orig = true
     end
 
     if rebuild_orig then
         data.orig_vels = {}
+        data.cur_vels  = {}   -- velocity currently in the take (only changed notes get written)
         data.start_ppq = {}
         data.end_ppq   = {}
         data.hum_offs  = {}
         for n = 0, note_cnt-1 do
             local _, _, _, sppq, eppq, _, _, vel = reaper.MIDI_GetNote(take, n)
             data.orig_vels[n] = vel
+            data.cur_vels[n]  = vel
             data.start_ppq[n] = sppq
             data.end_ppq[n]   = eppq
             data.hum_offs[n]  = (random()*2) - 1   -- [-1, 1]
@@ -439,7 +442,9 @@ local function apply_to_take(take, use_original_only)
     local hum = humanize_val
     local gain = gain_val
 
-    reaper.MIDI_DisableSort(take)
+    -- Only notes whose velocity really changes are written. Velocity never moves a note,
+    -- and every write uses noSort, so note indices stay valid for the whole loop.
+    local wrote = false
     for n = 0, d.note_cnt-1 do
         local orig = d.orig_vels[n]
         if orig then
@@ -455,20 +460,28 @@ local function apply_to_take(take, use_original_only)
                 v = floor(v + 0.5)
                 if v < 1 then v = 1 elseif v > 127 then v = 127 end
             end
-            reaper.MIDI_SetNote(take, n, nil, nil, nil, nil, nil, nil, v, true)
+            if v ~= d.cur_vels[n] then
+                if not wrote then reaper.MIDI_DisableSort(take); wrote = true end
+                reaper.MIDI_SetNote(take, n, nil, nil, nil, nil, nil, nil, v, true)
+                d.cur_vels[n] = v
+            end
         end
     end
-    reaper.MIDI_Sort(take)
+    if not wrote then return false end
+    reaper.MIDI_Sort(take)   -- also ends MIDI_DisableSort
     -- Our writes changed the hash; resync stored hash to avoid false "user edit" detection.
     local _, h = reaper.MIDI_GetHash(take, false, "")
     d.hash = h
+    return true
 end
 
 local function apply_all(use_original_only)
     for _, take in ipairs(active_takes) do
-        apply_to_take(take, use_original_only)
+        if apply_to_take(take, use_original_only) then
+            has_written = true
+            last_write  = reaper.time_precise()
+        end
     end
-    has_written = true
 end
 
 local function reset_values()
@@ -1785,6 +1798,12 @@ local function draw_main()
         need_reapply = false
     end
     track_history()
+
+    -- Undo point once the GUI is let go: nothing held and 0.5 s since the last write
+    if has_written and not ImGui.IsAnyItemActive(ctx) and reaper.time_precise() - last_write >= 0.5 then
+        reaper.Undo_OnStateChange2(0, UNDO_NAME)
+        has_written = false
+    end
 
     ImGui.PopFont(ctx)
 end

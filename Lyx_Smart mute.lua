@@ -81,7 +81,9 @@
         
         
         if  razor_toggle then
-            local mute = api.giv(api.gsi(0,0),'B_MUTE')==1
+            local it = api.gsi(0,0)
+            if not it then return end -- razor had only envelopes, no items
+            local mute = api.giv(it,'B_MUTE')==1
             if  mute then
                 api.cmd(40720,0)--Item properties: Unmute
                 api.cmd(42957,0)--Select media items within razor edit area
@@ -103,7 +105,7 @@
     --------------
     local function main()
         
-        local razor,razorMap = r.GetRazorEdits2(false,true)
+        local razor,razorMap = r.GetRazorEdits(false,true)
         
         api.mcw()
         mouse_item = api.mci()

@@ -11,7 +11,7 @@
         
         r.SelItemFilter()
         
-        if it_n == 0 then return end
+        if api.csi(0) == 0 then return end
         
         api.cmd(api.name('_SWS_SAVEVIEW'),0)
         
@@ -27,11 +27,8 @@
 
         for abi=1,api.csi(0) do
             local item = api.gsi(0,abi-1)
-            if  last_END then api.siv(item,"D_POSITION",last_END) end
             local p    = api.giv(item,"D_POSITION")
-            END = api.giv(item,"D_LENGTH")+p
             api.siv(item,'D_POSITION',p+distence)
-            last_END = END
         end
         
         api.sec(P1,false,false)

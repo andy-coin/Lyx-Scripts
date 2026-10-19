@@ -3,6 +3,7 @@
     script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
     
     --------------
     local function main()
@@ -11,6 +12,8 @@
 
         editor = reaper.MIDIEditor_GetActive()
         if not editor then return end
+
+        api.ubb()
 
         time = api.now()
         timeout = 15
@@ -43,8 +46,7 @@
         
         reaper.MIDIEditor_OnCommand(editor,40669)--Unselect all CC events in last clicked lane
 
-        api.ueb(0,"Insert cc events at the start and the end of selected notes",-1)
+        api.ueb(0,"Clear sustain pedal continuous CC",-1)
         
     end
-    api.cc()
     main()

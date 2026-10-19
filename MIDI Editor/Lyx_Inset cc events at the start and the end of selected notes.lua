@@ -3,6 +3,7 @@
     script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
     
     --------------
     local function main()
@@ -97,6 +98,7 @@
                     end
                 end
                 
+                reaper.MIDI_DisableSort(tk) -- sort once after all inserts, not after each one
                 if  cc_lane[abi] == 64 then
 
                     -- --insert start point
@@ -131,6 +133,7 @@
                     end
 
                 end
+                reaper.MIDI_Sort(tk)
                 
                 ::NEXT::                
                 

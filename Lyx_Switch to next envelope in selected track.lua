@@ -41,8 +41,9 @@
             for abig = 1, env_n do
                 env = api.gte(tr,abig-1)
 
-                local ret, chunk = api.geC(env, "", false)
-                local show = chunk:match("VIS 1")
+                local br_tmp = api.brea(env,false)
+                local _, show = api.breg(br_tmp)
+                api.bref(br_tmp,false)
                 
                 if  show then
                     if  cycle then
@@ -57,7 +58,7 @@
             
             api.cmd(40889,0) -- Envelope: Hide all envelopes for tracks
 
-            if not key then return end
+            if not key then goto NEXT end
         
             env = api.gte(tr,key)
             

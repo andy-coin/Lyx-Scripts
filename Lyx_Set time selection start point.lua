@@ -16,4 +16,4 @@
     end
 
     main()
-    reaper.defer(main)
+    reaper.defer(function() end)

@@ -66,11 +66,12 @@ local G = require("_Lyx_GUI")
 local R = reaper
 local EXT = "Lyx_FFMPEG"
 local WIN = R.GetOS():find("Win") ~= nil
-local TMP = (os.getenv("TMPDIR") or "/tmp/"):gsub("([^/])$", "%1/")
+local MAC = R.GetOS():find("OSX") ~= nil or R.GetOS():find("mac") ~= nil
+local TMP = (os.getenv("TMPDIR") or (WIN and os.getenv("TEMP")) or "/tmp/"):gsub("([^/\\])$", "%1/")
 
 local function find_ffmpeg()
     local list = WIN and { R.GetResourcePath() .. "\\UserPlugins\\ffmpeg.exe" }
-                 or { "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg",
+                 or { "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg",
                       R.GetResourcePath() .. "/UserPlugins/ffmpeg" }
     for _, p in ipairs(list) do if R.file_exists(p) then return p end end
 end
@@ -132,7 +133,11 @@ local function render_file()
     for f in (targets or ""):gmatch("[^;]+") do if R.file_exists(f) then return f end end
 end
 
-local function q(s) return '"' .. s .. '"' end
+-- quote a path for the job script: .bat uses double quotes (% doubled), sh uses single quotes
+local function q(s)
+    if WIN then return '"' .. s:gsub("%%", "%%%%") .. '"' end
+    return "'" .. s:gsub("'", "'\\''") .. "'"
+end
 
 local function start(j)
     local dir, name, vext = split_path(j.video)
@@ -141,18 +146,18 @@ local function start(j)
     local cmd = table.concat({ q(FFMPEG), "-y -hide_banner -i", q(j.video), "-i", q(j.audio),
         "-map 0:v:0 -map 1:a:0 -c:v copy", audio_args(vext, aext, codec, BITRATES[br_idx]), q(j.out) }, " ")
     j.status = "run"
-    if WIN then -- synchronous fallback
-        local res = R.ExecProcess(cmd, 0) or ""
-        j.code = tonumber(res:match("^(%-?%d+)")) or -1
-        j.log = res
-        return
-    end
+    -- run in the background; the script writes ffmpeg's exit code to the .done file
     local base = TMP .. "lyx_ffmpeg_" .. j.id .. "_" .. math.floor(R.time_precise() * 1000)
     j.logf, j.donef = base .. ".log", base .. ".done"
-    local f = io.open(base .. ".sh", "w")
-    f:write(cmd, " > ", q(j.logf), " 2>&1\necho $? > ", q(j.donef), "\n")
+    j.script = base .. (WIN and ".bat" or ".sh")
+    local f = io.open(j.script, "w")
+    if WIN then
+        f:write("@echo off\r\nchcp 65001 >nul\r\n", cmd, " > ", q(j.logf), " 2>&1\r\necho %ERRORLEVEL% > ", q(j.donef), "\r\n")
+    else
+        f:write(cmd, " > ", q(j.logf), " 2>&1\necho $? > ", q(j.donef), "\n")
+    end
     f:close()
-    R.ExecProcess("/bin/sh " .. q(base .. ".sh"), -1)
+    R.ExecProcess(WIN and ('cmd.exe /C "' .. j.script .. '"') or ("/bin/sh " .. q(j.script)), -1)
 end
 
 local function finish(j)
@@ -179,14 +184,12 @@ end
 local function poll()
     for _, j in ipairs(jobs) do
         if j.status == "run" then
-            if WIN then
-                finish(j)
-            elseif R.file_exists(j.donef) then
+            if R.file_exists(j.donef) then
                 local f = io.open(j.donef); local s = f and f:read("a") or ""; if f then f:close() end
                 if s:match("%d") then
                     j.code = tonumber(s:match("%-?%d+"))
                     finish(j)
-                    os.remove(j.donef); os.remove(j.donef:gsub("%.done$", ".sh"))
+                    os.remove(j.donef); os.remove(j.script)
                 end
             end
         end
@@ -194,7 +197,9 @@ local function poll()
 end
 
 local function reveal(p)
-    if WIN then R.ExecProcess('explorer /select,' .. q(p), -1) else os.execute("open -R " .. q(p)) end
+    if WIN then R.ExecProcess('explorer /select,"' .. p .. '"', -1)
+    elseif MAC then os.execute("open -R " .. q(p))
+    else os.execute("xdg-open " .. q(split_path(p)) .. " &") end
 end
 
 local function pick_audio(j)

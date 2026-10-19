@@ -13,9 +13,11 @@ local function main()
     editor = reaper.MIDIEditor_GetActive()
     if not editor then return end
 
+    reaper.Undo_BeginBlock()
     for abi = 1,5 do
         reaper.MIDIEditor_OnCommand(editor,40462)--velocity + 1
     end
+    reaper.Undo_EndBlock('Note velocity +5', -1)
     
     VEL = {}
     NOTES = ''

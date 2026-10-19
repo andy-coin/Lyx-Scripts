@@ -3,6 +3,7 @@
     --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
 
     local function main()
 
@@ -10,6 +11,7 @@
     if reaper.MIDIEditor_GetActive() or play==5 then return end
 
     trz={}
+    if reaper.CountSelectedTracks(0)>0 then freeze=0 end
     for abi=1,reaper.CountSelectedTracks(0) do
         tr=reaper.GetSelectedTrack(0,abi-1)
         --reaper.ShowConsoleMsg(reaper.BR_GetMediaTrackFreezeCount(tr))
@@ -26,9 +28,8 @@
                     end
                 end
             end--]]
-            freeze=1
+            freeze=1 -- any unfrozen track: freeze
         else
-            freeze=0
             trz[#trz+1]=tr
         end
     end
@@ -48,9 +49,8 @@
         reaper.Main_OnCommand(41644,0)--unfreeze track
     end
 
-    reaper.Main_OnCommand(cmd,0)
     end
 
     reaper.Undo_BeginBlock()
     main()
-    reaper.Undo_EndBlock("Toggle track freeze",0)
+    reaper.Undo_EndBlock("Toggle track freeze",-1)

@@ -20,6 +20,10 @@
       elseif reaper.GetToggleCommandState(triplet)==0 and  reaper.GetToggleCommandState(swing)==1 then
           Act="Set grid mode to : Straight"
           reaper.Main_OnCommand(swing,0)
+      else -- both on: back to straight
+          Act="Set grid mode to : Straight"
+          reaper.Main_OnCommand(triplet,0)
+          reaper.Main_OnCommand(swing,0)
       end
       r.billboard(Act)
       return Act

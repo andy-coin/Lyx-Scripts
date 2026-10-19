@@ -2,6 +2,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    if not r.Need("SWS") then return end
 
     -----CUSTOM-----
         fix_laneH = false
@@ -9,14 +10,13 @@
     
     local function main()
         
-        local ENV,trz
-
-        ENV = {}
+        local trz
         
         trz = r.SaveTracks()
 
         for abi=1, #trz do
             local track, tcph, SHOW
+            local ENV = {}
             
             track = trz[abi]
             tcph= api.gtv(track ,"I_TCPH","",false) 
@@ -31,6 +31,7 @@
                     local env_height = (fix_laneH and fixed_lane_height) or tcph
                     reaper.BR_EnvSetProperties(br_env,act,true,arm,true,env_height,def,fad)
                 else
+                    reaper.BR_EnvFree(br_env,false)
                     api.sot(track)
                     api.cmd(40889,0) -- Hide all envelopes for tracks
                     break

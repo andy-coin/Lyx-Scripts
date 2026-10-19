@@ -67,6 +67,7 @@ end
 
 ---------------------------------------------------------------------------
 local R = reaper
+if not r.Need("SWS") then return end
 
 local function lane_names(tr)
     local t = {}

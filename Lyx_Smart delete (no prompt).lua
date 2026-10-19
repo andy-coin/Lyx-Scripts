@@ -32,7 +32,7 @@
         local Env = reaper.GetSelectedEnvelope(0) or api.mce()
         if  Tn==0 and In==0 and not Env then return "Delete nothing" end
         
-        local razor,razorMap=r.GetRazorEdits2(false,false)
+        local razor,razorMap=r.GetRazorEdits(false,false)
         if  razor then
             for abi=1,#razorMap do
             
@@ -171,6 +171,8 @@
         end
 
 ::TRACK::
+
+        if reaper.CountSelectedTracks(0) == 0 then return 'nothing' end
 
         api.cmd(api.name('_SWS_SAVETIME1'),0)
         local start_time, end_time = reaper.GetSet_ArrangeView2(0, false, 0, 0, 0, 0)
