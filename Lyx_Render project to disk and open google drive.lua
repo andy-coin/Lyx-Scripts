@@ -6,7 +6,7 @@
     -----CUSTOM-----
     open_when_done = true
     show_lane_name = false
-    dropbox = '/Users/will/Dropbox'
+    dropbox = os.getenv("HOME")..'/Dropbox'
     
     local function get_render_path()
         
@@ -42,8 +42,7 @@
             open = nil
         elseif not open and reaper.JS_Window_Find("Finished in",false) then
             open = true
-            --path = get_render_path()
-            path = "/users/will/desktop/1016"
+            path = get_render_path()
             path = ESCPattern(path,true)
             os.execute('mv '..path..'/*.render_stats.html "/Users/shared/Reaper Projects/render_stats/"')
             os.execute('open '..path)

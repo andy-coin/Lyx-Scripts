@@ -10,7 +10,7 @@
         auto_change_buffersize = false
         small = 128
         large = 2048
-        guitar_icon = '/Users/andy/Library/Application Support/REAPER/Data/track_icons/Logic/Guitar/'
+        guitar_icon = reaper.GetResourcePath()..'/Data/track_icons/Logic/Guitar/'
         eg_io = {   dry = 13,     -- input
                     wet = 1038,   -- input
                     kemper = 1037 -- ouput from 1032~1039

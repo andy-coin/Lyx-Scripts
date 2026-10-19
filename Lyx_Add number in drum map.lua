@@ -19,7 +19,7 @@
     -- reaper.defer(function()end)
 
     lfs = require("lfs")
-    directory = '/Users/andy/Desktop/drum map/'
+    directory = os.getenv("HOME")..'/Desktop/drum map/'
 
     local function formatFile(path)
 

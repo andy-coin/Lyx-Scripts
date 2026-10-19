@@ -4,7 +4,7 @@
     local r=require("_Lyx_HOME")
   
     -----CUSTOM-----
-        default_icon = '/Users/andy/Library/Application Support/REAPER/Data/track_icons/Logic//Effects/fx.png' 
+        default_icon = reaper.GetResourcePath()..'/Data/track_icons/Logic//Effects/fx.png' 
 
     
     reaper.Undo_BeginBlock()

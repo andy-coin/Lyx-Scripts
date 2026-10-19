@@ -5,7 +5,7 @@
 
         
     -- 定義搜尋目錄和檔案類型
-    local dir = "/Users/andy/Downloads"
+    local dir = os.getenv("HOME").."/Downloads"
 
     -- 你要搜尋的檔案類型，例如 .wav 檔案
     local ext = ".rar" 
@@ -170,7 +170,7 @@
 
         --local retval,path = reaper.GetUserFileNameForRead("","What do we crack now?",'lua')
     
-        local path = '/Users/andy/Desktop/Coding Projects/Claude/ReaLive/Lyx_Realive.lua'
+        local path = os.getenv("HOME")..'/Desktop/Coding Projects/Claude/ReaLive/Lyx_Realive.lua'
         --if retval then
             local file,content,func_names
 

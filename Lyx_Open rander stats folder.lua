@@ -4,6 +4,6 @@
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
 
-    os.execute('open "/Users/andy/Desktop/Reaper Projects/render_stats"')
+    os.execute('open "'..os.getenv("HOME")..'/Desktop/Reaper Projects/render_stats"')
 
     reaper.defer(function ()end)

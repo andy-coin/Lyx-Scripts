@@ -5,7 +5,7 @@
     local r=require("_Lyx_HOME")
     
     -- 定義搜尋目錄和檔案類型
-    local default_dir = "/Users/andy/Desktop/Reaper Projects"
+    local default_dir = os.getenv("HOME").."/Desktop/Reaper Projects"
 
     -- 你要搜尋的檔案類型，例如 .wav 檔案
     local file_extension = ".RPP" 

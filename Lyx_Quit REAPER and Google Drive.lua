@@ -66,7 +66,7 @@
      reaper.GetSet_LoopTimeRange2(0,true,loop,min,max,false)
      reaper.Main_OnCommand(42230,0)--render
      reaper.GetSet_LoopTimeRange2(0,true,loop,Start,End,false)
-     desktopPath='/Users/andy/Desktop'
+     desktopPath=os.getenv("HOME")..'/Desktop'
      reaper.GetSetProjectInfo(0,'RENDER_SETTINGS',bounds_setting, true)
      reaper.GetSetProjectInfo_String(0,'RENDER_FILE',desktopPath, true)
      reaper.GetSetProjectInfo(0,'RENDER_BOUNDSFLAG' ,bounds_flag, true)--]]
