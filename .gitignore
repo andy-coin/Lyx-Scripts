@@ -1,0 +1,17 @@
+.DS_Store
+_Backup/
+Realive/
+*.dylib
+*.ReaperThemeZip
+*.app/
+# not published: local caches/notes, third-party mods, WIP
+solger_*.ini
+handoff.md
+convert_bform_to_stereo_uhj.py
+Buss Driver/
+Theme Layout Modifier/
+neutronic_Quick Adder (Lyx mod)/
+Realauncher*
+X-Raym_*
+Script- *
+MIDI Editor/_Lyx_HOME.lua
