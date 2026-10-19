@@ -4,8 +4,8 @@
     package.path = package.path..";"..script_path.."?.lua"
     local r = require("_Lyx_HOME")
     
-    local dir = "~/Library/Application Support/REAPER/MIDINoteNames/"
-    local SD3 = "~/Library/Application Support/REAPER/MIDINoteNames/SD3 - Standard.txt"
+    local dir = reaper.GetResourcePath().."/MIDINoteNames/"
+    local SD3 = reaper.GetResourcePath().."/MIDINoteNames/SD3 - Standard.txt"
     local ext = ".txt" 
     
     local function get_clipboard_text()
