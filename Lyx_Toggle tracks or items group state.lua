@@ -1,7 +1,11 @@
 
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
+
+  -----CUSTOM-----
+  GROUP_MCP_LAYOUT = "c2 -- FX Rack_EX" -- MCP layout for grouped tracks; "" keeps each track's own layout
+  ----------------
   
   --------------
   local function NextTrack(tr)
@@ -413,7 +417,7 @@
          else
             for abi=1,reaper.CountSelectedTracks(0) do
                 tr= reaper.GetSelectedTrack(0,abi-1)
-                reaper.GetSetMediaTrackInfo_String(tr,"P_MCP_LAYOUT","c2 -- FX Rack_EX",true)
+                if GROUP_MCP_LAYOUT ~= "" then reaper.GetSetMediaTrackInfo_String(tr,"P_MCP_LAYOUT",GROUP_MCP_LAYOUT,true) end
                 for abii=1,#string do
                     reaper.GetSetTrackGroupMembershipHigh(tr,string[abii],empty_ID,empty_ID)
                 end 
@@ -422,7 +426,7 @@
       else
          for abi=1,reaper.CountSelectedTracks(0) do
              tr= reaper.GetSelectedTrack(0,abi-1)
-             reaper.GetSetMediaTrackInfo_String(tr,"P_MCP_LAYOUT","c2 -- FX Rack_EX",true)
+             if GROUP_MCP_LAYOUT ~= "" then reaper.GetSetMediaTrackInfo_String(tr,"P_MCP_LAYOUT",GROUP_MCP_LAYOUT,true) end
              for abii=1,#string do
                  reaper.GetSetTrackGroupMembership(tr,string[abii],empty_ID,empty_ID)
              end

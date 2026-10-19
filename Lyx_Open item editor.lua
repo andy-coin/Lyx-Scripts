@@ -1,6 +1,6 @@
     
         
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
 
@@ -13,23 +13,15 @@
     ---------------
     ---CUSTOMIZE---
     ---------------
-    data = api.load("Item Editor","midi editor window position")
-    edge={}
-    for value in data:gmatch("(%d*)|") do
-        edge[#edge+1] = value
-    end
-    
     local midi_editor = {
                     screen_height = TCP_max*0.85,
                     single_zoom   = math.floor(TCP_max*0.45),   --single item vertical zoom pixel
                     bound_limit   = true,                     -- zoom in media item with limit
                     bound=10,                               -- limit left edge to right edge to setting seconds
-                    --midi editor window position
-                    fix    = true,
-                    left   = edge[1] or 110,
-                    top    = edge[2] or 595,
-                    right  = edge[3] or 1753,
-                    bottom = edge[4] or 0,
+                    --midi editor window position: the one saved with "Save midi editor window position",
+                    --otherwise the bottom part of the screen REAPER is on
+                    fix          = true,
+                    default_size = 0.45,                    -- default editor height, share of the screen
                  }      
                  
     --------------
@@ -53,21 +45,39 @@
     end
 
     --------------
+    local function EditorRect() -- l, t, r, b in native coords, as JS_Window_GetRect gives them
+        local e = {}
+        for v in api.load("Item Editor","midi editor window position"):gmatch("(-?[%d.]+)|") do e[#e+1] = tonumber(v) end
+        if  #e == 4 then -- saved spot, kept only while its monitor is still connected
+            local cx, cy = (e[1]+e[3])/2, (e[2]+e[4])/2
+            local vl, vt, vr, vb = reaper.my_getViewport(0, 0, 0, 0, cx, cy, cx+1, cy+1, true)
+            if cx >= vl and cx <= vr and cy >= math.min(vt,vb) and cy <= math.max(vt,vb) then
+                return e[1], e[2], e[3], e[4]
+            end
+        end
+        local w, h, x0, y0 = r.GetScreenResolution()
+        local eh  = math.floor(h * midi_editor.default_size)
+        local mac = reaper.GetOS():find("OS")       -- macOS: origin bottom-left, y grows upward
+        local lower = (mac and y0) or y0 + h        -- the screen's bottom edge
+        local upper = (mac and y0 + eh) or y0 + h - eh
+        return x0, upper, x0 + w, lower
+    end
+
+    --------------
     local function AdjustMidiEditorSize(hwnd)
-        
-        local fix,left,right,top,bottom,L,T,R,B
-        left, top, right, bottom=r.GetWindowPosition(hwnd)
-        fix=midi_editor.fix
-        L=midi_editor.left
-        R=midi_editor.right
-        T=midi_editor.top
-        B=midi_editor.bottom
-        
-        if  fix and (left~=L or top~=T or right~=R or bottom~=B) then
+        -- returns how many pixels of the arrange view the editor covers (height for the spacer track)
+        local left, top, right, bottom = r.GetWindowPosition(hwnd)
+        local L, T, R, B = EditorRect()
+
+        if  midi_editor.fix and (left~=L or top~=T or right~=R or bottom~=B) then
             r.SetWindowPosition(hwnd, L, B, R, T)
+            left, top, right, bottom = L, T, R, B
         end
 
-        return top
+        -- overlap of two vertical spans: same math whichever way the screen's y axis points
+        local _, _, at, _, ab = reaper.JS_Window_GetRect(windowHWND)
+        local overlap = math.min(math.max(at,ab), math.max(top,bottom)) - math.max(math.min(at,ab), math.min(top,bottom))
+        return math.max(0, overlap)
     end
 
     -----------------------------------SAVE SCREEN POSITION-------------------------------------------------
@@ -493,7 +503,6 @@
             reaper.MIDIEditor_OnCommand(MIDI,40746)--select note in time selection
             H_zoom = 40725
             H_zoom = 40151
-            V_zoom = api.name('_RS7d3c_2d8ceafe2edc2e0505fe46f8ca35c3020037cf5a')
             
             reaper.MIDIEditor_OnCommand(MIDI,H_zoom)
             --ZoomInMidiNote(MIDI,itemz)
@@ -507,7 +516,7 @@
 
             --make track won't hide behind midi editor window
             local idx=reaper.CountTracks(0)+1
-            local FATTY = AdjustMidiEditorSize(MIDI)-87
+            local FATTY = AdjustMidiEditorSize(MIDI)
             reaper.InsertTrackAtIndex(idx,false)
             local tr=reaper.GetTrack(0,idx-1)
             local _,chunk=reaper.GetTrackStateChunk(tr,"",false)

@@ -1,21 +1,18 @@
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
 
-    anchor_options = {"left", "center", "right"}
     layout_options = {"horizontal","vertical"}
-    FX_keywords = {"FX: Track","FX: Item","FX: Monitoring","VST:","VSTi:","VST3:","VST3i:","AU:","AUi:","LV2:","LV2i:","JS:","(x86_64)","CLAP:","CALPi:","ReWire:"}
 
     -- Configuration
     local Config = {
-        anchor = anchor_options[1], -- 1=left , 2=center, 3=right
         layout = layout_options[1], -- 1=horizontal, 2=vertical
         window_gap = 5, -- pixels
-        edge_limits = { -- pixels
-            left = 450,
+        edge_limits = { -- share of the screen kept free on each side (0..1)
+            left = 0.18,
             right = 0,
-            top = 190,
+            top = 0.13,
             bottom = 0,
         },
         overlap_threshold = 30,
@@ -24,54 +21,6 @@
         },
         exclude_plugins = {},    -- plugins to exclude from management
     }
-    
-    local function GetAllFloatingFXWindows_By_name()
-        
-        local windows = {}
-        local ret,list = reaper.JS_Window_ListAllTop()
-        local total_area = 0
-
-        for  address in list:gmatch('[^,]+') do
-            local window,title
-            window = reaper.JS_Window_HandleFromAddress(address)
-            title = reaper.JS_Window_GetTitle(window)
-
-            for abi=1,#FX_keywords do
-                if  title:find(FX_keywords[abi]) and window and api.check(0,window,"HWND*") and reaper.JS_Window_IsVisible(window) then
-                    
-                    for abig=1,#Config.exclude_plugins do
-                        local string=ESCPattern(Config.exclude_plugins[abig])
-                        if  title:match(string) then
-                            break
-                        end
-                    end
-
-                    local _,left, top, right, bottom = reaper.JS_Window_GetRect(window)
-                    local width = right - left
-                    local height = top - bottom
-                    local area = width * height
-
-                    total_area = total_area + area
-                    
-                    table.insert(windows,{
-                        hwnd = window,
-                        left = left,
-                        top = top,
-                        right = right,
-                        bottom = bottom,
-                        width = width,
-                        height = height,
-                        area = area, 
-                    })
-
-                    break
-                end
-            end
-
-        end
-
-        return windows, total_area
-    end
     
     --------------
     local function GetAllFloatingFXWindows()
@@ -152,7 +101,7 @@
 
             local _,left, top, right, bottom = reaper.JS_Window_GetRect(hwnds[abi])
             local width = right - left
-            local height = top - bottom
+            local height = math.abs(top - bottom)
             local area = width * height
     
             total_area = total_area + area
@@ -172,13 +121,15 @@
 
         local screen_area, start_x, start_y, right_edge, top_edge, bottom_edge
         
-        right_edge = screen_width - Config.edge_limits.right
-        top_edge   = screen_height - Config.edge_limits.top
-        bottom_edge = Config.edge_limits.bottom
+        -- screen-relative space: x from the left, y = height above the screen bottom
+        local E = Config.edge_limits
+        right_edge = screen_width * (1 - E.right)
+        top_edge   = screen_height * (1 - E.top)
+        bottom_edge = screen_height * E.bottom
         
-        screen_area = (right_edge - Config.edge_limits.left ) * (top_edge - Config.edge_limits.bottom ) 
+        screen_area = (right_edge - screen_width * E.left) * (top_edge - bottom_edge)
         
-        start_x = 0 + Config.edge_limits.left
+        start_x = screen_width * E.left
         start_y = top_edge
         
         
@@ -224,20 +175,6 @@
                 end
             end
 
-            if  Config.anchor == 'left' then
-
-            elseif Config.anchor == 'right' then
-            
-            elseif Config.anchor == 'center' then
-            
-            end
-
-        elseif true then
-
-        elseif true then
-
-        else
-
         end
 
         return windows
@@ -246,7 +183,8 @@
 
     local function main()
 
-        local width, height = r.GetScreenResolution()
+        local width, height, x0, y0 = r.GetScreenResolution() -- REAPER's monitor, native coords
+        local mac = reaper.GetOS():find("OS")                -- macOS: native y grows upward
         
         local windows, total_area = GetAllFloatingFXWindows()
         
@@ -255,12 +193,11 @@
         local new_layout = arrangeWindows(windows, total_area, width, height)
         
         for abi=1, #new_layout do
-            reaper.JS_Window_SetPosition(new_layout[abi].hwnd,
-                                        math.floor(new_layout[abi].left),
-                                        math.floor(new_layout[abi].top - new_layout[abi].height),
-                                        math.floor(new_layout[abi].width),
-                                        math.floor(new_layout[abi].height)
-                                        )
+            local w = new_layout[abi]
+            -- SetPosition wants the lower edge on macOS, the top edge (counted downward) on Windows/Linux
+            local y = (mac and y0 + w.top - w.height) or (y0 + height - w.top)
+            reaper.JS_Window_SetPosition(w.hwnd, math.floor(x0 + w.left), math.floor(y),
+                                         math.floor(w.width), math.floor(w.height))
         end
 
         api.ua()

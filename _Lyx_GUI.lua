@@ -42,7 +42,7 @@ function G.S(v) return v * G.scale end
 
 function G.new(title)
     if not R.ImGui_CreateContext then
-        R.MB("此腳本需要 ReaImGui 擴充套件。\n請用 ReaPack 安裝 \"ReaImGui: ReaScript binding for Dear ImGui\"。", title or "Lyx", 0)
+        R.MB("This script needs the ReaImGui extension.\nInstall \"ReaImGui: ReaScript binding for Dear ImGui\" with ReaPack.", title or "Lyx", 0)
         return
     end
     local ctx = R.ImGui_CreateContext(title or "Lyx")

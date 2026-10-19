@@ -12,8 +12,7 @@ c_chart={25182272,25196864,21790784,21004396,20994432,
 
 function main()
 
-    local color = reaper.GetExtState("color","color",true)
-    color=color or 0
+    local color = tonumber(reaper.GetExtState("color","color")) or 0 -- empty on first use
     color=color%40+1
     
     win,_,det=reaper.BR_GetMouseCursorContext()

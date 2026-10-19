@@ -1,5 +1,5 @@
 
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path .. ";" .. script_path .. "?.lua"
   local r=require("_Lyx_HOME")
   
@@ -61,7 +61,7 @@
               end
               if  Points then
                   --reaper.DeleteEnvelopePointRange(Env,max+0.0000000001,max+(max-min)+0.0000000001)
-                  cmd=reaper.NamedCommandLookup("_RSbdbdf040df097fd57022f539c4b62b8e297c12cd")
+                  cmd=r.ScriptID("MPL Scripts/Envelopes/mpl_Duplicate envelope points.lua")
                   reaper.Main_OnCommand(cmd,0)--duplicate envelope points
               end
           end

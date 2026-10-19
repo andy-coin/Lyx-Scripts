@@ -1,7 +1,7 @@
 
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
     
@@ -67,7 +67,7 @@
         elseif FX == 1 then
             
             Act="Switch track FX preset"
-            tr=reaper.GetTrack(0,tr_n-1)
+            tr=(tr_n==0 and reaper.GetMasterTrack(0)) or reaper.GetTrack(0,tr_n-1)
             preset,All=reaper.TrackFX_GetPresetIndex(tr,fx_n)
             if preset+1>=All then 
                 preset=-1
@@ -79,7 +79,8 @@
             Act="Switch take FX preset"
             tr=reaper.GetTrack(0,tr_n-1)
             item=reaper.GetTrackMediaItem(tr,it_n)
-            take=reaper.GetActiveTake(item)
+            take=reaper.GetTake(item, fx_n >> 16) -- high word = take index, low word = FX index
+            fx_n=fx_n & 0xFFFF
             preset,All=reaper.TakeFX_GetPresetIndex(take,fx_n)
             reaper.TakeFX_GetPreset(take,fx_n)
             if preset+1>=All then 

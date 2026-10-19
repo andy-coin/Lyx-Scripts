@@ -1,5 +1,5 @@
   
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
   
@@ -43,7 +43,7 @@
       local hwnd,midi_editor,position,mixer,dock_state
       
       if reaper.MIDIEditor_GetActive() then
-         editor=reaper.NamedCommandLookup("_RS9664cd55908f551fdbf5bc09712d2cb95cbbeab5")
+         editor=r.ScriptID("Lyx Scripts/Lyx_Open item editor.lua")
          reaper.Main_OnCommand(editor,0)
       end
         
@@ -89,7 +89,7 @@
       reaper.DockWindowAdd(mixer,"Mixer",position,true)
       reaper.DockWindowRefresh(mixer)
       reaper.UpdateArrange()
-      cmd=api.name("_RSb546cb9c6cf507646be9ef1d0cf6d1cb6e0642f9")
+      cmd=r.ScriptID("Lyx Scripts/Lyx_Side mixer.lua")
       api.cmd(cmd,0)--sidemixer
       ScrollMixer()
   end

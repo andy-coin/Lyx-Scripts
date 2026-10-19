@@ -100,49 +100,24 @@
         reaper.SetOnlyTrackSelected(Tr)
         cmd=reaper.NamedCommandLookup("_BR_SAVE_CURSOR_POS_SLOT_1")
         reaper.Main_OnCommand(cmd,0)--save edit cursor position
-        cmd=reaper.NamedCommandLookup("_RSd27b12681630457c01c5dd2203135a9f69ea6ab7")
-        reaper.Main_OnCommand(cmd,0)--move edit cursor to selected item
+        reaper.SetEditCurPos(CurItem_pos + reaper.GetMediaItemInfo_Value(CurItem,"D_SNAPOFFSET"), false, false)--move edit cursor to selected item
 
---reaper.ShowConsoleMsg(last_tr..","..tr..","..last_tri..","..tri)
-        
-          if  last_tr-tr+last_tri-tri == 0 then
-          
-            abigel = 3
-            
-            reaper.SetMediaItemSelected(CurItem,false)
-            cmd=reaper.NamedCommandLookup("_SWS_NUDGESAMPLELEFT")
-            reaper.Main_OnCommand(cmd,0)--nudge left 1 sample
-            CurItem_pos = reaper.GetMediaItemInfo_Value(CurItem,"D_POSITION")
-            reaper.Main_OnCommand(40417,0)--Select and move to next item
-            cmd=reaper.NamedCommandLookup("_SWS_NUDGESAMPLELEFT")
-            reaper.Main_OnCommand(cmd,0)--nudge left 1 sample
-            TempItem = reaper.GetSelectedMediaItem(0,0)
-            TempItem_pos = reaper.GetMediaItemInfo_Value(TempItem,"D_POSITION")
-            TempItem_len = reaper.GetMediaItemInfo_Value(TempItem,"D_LENGTH")
-            
-            --[[abi = 0
-            while(CurItem_len == TempItem_len and CurItem_pos == TempItem_pos-CurItem_len*(abi+1))do
-            reaper.Main_OnCommand(40417,0)--Select and move to next item
-            cmd=reaper.NamedCommandLookup("_SWS_NUDGESAMPLELEFT")
-            reaper.Main_OnCommand(cmd,0)--nudge left 1 sample
-            TempItem = reaper.GetSelectedMediaItem(0,0)
-            TempItem_pos = reaper.GetMediaItemInfo_Value(TempItem,"D_POSITION")
-            TempItem_len = reaper.GetMediaItemInfo_Value(TempItem,"D_LENGTH")
-            reaper.Main_OnCommand(40006,0)--remove items end
-            end
-            
-            cmd=reaper.NamedCommandLookup("_BR_RESTORE_CURSOR_POS_SLOT_1")
-            reaper.Main_OnCommand(cmd,0)--restore edit cursor position---]]
+        last_tr, last_tri = tonumber(last_tr) or -1, tonumber(last_tri) or -1 -- empty on first use
 
-reaper.ShowConsoleMsg(abigel..","..CurItem_pos..","..TempItem_pos-CurItem_len*1)
-
+          if  last_tr == tr and last_tri == tri then
+            -- same item pressed again: nothing to do (unfinished nudge branch removed)
           else
             
             SaveItemID()
             reaper.Main_OnCommand(40417,0)--Select and move to next item
             NextItem = reaper.GetSelectedMediaItem(0,0)
-            NextItem_pos = reaper.GetMediaItemInfo_Value(NextItem,"D_POSITION")
-            reaper.SetMediaItemSelected(NextItem,false)
+            if not NextItem or NextItem == CurItem then -- last item on the track: fill to project end
+              NextItem = nil
+              NextItem_pos = reaper.GetProjectLength(0)
+            else
+              NextItem_pos = reaper.GetMediaItemInfo_Value(NextItem,"D_POSITION")
+            end
+            if NextItem then reaper.SetMediaItemSelected(NextItem,false) end
             reaper.SetMediaItemSelected(CurItem,true)
             
             abi = 0

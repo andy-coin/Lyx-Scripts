@@ -1,5 +1,5 @@
   
-   local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+   local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
    package.path = package.path..";"..script_path.."?.lua"
    local r=require("_Lyx_HOME")
   
@@ -14,7 +14,7 @@
       retval,tr_n,it_n,fx_n = reaper.GetFocusedFX2()
       
       if retval==0 then 
-         cmd=reaper.NamedCommandLookup("_RS88532f1a953d5e0d546426226abbb4c78ef6c36f")
+         cmd=r.ScriptID("MPL Scripts/FX/mpl_Bypass all FX except instruments on selected tracks.lua")
          --reaper.Main_OnCommand(cmd,0)--mpl_Bypass all FX except instruments on selected tracks.lua
          return
       end

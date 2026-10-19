@@ -1,5 +1,5 @@
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
     
@@ -77,7 +77,7 @@
             return
         end
 
-        FX_position =api.name("_RS021abfa884464328e69a553804fb169e9b7ba370")
+        FX_position =r.ScriptID("Lyx Scripts/Lyx_Smart set FX windows position.lua")
         api.cmd(FX_position,0)
 
     end

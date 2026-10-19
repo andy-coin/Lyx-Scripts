@@ -1,29 +1,29 @@
 --[[
     Lyx_Insert click track (prompt)
 
-    在時間選取範圍（沒有選取就用整個專案長度）插入一軌 Click。
+    在時間選取範圍（沒有選取就用整個專案長度）插入一軌 Click。 / Inserts a click track over the time selection (whole project if none).
 
-    對話框欄位
-      double_or_half : x1 = 每拍一下，x2 = 每拍兩下，x0.5 或 /2 = 兩拍一下
-      Pattern        : ts / time signature = 依拍號，A = 每小節第一拍，B = 其他拍
-                       或輸入字母序列（例如 ABBB、ABAC），依序循環，每個字母一個音色
-      Click sound    : n      = 用上次存的音色
-                       y      = 重新選擇音色檔
-                       custom = 輸入參數產生合成音
-                       reaper = 用 SWS 的 click track（忽略其他欄位）
-      Track position : top / bottom / current / 數字（插在第幾軌）
+    對話框欄位 / Dialog fields
+      double_or_half : x1 = 每拍一下，x2 = 每拍兩下，x0.5 或 /2 = 兩拍一下 / x1 = one click per beat, x2 = two per beat, x0.5 or /2 = one every two beats
+      Pattern        : ts / time signature = 依拍號，A = 每小節第一拍，B = 其他拍 / ts = follow the time signature, A = first beat of the bar, B = other beats
+                       或輸入字母序列（例如 ABBB、ABAC），依序循環，每個字母一個音色 / or a letter sequence (e.g. ABBB, ABAC) looped in order, one sound per letter
+      Click sound    : n      = 用上次存的音色 / use the last saved sound
+                       y      = 重新選擇音色檔 / pick a sound file again
+                       custom = 輸入參數產生合成音 / synthesize a click from parameters
+                       reaper = 用 SWS 的 click track（忽略其他欄位） / use the SWS click track (other fields ignored)
+      Track position : top / bottom / current / 數字（插在第幾軌） / or a number (insert at that track)
 
-    原始版本備份在 "Lyx_Insert click track (prompt).lua.bak"
+    原始版本備份在 "Lyx_Insert click track (prompt).lua.bak" / original version backed up in "Lyx_Insert click track (prompt).lua.bak"
 ]]
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
 
     -----CUSTOM-----
-    local primary_vol   = 0.9 -- 每小節第一下的音量 0~1
-    local secondary_vol = 0.7 -- 其他拍的音量 0~1
-    local patient       = 3   -- 最長處理秒數，超過就停止
+    local primary_vol   = 0.9 -- 每小節第一下的音量 0~1 / volume of the first beat of each bar, 0~1
+    local secondary_vol = 0.7 -- 其他拍的音量 0~1 / volume of the other beats, 0~1
+    local patient       = 3   -- 最長處理秒數，超過就停止 / max processing time in seconds, stops after that
 
     local EXT            = "Click Track"
     local FILE_EXT       = "*.wav; *.aiff; *.mp3; *.m4a; *.flac"
@@ -41,8 +41,8 @@
     --------------------------
     ---------SOUNDS-----------
     --------------------------
-    -- how: "saved" = 上次存的檔案（不存在就詢問）, "choose" = 重新選檔, "custom" = 產生合成音
-    -- 回傳音色檔路徑；取消則回傳 nil
+    -- how: "saved" = 上次存的檔案（不存在就詢問）, "choose" = 重新選檔, "custom" = 產生合成音 / "saved" = last saved file (asks if missing), "choose" = pick again, "custom" = synthesize
+    -- 回傳音色檔路徑；取消則回傳 nil / returns the sound file path; nil when cancelled
     local function get_sound(letter, how)
 
         if  how == "custom" then
@@ -56,7 +56,7 @@
             if not ok then return end
 
             local frequency, ms, channel, intensity, bit = csv:match("^(.*),(.*),(.*),(.*),(.*)$")
-            if not frequency then oops("Custom click sound 需要 5 個數值") return end
+            if not frequency then oops("Custom click sound needs 5 values") return end
 
             local file = r.GenerateWave(frequency, ms, channel, intensity, bit)
             if not file then return end
@@ -98,7 +98,7 @@
         return (n and n > 0) and n or nil
     end
 
-    -- 回傳 InsertTrackAtIndex 用的 index（0 起算）
+    -- 回傳 InsertTrackAtIndex 用的 index（0 起算） / returns the index for InsertTrackAtIndex (0-based)
     local function parse_position(s)
         local tr_n = reaper.CountTracks(0)
         local n = tonumber(s)
@@ -116,7 +116,7 @@
         return tr_n -- bottom
     end
 
-    -- 回傳設定 table；取消或輸入錯誤回傳 nil
+    -- 回傳設定 table；取消或輸入錯誤回傳 nil / returns the settings table; nil on cancel or bad input
     local function prompt()
 
         local last = api.load(EXT, "Last answer")
@@ -128,11 +128,11 @@
         if not ok then return end
 
         local rate_s, pattern_s, sound_s, position_s = csv:match("^([^,]*),([^,]*),([^,]*),([^,]*)$")
-        if not rate_s then oops("欄位裡不能有逗號") return end
+        if not rate_s then oops("Fields can't contain commas") return end
 
         local sound = trim(sound_s):lower()
 
-        -- 記住這次的輸入；但 "y"（重新選檔）不保留，否則每次都要重選
+        -- 記住這次的輸入；但 "y"（重新選檔）不保留，否則每次都要重選 / remember this input, except "y" (pick again), or it would ask every time
         local keep_sound = (sound == "y" or sound == "yes") and "n" or sound_s
         api.save(EXT, "Last answer", table.concat({rate_s, pattern_s, keep_sound, position_s}, ","), true)
 
@@ -144,7 +144,7 @@
         end
 
         opt.rate = parse_rate(rate_s)
-        if not opt.rate then oops("double_or_half 請輸入 x1、x2、x0.5 或 /2 這類格式") return end
+        if not opt.rate then oops("double_or_half: type something like x1, x2, x0.5 or /2") return end
 
         local letters
         local pattern = trim(pattern_s):lower()
@@ -156,7 +156,7 @@
             for letter in pattern_s:gmatch("%a") do
                 opt.pattern[#opt.pattern + 1] = letter:upper()
             end
-            if #opt.pattern == 0 then oops("Pattern 請輸入 ts 或字母序列（例如 ABBB）") return end
+            if #opt.pattern == 0 then oops("Pattern: type ts or a letter sequence (e.g. ABBB)") return end
             letters = opt.pattern
         end
 
@@ -194,7 +194,7 @@
         return item
     end
 
-    -- 從 first_m 到 last_m 小節逐拍放入 click，回傳 items 與是否在時限內完成
+    -- 從 first_m 到 last_m 小節逐拍放入 click，回傳 items 與是否在時限內完成 / place clicks beat by beat from bar first_m to last_m; returns the items and whether it finished in time
     local function build_clicks(track, first_m, last_m, opt)
 
         local items, step_i, start = {}, 0, api.now()
@@ -202,7 +202,7 @@
         for m = first_m, last_m do
 
             local _, qn, qn_end, _, div = reaper.TimeMap_GetMeasureInfo(0, m)
-            local step  = 4 / div / opt.rate -- 每下 click 間隔幾個四分音符
+            local step  = 4 / div / opt.rate -- 每下 click 間隔幾個四分音符 / quarter notes between clicks
             local first = true
 
             while qn < qn_end - 1e-9 do
@@ -251,7 +251,7 @@
 
         local items, finished = build_clicks(click_tr, measure_at(starttime), measure_at(endtime), opt)
 
-        -- glue 成一個 item，再裁到範圍
+        -- glue 成一個 item，再裁到範圍 / glue into one item, then trim to the range
         api.cmd(40289,0) -- unselect all items
         for _, item in ipairs(items) do reaper.SetMediaItemSelected(item, true) end
         api.cmd(40362,0) -- glue items
@@ -268,7 +268,7 @@
         reaper.UpdateArrange()
 
         if not finished then
-            oops("超過 " .. patient .. " 秒，click 只建到一半。\n可以縮小時間選取範圍，或調高腳本裡的 patient。")
+            oops("Took over " .. patient .. " s, the click track is only partly built.\nUse a shorter time selection, or raise patient in the script.")
         end
     end
 

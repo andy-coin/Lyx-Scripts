@@ -1,11 +1,13 @@
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path..";"..script_path.."?.lua"
 local r = require("_Lyx_HOME")
 
 -- ── Config ────────────────────────────────────────────────────────────────────
+-- Layout is computed in screen-relative space (x from screen left, y = height above screen bottom)
+-- and converted to the OS's native coordinates only when windows are moved.
 local Config = {
-    start_x     = 525,   -- first window X (px from screen left)
-    start_y     = 1325,  -- first window Y (px from screen bottom; clears macOS menubar)
+    start_x     = 0.20,  -- first window X, share of screen width from the left
+    start_y     = 0.92,  -- first window top, share of screen height above the bottom (clears menubar)
     gap         = 2,  -- shelf mode spacing (px)
     title_bar_h = 16,  -- stagger step per window (px)
 }
@@ -20,7 +22,7 @@ local function collect_fx_windows()
     local function add(hwnd)
         if not hwnd then return end
         local _, l, t, rr, b = reaper.JS_Window_GetRect(hwnd)
-        wins[#wins+1] = { hwnd = hwnd, w = rr - l, h = t - b }  -- t > b (macOS Y 向上)
+        wins[#wins+1] = { hwnd = hwnd, w = rr - l, h = math.abs(t - b) }
     end
     local master = reaper.GetMasterTrack(0)
     for fx = 0, reaper.TrackFX_GetCount(master) - 1 do
@@ -31,6 +33,20 @@ local function collect_fx_windows()
         for fx = 0, reaper.TrackFX_GetCount(track) - 1 do
             add(reaper.TrackFX_GetFloatingWindow(track, fx))
         end
+        for fx = 0, reaper.TrackFX_GetRecCount(track) - 1 do -- input FX
+            add(reaper.TrackFX_GetFloatingWindow(track, fx + 0x1000000))
+        end
+        for ii = 0, reaper.CountTrackMediaItems(track) - 1 do -- take FX
+            local item = reaper.GetTrackMediaItem(track, ii)
+            for tk = 0, reaper.GetMediaItemNumTakes(item) - 1 do
+                local take = reaper.GetMediaItemTake(item, tk)
+                if take then
+                    for fx = 0, reaper.TakeFX_GetCount(take) - 1 do
+                        add(reaper.TakeFX_GetFloatingWindow(take, fx))
+                    end
+                end
+            end
+        end
     end
     return wins
 end
@@ -40,7 +56,7 @@ end
 -- Windows in the first row start at oy. Gap-fill lookahead fills horizontal remnants.
 local function shelf_layout(wins, sw, sh)
     local gap    = Config.gap
-    local ox, oy = Config.start_x, Config.start_y
+    local ox, oy = math.floor(Config.start_x * sw), math.floor(Config.start_y * sh)
     local pos    = {}
     local placed = {}  -- {x, y (top), w, h} of all placed windows
 
@@ -103,7 +119,7 @@ end
 -- TL→BR placement: [k-1, k-2, ..., 1,  N, N-1, ..., k]
 --   • Windows k-1..1  fill the left/top (previous featured slides left each cycle)
 --   • Windows N..k+1  fill the middle in descending order
---   • Window k        is featured at the bottom-right (最前)
+--   • Window k        is featured at the bottom-right (最前) / front-most
 local function stagger_order(N, k)
     local order = {}
     for i = k - 1, 1, -1 do order[#order+1] = i end
@@ -112,9 +128,9 @@ local function stagger_order(N, k)
 end
 
 -- ── Apply stagger positions ───────────────────────────────────────────────────
-local function apply_stagger(wins, k)
+local function apply_stagger(wins, k, sw, sh)
     local step   = Config.title_bar_h
-    local ox, oy = Config.start_x, Config.start_y
+    local ox, oy = math.floor(Config.start_x * sw), math.floor(Config.start_y * sh)
     local order  = stagger_order(#wins, k)
     local pos    = {}
     for p, win_idx in ipairs(order) do
@@ -125,13 +141,14 @@ end
 
 -- ── Main ──────────────────────────────────────────────────────────────────────
 local function main()
-    local sw, sh = r.GetScreenResolution()
+    local sw, sh, x0, y0 = r.GetScreenResolution() -- REAPER's monitor, native coords
+    local mac = reaper.GetOS():find("OS")          -- macOS: native y grows upward
     local wins   = collect_fx_windows()
 
     if #wins == 0 then
         reaper.SetExtState(NS, KEY_STATE, "0", false)
         reaper.SetExtState(NS, KEY_COUNT, "0", false)
-        api.cmd(api.name('_RS52f724102d8619b6f87ef3a978e4adb0537d364d'),0)
+        api.cmd(r.ScriptID("Lyx Scripts/Lyx_Go to cursor position and toggle auto-view-scroll.lua"),0)
         return
     end
 
@@ -156,11 +173,11 @@ local function main()
         if fits then
             next_state = 1
         else
-            positions, zorder = apply_stagger(wins, 1)
+            positions, zorder = apply_stagger(wins, 1, sw, sh)
             next_state = 2
         end
     else
-        positions, zorder = apply_stagger(wins, state)
+        positions, zorder = apply_stagger(wins, state, sw, sh)
         next_state = (state >= N) and 0 or (state + 1)
     end
 
@@ -169,8 +186,10 @@ local function main()
 
     for i, win in ipairs(wins) do
         local p = positions[i]
-        -- p.y = top 錨點；JS_Window_SetPosition 需要 bottom (= top - height)
-        reaper.JS_Window_SetPosition(win.hwnd, p.x, p.y - win.h, win.w, win.h)
+        -- p.y = top edge, height above screen bottom. SetPosition wants the lower edge on macOS,
+        -- the top edge (counted downward) on Windows/Linux
+        local y = (mac and y0 + p.y - win.h) or (y0 + sh - p.y)
+        reaper.JS_Window_SetPosition(win.hwnd, math.floor(x0 + p.x), math.floor(y), win.w, win.h)
     end
 
     -- z-order: call "TOP" bottom→top so featured window ends up on top

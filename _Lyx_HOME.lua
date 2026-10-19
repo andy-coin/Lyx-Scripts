@@ -1,6 +1,6 @@
 --[[
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     --local r=require("_Lyx_HOME")
     
@@ -13,7 +13,18 @@ local Lyx_computer = true --reaper.GetResourcePath():find("/Users/andy/") or rea
 
 pro_name = reaper.GetProjectName(0) 
 pro_name = (#pro_name > 0 and pro_name) or "Unsaved project"
-REAPER = reaper.JS_Window_FindChildByID(reaper.GetMainHwnd(),1000)
+REAPER = reaper.JS_Window_FindChildByID and reaper.JS_Window_FindChildByID(reaper.GetMainHwnd(),1000)
+
+-- missing extensions: warn once per REAPER session instead of crashing later
+do
+    local missing = {}
+    if not reaper.JS_Window_FindChildByID then missing[#missing+1] = "js_ReaScriptAPI" end
+    if not reaper.BR_GetMouseCursorContext then missing[#missing+1] = "SWS" end
+    if #missing > 0 and reaper.GetExtState("Lyx","ext_warned") == "" then
+        reaper.SetExtState("Lyx","ext_warned","1",false)
+        reaper.MB("Lyx Scripts needs these extensions, please install them:\n"..table.concat(missing,"\n"),"Lyx Scripts",0)
+    end
+end
 
 DE_BUG_MODE = false
 REAPER_ini = reaper.get_ini_file()
@@ -311,7 +322,7 @@ local FUN={}
             if  DE_BUG_MODE then
                 reaper.ShowConsoleMsg('    Running FUNCTION --  ESCPattern\n')
             end
-        -- 將所有特殊模式匹配字符前加上 '%' 進行轉義
+        -- 將所有特殊模式匹配字符前加上 '%' 進行轉義 / escape every magic pattern character with '%'
         local escapedText
         if  terminal then
             escapedText = text:gsub("([%s%^%$%(%)%%%.%[%]%*%+%-%?%&])", "\\%1")
@@ -330,7 +341,7 @@ local FUN={}
         local fix_mode,fix_x,fix_y,btn_x,btn_y,btn_size,last_click
 
         font = 'WenQuanYiZenHei'
-        -- 讀取持久化的 lock 狀態
+        -- 讀取持久化的 lock 狀態 / read the saved lock state
         fix_mode = api.load("billboard","fix_mode") == "true"
         fix_x = tonumber(api.load("billboard","fix_x"))
         fix_y = tonumber(api.load("billboard","fix_y"))
@@ -352,7 +363,7 @@ local FUN={}
         end
 
         local function DrawToggle()
-            -- 右上角 toggle 按鈕：手繪鎖頭 icon
+            -- 右上角 toggle 按鈕：手繪鎖頭 icon / top-right toggle button: hand-drawn lock icon
             local s = btn_size
             local cx = btn_x + s/2
             local body_w = s * 0.7
@@ -362,32 +373,32 @@ local FUN={}
             local sh_r = s * 0.26
             local sh_cy = body_y
 
-            -- 背景清除（避免重繪殘影）
+            -- 背景清除（避免重繪殘影） / clear the background (no redraw ghosting)
             gfx.set(9/255, 38/255, 44/255)
             gfx.rect(btn_x - 1, btn_y - 1, s + 2, s + 2, 1)
 
-            -- 主色
+            -- 主色 / main color
             if fix_mode then
-                gfx.set(251/255, 184/255, 47/255)   -- locked = 橘
+                gfx.set(251/255, 184/255, 47/255)   -- locked = 橘 / orange
             else
-                gfx.set(0.6, 0.6, 0.6)              -- unlocked = 灰
+                gfx.set(0.6, 0.6, 0.6)              -- unlocked = 灰 / grey
             end
 
-            -- 鎖身
+            -- 鎖身 / lock body
             gfx.rect(body_x, body_y, body_w, body_h, 1)
 
-            -- 鎖環（畫 2 圈粗線）
+            -- 鎖環（畫 2 圈粗線） / shackle (two thick arcs)
             for i = 0, 1 do
                 if fix_mode then
-                    -- 完整倒 U
+                    -- 完整倒 U / closed upside-down U
                     gfx.arc(cx, sh_cy, sh_r - i, -math.pi/2, math.pi/2, 1)
                 else
-                    -- 開鎖：右端斷開
+                    -- 開鎖：右端斷開 / unlocked: right end open
                     gfx.arc(cx, sh_cy, sh_r - i, -math.pi/2, math.pi/6, 1)
                 end
             end
 
-            -- 鑰匙孔
+            -- 鑰匙孔 / keyhole
             gfx.set(9/255, 38/255, 44/255)
             gfx.circle(cx, body_y + body_h*0.45, math.max(1, s*0.08), 1, 1)
             gfx.rect(cx - s*0.04, body_y + body_h*0.45, s*0.08, body_h*0.35, 1)
@@ -402,7 +413,7 @@ local FUN={}
             local S1= reaper.time_precise()
             local focus = reaper.JS_Window_GetFocus()
 
-            -- 處理 toggle 按鈕點擊
+            -- 處理 toggle 按鈕點擊 / handle a click on the toggle button
             local mx, my = gfx.mouse_x, gfx.mouse_y
             local clicked_now = (gfx.mouse_cap & 1) == 1
             local in_btn = mx >= btn_x and mx <= btn_x + btn_size
@@ -411,16 +422,16 @@ local FUN={}
                 fix_mode = not fix_mode
                 api.save("billboard","fix_mode", tostring(fix_mode), true)
                 if fix_mode and billboard then
-                    -- 切換到 fix：記錄當下視窗位置
+                    -- 切換到 fix：記錄當下視窗位置 / switching to fix: remember the window position now
                     local _, l, t, r, b = reaper.JS_Window_GetRect(billboard)
                     fix_x = (l + r)/2
-                    fix_y = b + tab_h
+                    fix_y = math.min(t, b) + tab_h -- native y origin: mac bottom-left, win/linux top-left
                     api.save("billboard","fix_x", fix_x, true)
                     api.save("billboard","fix_y", fix_y, true)
                 end
                 DrawToggle()
                 gfx.update()
-                S0 = reaper.time_precise()  -- 點擊後延長顯示，方便確認
+                S0 = reaper.time_precise()  -- 點擊後延長顯示，方便確認 / keep it open a bit longer after a click so you can see it
             end
             last_click = clicked_now
 
@@ -428,10 +439,10 @@ local FUN={}
                 reaper.defer(function()Wait(sec)end)
             else
                 if  billboard and not fix_mode then
-                    -- 僅 free 模式才記錄關閉時位置
+                    -- 僅 free 模式才記錄關閉時位置 / remember the closing position only in free mode
                     local _, l, t, r, b = reaper.JS_Window_GetRect(billboard)
                     local cx = (l + r )/2
-                    local cy = b + tab_h
+                    local cy = math.min(t, b) + tab_h
                     api.save("billboard","gfx.x",cx,true)
                     api.save("billboard","gfx.y",cy,true)
                 end
@@ -451,7 +462,7 @@ local FUN={}
         dpi = gfx.ext_retina
         gfx.quit()
 
-        -- fix 模式用記錄位置；否則用上次 free 位置
+        -- fix 模式用記錄位置；否則用上次 free 位置 / fix mode uses the saved spot; otherwise the last free position
         if fix_mode and fix_x and fix_y then
             x = fix_x
             y = fix_y
@@ -466,11 +477,12 @@ local FUN={}
         rect_w = (str_w>600  and str_w + 103 ) or 600
 
 
-        gfx.x = x-(rect_w/dpi/2)
-        gfx.y = y
+        -- saved spot may be on a monitor that is gone now: pull it back onto a screen
+        local win_w, win_h = rect_w / dpi, str_h*1.2/dpi
+        gfx.x, gfx.y = FUN.ClampToScreen(x - win_w/2, y, win_w, win_h)
 
         --main billboard
-        gfx.init(emoji, rect_w / dpi, str_h*1.2/dpi, 0, gfx.x, gfx.y )
+        gfx.init(emoji, win_w, win_h, 0, gfx.x, gfx.y )
         gfx.set(9/255,38/255,44/255)
         gfx.gradrect(0,0,gfx.w,gfx.h,9/255,38/255,44/255,1);
         --show text
@@ -479,7 +491,7 @@ local FUN={}
         gfx.set(251/255,184/255,47/255)
         gfx.drawstr(str)
 
-        -- 右上角 toggle 按鈕
+        -- 右上角 toggle 按鈕 / top-right toggle button
         btn_size = math.floor(20 * dpi)
         btn_x = gfx.w - btn_size - 6
         btn_y = 4
@@ -609,10 +621,7 @@ local FUN={}
         if lock == "1" then return end
         
         ---Thanks FTC's adaptive guid
-        local fixed  = '_RSd4c23469a25528b9075743ce7e7baf5e5c9edeaa'
-        local medium = '_RS18326a165ec53a69aedced71d97a0f95715a0a8a'
-        local wild   = '_RS8156a582bcab3d91af2bb026e78690e99f4464da'
-        local narrow = '_RSf612c71a2852e9cc682dbec04707f9e452448d6f'
+        local medium = FUN.ScriptID("FTC Tools/Adaptive grid/Set grid to medium (adaptive).lua")
 
         local grid = api.name(medium)
         local adaptive_grid = (api.gtc(grid)~=1 and grid) or 0
@@ -885,12 +894,44 @@ local FUN={}
         return #areaMap>0, areaMap
     end --return IsRazor,areaMap={areaStart,areaEnd,track,items,isEnvelope,envelope,envelopeName,envelopePoints,GUID}
     --------------
+    function FUN.ScriptID(path, section, quiet)
+        -- command id of a script found by its file path, instead of a hard-coded _RS id
+        -- (_RS ids are made per machine; a path under Scripts/ is the same everywhere via ReaPack)
+        -- path: absolute, or relative to REAPER/Scripts/ ; section: 0 main (default), 32060 MIDI editor
+        if not (path:match("^/") or path:match("^%a:[/\\]")) then
+            path = reaper.GetResourcePath().."/Scripts/"..path
+        end
+        local key = (section or 0)..":"..path -- cached for this REAPER session
+        local id = tonumber(reaper.GetExtState("Lyx ScriptID", key))
+        if id and reaper.ReverseNamedCommandLookup(id) then return id end
+        if not reaper.file_exists(path) then
+            if not quiet then reaper.MB("Script not found, please install it with ReaPack:\n"..path, "Lyx Scripts", 0) end
+            return 0
+        end
+        id = reaper.AddRemoveReaScript(true, section or 0, path, true) -- the existing id if already registered
+        if id ~= 0 then reaper.SetExtState("Lyx ScriptID", key, id, false) end
+        return id
+    end
+    --------------
+    function FUN.RunScript(path, section, quiet)
+        local cmd = FUN.ScriptID(path, section, quiet)
+        if cmd == 0 then return false end
+        if  section == 32060 then
+            local editor = reaper.MIDIEditor_GetActive()
+            if not editor then return false end
+            reaper.MIDIEditor_OnCommand(editor, cmd)
+        else
+            reaper.Main_OnCommand(cmd, 0)
+        end
+        return true
+    end
+    --------------
     function FUN.SetBufferSize(BufferSize)
             if  DE_BUG_MODE then
                 reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.SetBufferSize\n')
             end
         
-        local cmd,Cmd,buffer
+        local buffer
                     
         local _,current_size = reaper.GetAudioDeviceInfo('BSIZE')
 
@@ -898,18 +939,7 @@ local FUN={}
 
         buffer = (BufferSize and BufferSize) or 256
 
-        Cmd = {
-                    ['64']   = "_RSbcc69ced35229feaa2b5a1b73638e06b5e19d723",
-                    ['128']  = "_RS5db737d4f3ee480349dd5a083598f9b00632f5bc",
-                    ['256']  = "_RS29926750f3de52111bc6f90b3d2efc1cd5b0f686",
-                    ['512']  = "_RSea61a03b390bc2b1bd6f613d35bd91c7107cb2fa",
-                    ['1024'] = "_RS84cd6d5120685c9c5bad735b576b605ba0dafafd",
-                    ['2048'] = "_RSd282aac18c6d35638bbf636946bdda131a56ab46",
-                    }
-
-        
-        cmd = reaper.NamedCommandLookup(Cmd[tostring(buffer)])
-        reaper.Main_OnCommand(cmd,0)
+        FUN.RunScript("Souk21 ReaPack/Scripts/souk21_Set block (buffer) size to "..tostring(buffer)..".lua")
         
     end
 
@@ -1311,7 +1341,7 @@ local FUN={}
             api.cmd(api.name('_SWS_RESTALLSELITEMS1'),0)
             return
         elseif type(mode)=='table' then
-            for _, item in ipairs(table) do
+            for _, item in ipairs(mode) do
                 if  reaper.ValidatePtr2(0,item,"MediaItem*") then
                     reaper.SetMediaItemSelected(item, true)
                 end
@@ -1321,7 +1351,6 @@ local FUN={}
         if  keep_razor then
             for abi = 1,api.ct(0) do
                 api.ts(api.gt(0,abi-1),"P_RAZOREDITS_EXT",razorMap[abi],true)
-                api.ua()
             end
         end
         
@@ -2287,19 +2316,19 @@ local FUN={}
         local found_files = {}
         local i = 0
         while true do
-            -- 使用 reaper.EnumerateFiles 和 reaper.EnumerateSubdirectories 函數
+            -- 使用 reaper.EnumerateFiles 和 reaper.EnumerateSubdirectories 函數 / using reaper.EnumerateFiles and reaper.EnumerateSubdirectories
             local file = reaper.EnumerateFiles(directory, i)
             local subdir = reaper.EnumerateSubdirectories(directory, i)
 
-            -- 如果沒有更多檔案或資料夾，跳出迴圈
+            -- 如果沒有更多檔案或資料夾，跳出迴圈 / stop when there are no more files or folders
             if not file and not subdir then break end
 
-            -- 檢查檔案是否符合指定的副檔名
+            -- 檢查檔案是否符合指定的副檔名 / check the file extension
             if  file and file:match(extension .. "$") then
                 table.insert(found_files, directory .. "/" .. file)
             end
 
-            -- 如果是資料夾，遞迴搜尋
+            -- 如果是資料夾，遞迴搜尋 / folder: search it recursively
             if  subdir then
                 search_files(directory .. "/" .. subdir, extension)
             end
@@ -2328,14 +2357,14 @@ local FUN={}
     function FUN.GenerateWave(freq, dur_ms, channels, intensity, bit)
 
         -- CUSTOM
-        local amplitude = 1                       -- 0..1（Peak），最後會裁切到 int16 範圍
+        local amplitude = 1                       -- 0..1（Peak），最後會裁切到 int16 範圍 / 0..1 (peak), clipped to the int16 range at the end
         local click_sound_directory = reaper.GetProjectPath() .. "/Click Sound/"
 
-        os.execute('mkdir -p '..ESCPattern(click_sound_directory,true))
+        reaper.RecursiveCreateDirectory(click_sound_directory, 0)
 
         local tn = tonumber
-        local freq = tn(freq) or 1400                   -- click 基頻 (Hz)
-        local dur_sec = tn(dur_ms) / 1000 or 0.01       -- 長度 (秒)，例如 0.01 = 10 ms
+        local freq = tn(freq) or 1400                   -- click 基頻 (Hz) / click base frequency (Hz)
+        local dur_sec = (tn(dur_ms) or 10) / 1000       -- 長度 (秒)，例如 0.01 = 10 ms / length (s), e.g. 0.01 = 10 ms
         local channels = tn(channels) or 1              -- 1 = mono, 2 = stereo
         local bitsPerSample = tn(bit) or 24             
         local sampleRate
@@ -2348,29 +2377,29 @@ local FUN={}
 
         local click_name = click_sound_directory .. string.format("%.1f",(freq/1000)) .. 'k_' .. dur_ms .. 'ms_' .. string.format("%.0f",sampleRate) .. ".wav"
         
-        -- 計算
+        -- 計算 / compute
         local samples = math.floor(sampleRate * dur_sec)
         local bytesPerSample = bitsPerSample / 8
         local blockAlign = channels * bytesPerSample
         local byteRate = sampleRate * blockAlign
         local dataChunkSize = samples * blockAlign
         local riffChunkSize = 4 + (8 + 16) + (8 + dataChunkSize)  -- "WAVE" + fmt chunk + data chunk
-        -- 注意：riff size = 4 + (8+fmtLen) + (8+dataLen)
+        -- 注意：riff size = 4 + (8+fmtLen) + (8+dataLen) / note: riff size = 4 + (8+fmtLen) + (8+dataLen)
 
-        -- 打開檔案 (二進位寫入)
+        -- 打開檔案 (二進位寫入) / open the file (binary write)
         local f, err = io.open(click_name, "wb")
 
         if not f then
-            reaper.ShowMessageBox("無法開檔寫入: " .. tostring(err), "Error", 0)
+            reaper.ShowMessageBox("Can't open file for writing: " .. tostring(err), "Error", 0)
             return
         end
 
-        -- helper: 寫小端 unsigned 32 / 16 via string.pack
+        -- helper: 寫小端 unsigned 32 / 16 via string.pack / write little-endian unsigned 32 / 16
         local function writeLE_s16(n) f:write(string.pack("<h", n)) end
         
-        -- 用位運算手工寫小端 unsigned 32/16
+        -- 用位運算手工寫小端 unsigned 32/16 / write little-endian unsigned 32/16 by hand with bit operations
         local function writeLE_u32(n)
-            n = n % 4294967296           -- 保證在 0..2^32-1
+            n = n % 4294967296           -- 保證在 0..2^32-1 / keep it in 0..2^32-1
             local b1 = n & 0xFF
             local b2 = (n >> 8) & 0xFF
             local b3 = (n >> 16) & 0xFF
@@ -2412,29 +2441,29 @@ local FUN={}
         f:write("data")
         writeLE_u32(dataChunkSize)
 
-        -- 產生samples：短 sine + 指數衰減 envelope
-        -- 用較平滑的 envelope 減少突變引起的高頻 click
-        local tau_factor = FUN.NumberCage(intensity, 1, 10)  -- 控制衰減速率；增大會更快衰減
+        -- 產生samples：短 sine + 指數衰減 envelope / make samples: short sine + exponential decay envelope
+        -- 用較平滑的 envelope 減少突變引起的高頻 click / a smoother envelope avoids high-frequency clicks from sudden jumps
+        local tau_factor = FUN.NumberCage(intensity, 1, 10)  -- 控制衰減速率；增大會更快衰減 / decay speed; bigger = faster decay
 
         local function scale(v,bitsPerSample)
             local depth = 2^(bitsPerSample-1) -1
-            return math.floor( FUN.NumberCage(v, -1, 1) * depth + 0.5)  -- clip 與四捨五入
+            return math.floor( FUN.NumberCage(v, -1, 1) * depth + 0.5)  -- clip 與四捨五入 / clip and round
         end
 
         local writeLE = (bitsPerSample == 16 and writeLE_s16) or writeLE_s24
 
         for i = 0, samples - 1 do
             local t = i / sampleRate
-            -- 基本正弦
+            -- 基本正弦 / plain sine
             local s = math.sin(2 * math.pi * freq * t)
-            -- 指數衰減 envelope：exp(-k * i / N) 讓最後剩很少
+            -- 指數衰減 envelope：exp(-k * i / N) 讓最後剩很少 / exponential decay envelope: exp(-k * i / N) leaves very little at the end
             local env = math.exp(-tau_factor * (i / samples))
             local v = s * env * amplitude
         
-            -- 轉成 PCM
+            -- 轉成 PCM / to PCM
             local intv = scale(v, bitsPerSample)
 
-            -- 如果 stereo 要寫兩個 channel，這裡可複寫
+            -- 如果 stereo 要寫兩個 channel，這裡可複寫 / for stereo write both channels here
             for abi = 1, channels do
                 writeLE(intv)
             end 
@@ -2442,10 +2471,10 @@ local FUN={}
 
         f:close()
 
-        -- 告知完成
+        -- 告知完成 / done
         -- BBB("Click written to: " .. click_name .. "\n")
         
-        -- 將檔案插入當前軌道 / 時間 (InsertMedia 參數 0 = insert as new item at edit cursor)
+        -- 將檔案插入當前軌道 / 時間 (InsertMedia 參數 0 = insert as new item at edit cursor) / insert the file on the current track / time (InsertMedia mode 0 = new item at edit cursor)
         return click_name
 
     end
@@ -2516,31 +2545,13 @@ local FUN={}
         api.cc()
         -- JS extension required
         if not (reaper.JS_Window_GetRect and reaper.JS_Window_SetPosition) then
-            reaper.ShowMessageBox("需要安裝/啟用 JS_ReaScriptAPI 才能控制視窗位置。", "Missing JS_ReaScriptAPI", 0)
+            reaper.ShowMessageBox("JS_ReaScriptAPI must be installed to control window positions.", "Missing JS_ReaScriptAPI", 0)
             return
         end
 
         local function NormalizeFXName(raw)
             if not raw then return "" end
             return raw:match(".-: (.*)%(.-%)") or raw
-        end
-
-        local function ParseTrackNumberFromTitle(title)
-            if not title or title == "" then return nil end
-
-            -- 排除 item/take FX（你說之後再管，這裡先略過）
-            if title:find("FX:Item", 1, true) or title:find("FX:Take", 1, true) then
-                return nil
-            end
-
-            -- Master
-            if title:find(" %- Master Track", 1, true) then
-                return api.gMt()
-            end
-            
-            --Normal tracks
-            local n = title:match("%) %- Track%s+(%d+)")
-            if n then return api.gt(0,n-1) end
         end
 
         local function BuildNameToPositions(track, mode)
@@ -2578,46 +2589,23 @@ local FUN={}
             return true
         end
 
-        local function ResolveFloatingFXOnTrackByHWND(track, hwnd)
-            -- postFX
-            for abi=1, 2 do
-                local mode = (abi==1 and 'recFX' ) or 'postFX'
-                local seen = {}
-                local n = reaper.TrackFX_GetCount(track)
-                for pos = 1, n do
-                    local fx = (mode =='recFX' and (pos - 1 + 0x1000000)) or (pos - 1)
-                    local fHwnd = reaper.TrackFX_GetFloatingWindow(track, fx)
-                    local _, raw = reaper.TrackFX_GetFXName(track, fx, "")
-                    local name = NormalizeFXName(raw)
-                    seen[name] = (seen[name] or 0) + 1
-                    local slot = seen[name]
-
-                    if fHwnd and fHwnd == hwnd then
-                        
-                        return { track = track, mode = mode, fx = fx, name = name, slot = slot, hwnd = hwnd }
-                    end 
-                end
-            end
-
-            return nil
-        end
-
-        local function GetAllFloatingFXByWindowTitles()
+        local function GetAllFloatingFX()
+            -- scan every track (master included) for open FX windows; works with any language pack
             local floats = {}
-
-            local _, list = reaper.JS_Window_ListAllTop()
-            if not list or list == "" then return floats end
-
-            for addr in list:gmatch("[^,]+") do
-                    local hwnd = reaper.JS_Window_HandleFromAddress(addr)
-                    if hwnd then
-                    local title = reaper.JS_Window_GetTitle(hwnd)
-                    local track = ParseTrackNumberFromTitle(title)
-
-                    if track then
-                        local item = ResolveFloatingFXOnTrackByHWND(track, hwnd)
-                        if item then
-                            floats[#floats + 1] = item
+            for t = -1, reaper.CountTracks(0) - 1 do
+                local track = (t < 0 and reaper.GetMasterTrack(0)) or reaper.GetTrack(0, t)
+                for _, mode in ipairs({'recFX', 'postFX'}) do
+                    local rec = mode == 'recFX'
+                    local n = (rec and reaper.TrackFX_GetRecCount(track)) or reaper.TrackFX_GetCount(track)
+                    local seen = {}
+                    for pos = 0, n - 1 do
+                        local fx = (rec and pos + 0x1000000) or pos
+                        local _, raw = reaper.TrackFX_GetFXName(track, fx, "")
+                        local name = NormalizeFXName(raw)
+                        seen[name] = (seen[name] or 0) + 1
+                        local hwnd = reaper.TrackFX_GetFloatingWindow(track, fx)
+                        if hwnd then
+                            floats[#floats + 1] = { track = track, mode = mode, fx = fx, name = name, slot = seen[name], hwnd = hwnd }
                         end
                     end
                 end
@@ -2627,7 +2615,7 @@ local FUN={}
 
         local function ApplyToSelectedTrackAndCloseSources(target)
 
-            local floats = GetAllFloatingFXByWindowTitles()
+            local floats = GetAllFloatingFX()
             if not target or #floats == 0 then return end
 
             local postMap = BuildNameToPositions(target, "postFX")
@@ -2637,16 +2625,16 @@ local FUN={}
             local usedPost = {}
             local usedRec  = {}
 
-            -- "例外：能優先匹配什麼就是什麼" -> 順序就照掃描到的 floats 先後；先搶到就先用
+            -- "例外：能優先匹配什麼就是什麼" -> 順序就照掃描到的 floats 先後；先搶到就先用 / "exception: take whatever matches first" -> follow the order floats were found; first come, first served
             for i = 1, #floats do
                 local s = floats[i]
-                if s.track == target then return end
+                if s.track == target then goto continue end -- already on target: skip just this one
                 local nameMap = (s.mode == "recFX") and recMap or postMap
                 local usedMap = (s.mode == "recFX") and usedRec or usedPost
 
                 local tfx = FindTargetFxIndex(target, s.mode, nameMap, s.name, s.slot)
 
-                -- 如果 occurrence 對位成功但那顆已被其他浮動視窗佔用，就嘗試回退第一顆同名（如果不同顆）
+                -- 如果 occurrence 對位成功但那顆已被其他浮動視窗佔用，就嘗試回退第一顆同名（如果不同顆） / if that occurrence is already taken by another floating window, fall back to the first FX of the same name (if different)
                 if tfx and usedMap[tfx] then
                     local tfxFallback = FindTargetFxIndex(target, s.mode, nameMap, s.name, 1)
                     if tfxFallback and not usedMap[tfxFallback] then
@@ -2664,6 +2652,7 @@ local FUN={}
                         reaper.TrackFX_Show(s.track, s.fx, 2)
                     end
                 end
+                ::continue::
             end
         end
 
@@ -2807,55 +2796,27 @@ local FUN={}
             if  DE_BUG_MODE then
                 reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.GetScreenResolution\n')
             end
-
-        local file,result,OS,mainHWND,hwnd,width,height,scale
-        
-        width=api.load("Screen Resolution","width")
-        height=api.load("Screen Resolution","height")
-
-        if  reScan or (type(tonumber(width))~="number" or type(tonumber(height))~="number") then
-            --mainHWND = reaper.GetMainHwnd()
-            --hwnd= reaper.JS_Window_FindChildByID(mainHWND,1000)
-            OS = reaper.GetOS()
-
-            if  OS:find("OS") then
-                file=io.popen("system_profiler SPDisplaysDataType | awk '/Resolution/ {print $2, $4}'")
-                result=file:read('*a')
-                width, height=result:match("(%d+)%s+(%d+)")
-            elseif OS:find("Win") then
-                file=io.popen("wmic path Win32_VideoController get CurrentHorizontalResolution,CurrentVerticalResolution /format:value")
-                result=file:read("*a")
-                width,height=result:match("CurrentHorizontalResolution=(%d+)"),result:match("CurrentVerticalResolution=(%d+)")
-            
-            elseif OS:find("Linux") then
-                file=io.popen("xrandr | grep '*'")
-                result=file:read("*a")
-                width, height=result:match("(%d+)x(%d+)")
-            end
-
-            file:close()
-
-            scale,gfx.ext_retina = 1, 1 -- init with 1
-            gfx.init("",1,1)
-            scale=gfx.ext_retina
-            gfx.quit()
-
-            width=tonumber(width/scale)
-            height=tonumber(height/scale)
-
-            api.save("Screen Resolution","width",width,true)
-            api.save("Screen Resolution","height",height,true)
-
-            if  show then
-                msg("Screen Resolution:")
-                msg("Width  | "..width)
-                msg("Height | "..height)
-            end
-          
+        -- work area of the monitor holding REAPER's main window (native coords, always live)
+        local _, ml, mt, mr, mb = reaper.JS_Window_GetRect(reaper.GetMainHwnd())
+        local l, t, r, b = reaper.my_getViewport(0, 0, 0, 0, ml, mt, mr, mb, true)
+        local width, height = r - l, math.abs(b - t)
+        if  show then
+            msg("Screen Resolution:")
+            msg("Width  | "..width)
+            msg("Height | "..height)
         end
-
-        return tonumber(width),tonumber(height)
-
+        return width, height, l, math.min(t, b)
+    end --return width, height, left, y_min (native coords)
+    -------------
+    function FUN.ClampToScreen(x, y, w, h)
+        -- keep a window (x,y = native SetPosition origin, w,h) on the nearest monitor;
+        -- a saved position on a monitor that still exists is kept as is
+        w, h = w or 0, h or 0
+        local l, t, r, b = reaper.my_getViewport(0, 0, 0, 0, x, y, x + math.max(w,1), y + math.max(h,1), true)
+        local y0, y1 = math.min(t, b), math.max(t, b)
+        x = math.max(l, math.min(x, r - w))
+        y = math.max(y0, math.min(y, y1 - h))
+        return x, y
     end
     -------------
     function FUN.GetWindowPosition(hwnd)
@@ -2871,7 +2832,8 @@ local FUN={}
             if  DE_BUG_MODE then
                 reaper.ShowConsoleMsg('    Running FUNCTION --  FUN.SetWindowPosition\n')
             end
-        reaper.JS_Window_SetPosition(hwnd,math.floor(l),math.floor(b),math.floor(r-l),math.floor(math.abs(t-b)))
+        -- y = min(t,b): lower edge on macOS (origin bottom-left), upper edge on Win/Linux (origin top-left)
+        reaper.JS_Window_SetPosition(hwnd,math.floor(l),math.floor(math.min(t,b)),math.floor(r-l),math.floor(math.abs(t-b)))
     end  
     -------------
     function FUN.IsMidiEditorFocus(editor)
@@ -3024,6 +2986,12 @@ local FUN={}
 
         local saved_x = tonumber(reaper.GetExtState(SECTION, "win_x") or "")
         local saved_y = tonumber(reaper.GetExtState(SECTION, "win_y") or "")
+        -- forget a saved spot whose monitor is gone (ImGui coords -> native, then ask the OS)
+        if saved_x and saved_y and reaper.ImGui_PointConvertNative then
+            local nx, ny = reaper.ImGui_PointConvertNative(ctx, saved_x, saved_y, true)
+            local l, t, r, b = reaper.my_getViewport(0, 0, 0, 0, nx, ny, nx + 1, ny + 1, true)
+            if nx < l or nx > r or ny < math.min(t, b) or ny > math.max(t, b) then saved_x, saved_y = nil, nil end
+        end
         local cur_x, cur_y = saved_x, saved_y
 
         local ok_result, csv_result = false, retvals_csv or ""

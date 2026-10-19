@@ -1,18 +1,18 @@
         
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
 
         
-    -- 定義搜尋目錄和檔案類型
+    -- 定義搜尋目錄和檔案類型 / search folder and file type
     local dir = os.getenv("HOME").."/Downloads"
 
-    -- 你要搜尋的檔案類型，例如 .wav 檔案
+    -- 你要搜尋的檔案類型，例如 .wav 檔案 / file type to look for, e.g. .wav
     local ext = ".rar" 
     
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r = require("_Lyx_HOME")
     
@@ -28,20 +28,20 @@
     
     local function count_files(directory, extension,only_number)
         
-        -- 用於儲存找到的檔案
+        -- 用於儲存找到的檔案 / files found
         local found_files = {}
 
-        -- 獲取目錄中的所有檔案和資料夾
+        -- 獲取目錄中的所有檔案和資料夾 / list every file and folder in the directory
         local i = 0
         while true do
-            -- 使用 reaper.EnumerateFiles 和 reaper.EnumerateSubdirectories 函數
+            -- 使用 reaper.EnumerateFiles 和 reaper.EnumerateSubdirectories 函數 / using reaper.EnumerateFiles and reaper.EnumerateSubdirectories
             local file = reaper.EnumerateFiles(directory, i)
             --local subdir = reaper.EnumerateSubdirectories(directory, i)
 
-            -- 如果沒有更多檔案或資料夾，跳出迴圈
+            -- 如果沒有更多檔案或資料夾，跳出迴圈 / stop when there are no more files or folders
             if not file then break end
 
-            -- 檢查檔案是否符合指定的副檔名
+            -- 檢查檔案是否符合指定的副檔名 / check the file extension
             if  file and file:match(extension .. "$") then
                 table.insert(found_files, directory .. "/" .. file)
             end
@@ -59,11 +59,11 @@
     local function get_link(path)
 
         local file,content,new_content
-        -- 讀取文件內容
+        -- 讀取文件內容 / read the file
         
         file = io.open(path, "r")
 
-        content = file:read("*a") -- "*a"表示讀取整個文件
+        content = file:read("*a") -- "*a"表示讀取整個文件 / "*a" reads the whole file
         
         if not content then return end
 

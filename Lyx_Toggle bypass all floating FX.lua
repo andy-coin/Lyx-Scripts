@@ -2,23 +2,8 @@
   r=reaper
   
   --------------
-  local function GetOpenProjects()
-      local projects = {}
-      local p = 0
-      repeat
-          local proj = reaper.EnumProjects(p)
-          if reaper.ValidatePtr(proj, 'ReaProject*') then
-              projects[#projects + 1] = proj
-          end
-          p = p + 1
-      until not proj
-      return projects
-  end
-  
-  --------------
   local function main()
       local hwnds = {}
-      local projects = GetOpenProjects()
   
       --for _, proj in ipairs(projects) do
       local master_track = reaper.GetMasterTrack(0)
@@ -29,8 +14,8 @@
              reaper.TrackFX_SetEnabled(master_track,fx,not bypass)
           end
       end
-      for t = 0, reaper.CountTracks(proj) - 1 do
-          local track = reaper.GetTrack(proj, t)
+      for t = 0, reaper.CountTracks(0) - 1 do
+          local track = reaper.GetTrack(0, t)
           for fx = 0, reaper.TrackFX_GetCount(track) - 1 do
               local hwnd = reaper.TrackFX_GetFloatingWindow(track, fx)
               if hwnd then 
@@ -42,8 +27,8 @@
               local fx_in = fx + 0x1000000
               local hwnd = reaper.TrackFX_GetFloatingWindow(track, fx_in)
               if hwnd then 
-                 bypass=reaper.TrackFX_GetEnabled(track,fx)
-                 reaper.TrackFX_SetEnabled(track,fx,not bypass)
+                 bypass=reaper.TrackFX_GetEnabled(track,fx_in)
+                 reaper.TrackFX_SetEnabled(track,fx_in,not bypass)
               end
           end
       

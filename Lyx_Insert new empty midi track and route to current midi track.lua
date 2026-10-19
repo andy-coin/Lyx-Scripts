@@ -18,11 +18,12 @@
     
     if mode~=7 and mode~=8 then return end
     
-    reaper.SetOnlyTrackSelected(mom)
-    cmd = reaper.NamedCommandLookup("_RS2b7916dcaba757d714942f43e6d02e9370568325")
-    reaper.Main_OnCommand(cmd,0)-- Insert MIDI track
-    
-    local child = reaper.GetSelectedTrack(0,0)
+    -- new MIDI track right under mom (was a call to a script that no longer exists)
+    local idx = reaper.GetMediaTrackInfo_Value(mom,"IP_TRACKNUMBER")
+    reaper.InsertTrackAtIndex(idx, true)
+    local child = reaper.GetTrack(0, idx)
+    if not child or child == mom then return end
+    reaper.SetMediaTrackInfo_Value(child, "I_RECINPUT", 4096 | (63 << 5)) -- all MIDI inputs, all channels
     
     if reaper.GetMediaTrackInfo_Value(mom,"I_FOLDERDEPTH")==0 then
        reaper.SetMediaTrackInfo_Value(mom,"I_FOLDERDEPTH",1)

@@ -1,6 +1,6 @@
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
     
@@ -116,7 +116,7 @@
         elseif  api.mci() then
             for abi=1,api.csi(0) do
                 if  api.gsi(0,abi-1) == mouse_item and api.gtv(api.git(mouse_item),'B_MUTE') == 0 then
-                    api.cmd(api.name('_RSfc1f730d6df94e015758c3625940ef9bea680f16'),0)--toggle items mute
+                    api.cmd(r.ScriptID("Lyx Scripts/Lyx_Toggle items mute.lua"),0)--toggle items mute
                     return
                 end
             end

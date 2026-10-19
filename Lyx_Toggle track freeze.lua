@@ -1,6 +1,6 @@
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
 
@@ -35,8 +35,6 @@
     --reaper.ShowConsoleMsg(freeze)
     if not freeze then return end
 
-    cmd=reaper.NamedCommandLookup("_RS0213b7e33bb7afa70b7e406a801d5b723c81dbdc")
-    reaper.Main_OnCommand(cmd,0)
 
     if freeze==1 then
         for abi=1,#trz do

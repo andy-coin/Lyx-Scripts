@@ -6,7 +6,7 @@
 --   Also supports quantizing note lengths to grid lines.
 --   GUI style based on Lyx_MIDI_note_compressor_and_expander.lua (ReaImGui).
 
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 local _, _ = pcall(require, "_Lyx_HOME")
 
@@ -15,13 +15,13 @@ local _, _ = pcall(require, "_Lyx_HOME")
 -------------------------------------------------------------------------------
 if not reaper.ImGui_GetVersion then
     reaper.MB(
-        "此腳本需要 ReaImGui 擴充套件。\n\n" ..
-        "請依以下步驟安裝：\n" ..
-        "1) 開啟 REAPER → Extensions → ReaPack → Browse packages\n" ..
-        "2) 搜尋 \"ReaImGui\"\n" ..
-        "3) 右鍵 → Install，安裝後重啟 REAPER\n\n" ..
-        "安裝完成後再次執行此腳本即可。",
-        "缺少 ReaImGui", 0)
+        "This script needs the ReaImGui extension.\n\n" ..
+        "To install it:\n" ..
+        "1) REAPER → Extensions → ReaPack → Browse packages\n" ..
+        "2) Search for \"ReaImGui\"\n" ..
+        "3) Right-click → Install, then restart REAPER\n\n" ..
+        "Then run this script again.",
+        "ReaImGui missing", 0)
     return
 end
 
@@ -41,6 +41,11 @@ local EXT_SECTION = "Lyx_MIDI_Quantize"
 -- Undo_EndBlock()（見 ensure_undo_block / finish_undo_block）。不再把整個
 -- 腳本執行期間包成一個永遠不關閉的 block（那樣期間內在 REAPER 做的任何
 -- 其他操作都會被吞進同一個 undo point）。腳本中途被關閉時由 atexit 補上 End。
+-- Undo: one gesture (release a slider, press a button, tick an option) makes one undo point.
+-- While dragging, Undo_BeginBlock() runs on the first real note write and Undo_EndBlock() on release
+-- (see ensure_undo_block / finish_undo_block). The script no longer wraps its whole run in one block
+-- that never closes (that swallowed every other REAPER edit into the same undo point).
+-- If the script is closed midway, atexit adds the End.
 -------------------------------------------------------------------------------
 local undo_block_open = false
 
@@ -93,7 +98,7 @@ local DEFAULT_THEME = {
     slider_act= rgba(110, 170, 240, 255),
     border    = rgba(70, 70, 80, 255),
     stat_val  = rgba(140, 220, 170, 255),
-    indicator = rgba(255, 190, 60, 220), -- Show Indicator 虛線顏色（獨立於其他主題色）
+    indicator = rgba(255, 190, 60, 220), -- Show Indicator 虛線顏色（獨立於其他主題色） / Show Indicator dashed-line color (separate from the theme colors)
 }
 
 local theme = {}
@@ -195,10 +200,16 @@ load_quantize_settings()
 --                             所以被鄰居吃掉的尾巴在鄰居移開／RESET 後會自動恢復。
 --   rec.cur_start/cur_end   : 目前實際寫在 take 裡的頭尾（整數 PPQ）
 --   rec.idx / rec.selected  : 每次 apply 前由 relocate_notes 重新對應
+--   rec.orig_*: original start/end when captured (integer PPQ, never overwritten)
+--   rec.want_*: wanted start/end before overlap handling; selected notes recompute from orig on every
+--     apply, unselected notes keep their last want. Overlap handling is a pure want -> cur function,
+--     so a tail eaten by a neighbour comes back when the neighbour moves away / RESET.
+--   rec.cur_*: start/end actually written in the take (integer PPQ)
+--   rec.idx / rec.selected: re-matched by relocate_notes before every apply
 -------------------------------------------------------------------------------
 local takes_data = {}
 local active_takes = {}
-local EPS = 1e-6 -- QN 單位的浮點容許誤差
+local EPS = 1e-6 -- QN 單位的浮點容許誤差 / float tolerance in QN
 
 local function round(x) return math.floor(x + 0.5) end
 
@@ -208,6 +219,8 @@ end
 
 -- MIDI Editor 一旦失焦（點到 ImGui 視窗），MIDIEditor_GetActive() 就會回傳 nil，
 -- 所以要記住最後一個 MIDI Editor，不然一操作滑桿就找不到 take。
+-- Once the MIDI Editor loses focus (clicking the ImGui window) MIDIEditor_GetActive() returns nil,
+-- so remember the last MIDI Editor, or moving a slider would find no take.
 local last_me = nil
 
 local function collect_takes()
@@ -216,9 +229,9 @@ local function collect_takes()
     if last_me then
         local ok, t = pcall(reaper.MIDIEditor_GetTake, last_me)
         if ok and is_valid_take(t) then
-            return { t } -- MIDI Editor 開著時只處理它正在編輯的 take
+            return { t } -- MIDI Editor 開著時只處理它正在編輯的 take / with a MIDI Editor open, only its edited take
         end
-        last_me = nil    -- 該 MIDI Editor 已關閉
+        last_me = nil    -- 該 MIDI Editor 已關閉 / that MIDI Editor was closed
     end
     local takes, seen = {}, {}
     for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
@@ -257,6 +270,8 @@ end
 
 -- 重新對應 idx / selected。回傳 false 代表 take 已經被腳本以外的操作改過
 -- （增刪音符、手動移動、Ctrl+Z…），此時舊 baseline 不可信。
+-- Re-match idx / selected. Returns false when the take was changed outside the script
+-- (notes added/removed, moved by hand, Ctrl+Z...); then the old baseline can't be trusted.
 local function relocate_notes(take, data)
     local _, cnt = reaper.MIDI_CountEvts(take)
     if cnt ~= #data.notes then return false end
@@ -277,7 +292,7 @@ local function relocate_notes(take, data)
     return true
 end
 
--- 取得「已同步」的 baseline；不同步就以目前狀態重新擷取，而不是靜默地讓所有音符失效
+-- 取得「已同步」的 baseline；不同步就以目前狀態重新擷取，而不是靜默地讓所有音符失效 / get a baseline that is in sync; if not, recapture the current state instead of silently invalidating every note
 local function get_synced_data(take)
     local data = takes_data[take]
     if data and not relocate_notes(take, data) then
@@ -291,7 +306,7 @@ local function get_synced_data(take)
 end
 
 -------------------------------------------------------------------------------
--- Grid / pull helpers（position 與 length 共用，不再各寫一份）
+-- Grid / pull helpers（position 與 length 共用，不再各寫一份） / shared by position and length
 -------------------------------------------------------------------------------
 local function ppq_to_qn(take, ppq) return reaper.MIDI_GetProjQNFromPPQPos(take, ppq) end
 local function qn_to_ppq(take, qn)  return round(reaper.MIDI_GetPPQPosFromProjQN(take, qn)) end
@@ -303,7 +318,7 @@ local function on_grid(q, g)
     return math.abs(r - math.floor(r + 0.5)) < EPS
 end
 
--- 嚴格落在 (a, b) 之間的 grid 線（端點剛好在線上的不算）
+-- 嚴格落在 (a, b) 之間的 grid 線（端點剛好在線上的不算） / grid lines strictly inside (a, b); an end exactly on a line does not count
 local function grid_lines_inside(a, b, g)
     local lines = {}
     local gi = math.floor(a / g - EPS)
@@ -318,6 +333,9 @@ end
 -- 從原始位置往目標位置拉。Weighted 的距離以「半格」正規化：
 -- 半格以上一律滿拉力（position 模式的最大距離就是半格，
 -- 舊版用整格正規化，導致 Strength 100% 時最遠的音符也只拉到 50%）
+-- Pull from the original toward the target. Weighted distance is normalised to half a grid:
+-- half a grid or more pulls fully (in position mode the max distance is half a grid; the old
+-- version normalised to a whole grid, so at Strength 100% the farthest notes only moved 50%).
 local function pull(orig, target, P)
     local dist = math.abs(target - orig)
     if dist < EPS or dist <= P.thresh then return orig end
@@ -333,11 +351,11 @@ local function position_target(take, rec, P)
     return s, s + (rec.orig_end - rec.orig_start)
 end
 
--- Length 模式：
---   頭尾都在 grid 上         → 不動
---   中間沒有 grid 線         → 填滿所在那一格
---   中間恰一條線 X（頭尾都不在線上）→ 頭近：頭收到 X、尾到下一條；尾近：尾收到 X、頭到上一條
---   其他（≥2 條線，或恰一條線但頭/尾有一端已在線上）→ 頭尾各自找最近的 grid
+-- Length 模式： / Length mode:
+--   頭尾都在 grid 上         → 不動 / start and end on the grid -> no change
+--   中間沒有 grid 線         → 填滿所在那一格 / no grid line inside -> fill the cell it is in
+--   中間恰一條線 X（頭尾都不在線上）→ 頭近：頭收到 X、尾到下一條；尾近：尾收到 X、頭到上一條 / exactly one line X inside (ends off-grid) -> start closer: start to X, end to next line; end closer: end to X, start to previous line
+--   其他（≥2 條線，或恰一條線但頭/尾有一端已在線上）→ 頭尾各自找最近的 grid / otherwise (2+ lines, or one line with an end already on a line) -> each end to its nearest grid line
 local function length_target(take, rec, P)
     local g = P.grid
     local sq = ppq_to_qn(take, rec.orig_start)
@@ -367,6 +385,9 @@ end
 -- want → cur：只在「同 pitch + 同 channel」的音符之間處理重疊，
 -- 且只會縮短前一顆的尾巴（絕不動後一顆的 START、不刪音符）。
 -- 全部音符（含未選取）都參與，並且每次都從 want 重算，所以不吃歷史、可還原。
+-- want -> cur: overlaps are handled only between notes of the same pitch + channel,
+-- and only by shortening the earlier note's tail (never moves the later START, never deletes).
+-- All notes (unselected too) take part and it is recomputed from want every time: no history, reversible.
 -------------------------------------------------------------------------------
 local function changed(rec)
     return rec.want_start ~= rec.orig_start or rec.want_end ~= rec.orig_end
@@ -388,7 +409,7 @@ local function flush(take, data)
         for i, rec in ipairs(list) do
             local e = rec.want_end
             local nxt = list[i + 1]
-            -- 只處理「這次由腳本造成」的重疊；原本就存在的重疊維持原樣（RESET 才能完整還原）
+            -- 只處理「這次由腳本造成」的重疊；原本就存在的重疊維持原樣（RESET 才能完整還原） / only fix overlaps this script caused; overlaps that were already there stay (RESET restores everything)
             if nxt and e > nxt.want_start and (changed(rec) or changed(nxt)) then
                 e = nxt.want_start
             end
@@ -412,6 +433,8 @@ end
 -------------------------------------------------------------------------------
 -- Undo：一次「操作」（放開滑桿／按鈕／勾選）才產生一個 undo point，
 -- 而不是整個腳本執行期間只開一個永遠不關的 block。
+-- Undo: one gesture (release slider / button / tick) makes one undo point,
+-- instead of one block left open for the whole run of the script.
 -------------------------------------------------------------------------------
 local function ensure_undo_block()
     if not undo_block_open then
@@ -546,15 +569,19 @@ local function draw_indicator(take)
     -- 和 SWS（BR_GetMidiVisibleArea，抓 piano roll 目前可視的時間範圍）
     -- 兩個擴充功能。缺任何一個就沒辦法把虛線畫在 MIDI Editor 上，這裡直接
     -- 跳過並提醒一次，而不是每一幀都嘗試、每一幀都失敗。
+    -- This needs js_ReaScriptAPI (MIDI Editor window position on screen) and
+    -- SWS (BR_GetMidiVisibleArea, the visible time range of the piano roll).
+    -- Without either the dashed lines can't be drawn, so skip and warn once
+    -- instead of trying and failing every frame.
     if not reaper.APIExists("JS_Window_GetClientRect") or not reaper.APIExists("BR_GetMidiVisibleArea") then
         if not warned_missing_indicator_api then
             warned_missing_indicator_api = true
             reaper.MB(
-                "Show Indicator 需要以下兩個擴充功能才能把虛線畫在 MIDI Editor 的 piano roll 上：\n\n" ..
-                "1) js_ReaScriptAPI（提供 JS_Window_GetClientRect）\n" ..
-                "2) SWS Extension（提供 BR_GetMidiVisibleArea）\n\n" ..
-                "請透過 Extensions → ReaPack → Browse packages 安裝後再重新開啟此腳本。",
-                "Show Indicator：缺少必要的擴充功能", 0)
+                "Show Indicator needs these two extensions to draw dashed lines on the MIDI Editor piano roll:\n\n" ..
+                "1) js_ReaScriptAPI (for JS_Window_GetClientRect)\n" ..
+                "2) SWS Extension (for BR_GetMidiVisibleArea)\n\n" ..
+                "Install them via Extensions → ReaPack → Browse packages, then reopen this script.",
+                "Show Indicator: missing extensions", 0)
         end
         return
     end
@@ -565,7 +592,7 @@ local function draw_indicator(take)
     local grid_qn = reaper.MIDI_GetGrid(take)
     if grid_qn <= 0 then return end
 
-    -- MIDI Editor 視窗在螢幕上的座標（piano roll 所在的視窗）
+    -- MIDI Editor 視窗在螢幕上的座標（piano roll 所在的視窗） / screen rect of the MIDI Editor window (where the piano roll is)
     local client_ok, me_left, me_top, me_right, me_bottom = reaper.JS_Window_GetClientRect(midiedit)
     if not client_ok or me_right <= me_left or me_bottom <= me_top then return end
 
@@ -575,6 +602,8 @@ local function draw_indicator(take)
 
     -- piano roll 目前實際可視的時間範圍（BR_GetMidiVisibleArea 回傳的是
     -- 專案時間/秒，換算成 QN 才能跟 grid_qn 對齊）
+    -- visible time range of the piano roll (BR_GetMidiVisibleArea gives project
+    -- seconds; converted to QN to line up with grid_qn)
     local br_ok, view_start_time, view_end_time = reaper.BR_GetMidiVisibleArea(take)
     if not br_ok then return end
     local view_start_qn = reaper.TimeMap2_timeToQN(0, view_start_time)
@@ -587,7 +616,7 @@ local function draw_indicator(take)
     local dash_len  = math.max(4, math.floor(8 * settings.ui_scale))
     local gap_len   = math.max(2, math.floor(4 * settings.ui_scale))
 
-    -- 虛線長度為 piano roll 高度的 90%，置中（上下各留 5% 邊界）
+    -- 虛線長度為 piano roll 高度的 90%，置中（上下各留 5% 邊界） / dashed line is 90% of the piano roll height, centered (5% margin top and bottom)
     local y_top    = me_top + me_h * 0.05
     local y_bottom = me_bottom - me_h * 0.05
 
@@ -609,18 +638,18 @@ local function draw_indicator(take)
         end
     end
 
-    -- 只畫「目前可視範圍」涵蓋到的 grid 線，不用管整個 item 有多長
+    -- 只畫「目前可視範圍」涵蓋到的 grid 線，不用管整個 item 有多長 / draw only grid lines in the visible range, whatever the item length
     local first_grid_qn = math.floor(view_start_qn / grid_qn) * grid_qn
     local last_grid_qn  = math.ceil(view_end_qn / grid_qn) * grid_qn
 
     local grid_q = first_grid_qn
     while grid_q <= last_grid_qn do
         if quantize.quantize_mode == "length" then
-            -- Note Length 模式：每個 grid 左右兩側各畫一條 threshold 虛線，形成一個 band
+            -- Note Length 模式：每個 grid 左右兩側各畫一條 threshold 虛線，形成一個 band / Note Length mode: one threshold line on each side of every grid line, forming a band
             draw_dashed_vline(qn_to_x(grid_q - thresh_qn))
             draw_dashed_vline(qn_to_x(grid_q + thresh_qn))
         else
-            -- Note Position 模式：只在每個 grid 的右方畫一條 threshold 虛線
+            -- Note Position 模式：只在每個 grid 的右方畫一條 threshold 虛線 / Note Position mode: one threshold line right of every grid line
             draw_dashed_vline(qn_to_x(grid_q + thresh_qn))
         end
 
@@ -639,6 +668,8 @@ local function build_fonts()
     local base = math.floor(14 * settings.ui_scale + 0.5)
     -- 先算好所有尺寸，再用來建立字型（原本的順序是先建立 h1/small
     -- 字型、才計算 font_sizes.h1/small，導致第一次呼叫時拿到 nil）
+    -- compute all sizes first, then build the fonts (the old order built h1/small
+    -- before font_sizes.h1/small existed, so the first call got nil)
     font_sizes.body = base
     font_sizes.h1 = math.floor(base * 1.3 + 0.5)
     font_sizes.small = math.max(10, base - 2)
@@ -660,8 +691,8 @@ end
 -------------------------------------------------------------------------------
 local bypass = false
 local show_settings = false
-local needs_apply = false     -- 本 frame 有參數變動，需要重新 apply
-local commit_pending = false  -- 本 frame 操作已結束，可以關閉 undo block
+local needs_apply = false     -- 本 frame 有參數變動，需要重新 apply / a parameter changed this frame, apply again
+local commit_pending = false  -- 本 frame 操作已結束，可以關閉 undo block / the gesture ended this frame, the undo block can close
 
 -------------------------------------------------------------------------------
 -- Main GUI
@@ -679,6 +710,8 @@ local function draw_main()
         active_takes = new_takes
         -- 只擷取 baseline，不自動 apply（否則一開腳本就會用上次存下的
         -- Strength 直接改動音符）
+        -- only capture the baseline, no auto apply (otherwise opening the script
+        -- would change notes with the last saved Strength)
         for _, t in ipairs(active_takes) do
             capture_take_baseline(t)
         end
@@ -688,6 +721,9 @@ local function draw_main()
     -- 這裡不能再呼叫，否則會在同一個視窗的 Begin/End 之間多推入 21 個
     -- PushStyleColor 卻沒有對應的 Pop，導致 ImGui_End 丟出
     -- "Missing PopStyleColor()"（對齊 compressor 腳本的作法）
+    -- the theme (push_theme) is pushed once before Begin() in main(); calling it here
+    -- pushed 21 more PushStyleColor inside Begin/End with no Pop, and ImGui_End threw
+    -- "Missing PopStyleColor()" (same as the compressor script)
 
     local ui = settings.ui_scale
     push_font("body")
@@ -774,6 +810,8 @@ local function draw_main()
 
     -- 所有參數 widget 處理完後，同一個 frame 最多 apply 一次。
     -- 調整參數時自動離開 ORIGINAL（bypass）狀態，否則參數變了卻沒任何反應。
+    -- after all parameter widgets, apply at most once per frame.
+    -- Changing a parameter leaves ORIGINAL (bypass), or nothing would seem to happen.
     if needs_apply then
         needs_apply = false
         bypass = false
@@ -795,6 +833,8 @@ local function draw_main()
 
     -- Bypass toggle button：CURRENT（套用量化後的狀態）／ORIGINAL（還原原始音符）
     -- 用底色區分兩種狀態：CURRENT 用強調色，ORIGINAL 用較暗的面板色
+    -- Bypass toggle: CURRENT (quantized) / ORIGINAL (original notes);
+    -- CURRENT uses the accent color, ORIGINAL the darker panel color
     local bypass_col = bypass and theme.panel or theme.accent
 
     ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), bypass_col)
@@ -806,10 +846,10 @@ local function draw_main()
         bypass = not bypass
         ensure_undo_block()
         if bypass then
-            -- 切到 ORIGINAL：把選取的音符還原成原始位置（baseline 保留）
+            -- 切到 ORIGINAL：把選取的音符還原成原始位置（baseline 保留） / to ORIGINAL: put selected notes back where they were (baseline kept)
             reset_to_original()
         else
-            -- 切回 CURRENT：用目前的設定重新套用量化
+            -- 切回 CURRENT：用目前的設定重新套用量化 / back to CURRENT: re-apply quantize with the current settings
             apply_quantize()
         end
         finish_undo_block()
@@ -842,7 +882,7 @@ local function draw_main()
     ImGui.TextColored(ctx, theme.text_dim, string.format("v1.00"))
     ImGui.PopFont(ctx)
 
-    ImGui.PopFont(ctx) -- 對應函式開頭的 push_font("body")
+    ImGui.PopFont(ctx) -- 對應函式開頭的 push_font("body") / matches push_font("body") at the top of the function
 end
 
 -------------------------------------------------------------------------------

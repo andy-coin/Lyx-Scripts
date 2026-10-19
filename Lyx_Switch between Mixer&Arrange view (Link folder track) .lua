@@ -1,5 +1,5 @@
   
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
   
@@ -70,7 +70,7 @@
       local hwnd,midi_editor,position,mixer,dock_state
       
       if  reaper.MIDIEditor_GetActive() then
-          open_editor=reaper.NamedCommandLookup("_RS9664cd55908f551fdbf5bc09712d2cb95cbbeab5")
+          open_editor=r.ScriptID("Lyx Scripts/Lyx_Open item editor.lua")
           reaper.Main_OnCommand(open_editor,0)
       end
         
@@ -118,14 +118,14 @@
       reaper.UpdateArrange()
       api.cmd(41610,0)--master mixer
       --reaper.SetToggleCommandState(0,40903,icon)--show icon in mixer
-      api.cmd(api.name("_RSb546cb9c6cf507646be9ef1d0cf6d1cb6e0642f9"),0)
+      api.cmd(r.ScriptID("Lyx Scripts/Lyx_Side mixer.lua"),0)
       ScrollMixer()
   end
   
   api.ubb()
   
   if  (api.csi(0) > 0 and not api.mcw():find('cp')) or ( api.gse() and api.cep(api.gse(),-1) > 0 ) then
-      api.cmd(api.name('_RS6c4b21237a48e3ec7f51c8abccabe1a784009edb'),0)--delete
+      api.cmd(r.ScriptID("Lyx Scripts/Lyx_Smart delete (no prompt).lua"),0)--delete
   else
       main()
   end

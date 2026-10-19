@@ -1,6 +1,6 @@
   
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-  --script_path=script_path:gsub("/MIDI Editor","")
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+  --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
    
@@ -46,16 +46,16 @@
       
      reaper.SetExtState("Project Changes",name,0,true)
      
-     reaper.GetSetProjectInfo_String(0, 'RENDER_PATTERN', name, true)
-     pr_path = reaper.GetProjectPathEx( 0, '' )
-     reaper.GetSetProjectInfo_String(0, 'RENDER_FILE', pr_path, true)
-     file=pr_path:gsub(' ','\\ ')..'/'..name:gsub(' ','\\ ')..'.wav'
-     --reaper.ShowConsoleMsg(file.."\n")
-     os.execute('rm '..file)
-     
      if 7==reaper.ShowMessageBox("This project seems change a lot after last preview file was saved","Update project's preview file? >_<",4) then 
         goto END
      end           
+     -- only now (answered yes) replace the old preview; keep the user's render settings to put back
+     _,ori_pattern = reaper.GetSetProjectInfo_String(0, 'RENDER_PATTERN', '', false)
+     _,ori_file    = reaper.GetSetProjectInfo_String(0, 'RENDER_FILE', '', false)
+     pr_path = reaper.GetProjectPathEx( 0, '' )
+     os.remove(pr_path..'/'..name..'.wav')
+     reaper.GetSetProjectInfo_String(0, 'RENDER_PATTERN', name, true)
+     reaper.GetSetProjectInfo_String(0, 'RENDER_FILE', pr_path, true)
      bounds_setting=reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS',0,false)
      reaper.GetSetProjectInfo(0, 'RENDER_SETTINGS',0,true)
      bounds_flag=reaper.GetSetProjectInfo(0, 'RENDER_BOUNDSFLAG',0,false)
@@ -66,9 +66,9 @@
      reaper.GetSet_LoopTimeRange2(0,true,loop,min,max,false)
      reaper.Main_OnCommand(42230,0)--render
      reaper.GetSet_LoopTimeRange2(0,true,loop,Start,End,false)
-     desktopPath=os.getenv("HOME")..'/Desktop'
      reaper.GetSetProjectInfo(0,'RENDER_SETTINGS',bounds_setting, true)
-     reaper.GetSetProjectInfo_String(0,'RENDER_FILE',desktopPath, true)
+     reaper.GetSetProjectInfo_String(0,'RENDER_FILE',ori_file, true)
+     reaper.GetSetProjectInfo_String(0,'RENDER_PATTERN',ori_pattern, true)
      reaper.GetSetProjectInfo(0,'RENDER_BOUNDSFLAG' ,bounds_flag, true)--]]
   end 
   

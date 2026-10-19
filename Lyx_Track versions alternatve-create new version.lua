@@ -8,7 +8,7 @@
       "Verse"  (not a number)     -> "Verse*", "Verse**", ...
       new empty lane at bottom    -> highest number + 1
 ]]
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 local r = reaper and require("_Lyx_HOME")
 

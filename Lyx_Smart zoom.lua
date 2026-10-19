@@ -1,5 +1,5 @@
 
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
   
@@ -46,7 +46,7 @@
           s=Start
           e=End 
       else
-          api.cmd(api.name("_RSbfb8f64d9cb6467ec60dd3a4db5fddbe21e59cc3"),0)--F2
+          api.cmd(r.ScriptID("Lyx Scripts/Lyx_Toggle track zoom to project length.lua"),0)--F2
           --LoadScreenPosition()
           --SaveScreenPosition(S,E)
           return

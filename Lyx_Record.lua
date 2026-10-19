@@ -1,5 +1,5 @@
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
     
@@ -282,7 +282,7 @@
              
             --SwitchItemTint(1)
              
-            if auto_color then api.cmd(api.name("_RSb317b34c4b40a6471b5ef38a96ebf8f9a3ce65f7"),0) end --change color
+            if auto_color then api.cmd(r.ScriptID("Lyx Scripts/Lyx_Set random color .lua"),0) end --change color
             if auto_group and api.csi(0)>1 then api.cmd(40032,0) end --group items
             
             local rec_point = api.load("Record - Again point",pro_name)

@@ -1,5 +1,5 @@
 
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
   
@@ -145,7 +145,7 @@
   end
   
   -----------------------------------RAZOR AREA CHECK-----------------------------------------------
-  local function main()
+  local function main(len)
       
       itemzzz=r.SaveItems(itemzzz)
       
@@ -179,10 +179,6 @@
           end
       end
       
-      local ret,len=GetUserInput()
-      
-      if not ret then return end
-      
       if #itemzzz==0 and #itemzz==0 then return end
       
       if  razor then
@@ -196,7 +192,8 @@
       reaper.UpdateArrange()
   end
   
-  reaper.Undo_BeginBlock()
-  --main()
-  r.run(GetUserInput)
-  reaper.Undo_EndBlock("Adjust fade length",-1)
+  -- dialog runs in a coroutine (r.run); ask first, then one undo block around the edit
+  r.run(function()
+      local ret, len = GetUserInput()
+      if ret then r.Undo("Adjust fade length", main, len) end
+  end)
