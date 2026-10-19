@@ -26,9 +26,10 @@ def pick(f):
     name = f.rsplit("/", 1)[-1]
     if name in PRIVATE: return None
     if f.startswith("MIDI Editor/") and f.count("/") == 1: return ("MIDI Editor", "midi_editor")
+    if f.startswith("_lib/") and f.count("/") == 1 and name.startswith("_Lyx_"):
+        return ("Main", None)  # library: installed, no action
     if "/" in f: return None
     if name.startswith("Lyx_"): return ("Main", "main")
-    if name.startswith("_Lyx_"): return ("Main", None)  # library: installed, no action
     return None
 
 cats = {}
@@ -47,7 +48,7 @@ for cat in sorted(cats):
         name = f.rsplit("/", 1)[-1]
         url = f"https://github.com/{REPO}/raw/{h}/{quote(f)}"
         m = f" main={quoteattr(main)}" if main else ""
-        if "/" not in f: m += f" file={quoteattr('../' + name)}"  # root files: Scripts/Lyx Scripts/<name>
+        if cat == "Main": m += f" file={quoteattr('../' + f)}"  # Scripts/Lyx Scripts/<name> or _lib/<name>
         out.append(f"    <reapack name={quoteattr(name)} type=\"script\" desc={quoteattr(name[:-4])}>")
         out.append(f"      <version name=\"{ts:%Y.%m.%d.%H%M}\" author=\"Lyx\" time=\"{ts:%Y-%m-%dT%H:%M:%SZ}\">")
         out.append(f"        <source{m}>{escape(url)}</source>")

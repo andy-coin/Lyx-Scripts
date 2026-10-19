@@ -3,7 +3,7 @@
     local script_path = script_name:match("@?(.*[/\\])") or "./"
     --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
 
     -----CUSTOM-----
     lane_hieght_mode = 2

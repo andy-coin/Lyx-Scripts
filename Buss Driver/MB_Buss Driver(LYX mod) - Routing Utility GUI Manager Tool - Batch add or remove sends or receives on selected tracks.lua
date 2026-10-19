@@ -129,7 +129,7 @@ local _ui = {
 -- (rtk widgets bake colours at creation, so changes apply after a script restart).
 local LYX_THEME_KEY = "Buss Driver"
 package.path = package.path .. ";" .. (({reaper.get_action_context()})[2]:match("^(.*[/\\])[^/\\]+[/\\][^/\\]+$") or "") .. "?.lua"
-local _T_ok, T = pcall(require, "_Lyx_Theme")
+local _T_ok, T = pcall(require, "_lib._Lyx_Theme")
 if not _T_ok then T = nil end
 local _inherit = T ~= nil and T.inherit(LYX_THEME_KEY)
 local _rtk_theme = {}  -- extra rtk theme overrides (only when inherited)

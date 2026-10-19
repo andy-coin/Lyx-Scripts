@@ -2,15 +2,21 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
-    --local r=require("_Lyx_HOME")
+    --local r=require("_lib._Lyx_HOME")
     
     --HOME="/Users/andy/Library/Application Support/REAPER/Scripts/Lyx Scripts/"
     --package.path = package.path..";"..HOME.."?.lua"
-    --local lyx=require("_Lyx_HOME")
+    --local lyx=require("_lib._Lyx_HOME")
 --]]
 
+-- ReaPack repository (Extensions > ReaPack > Import repositories... > paste LYX_REPO.index)
+LYX_REPO = {
+    name  = "Lyx Scripts",
+    index = "https://github.com/andy-coin/Lyx-Scripts/raw/main/index.xml",
+    web   = "https://github.com/andy-coin/Lyx-Scripts",
+}
 
-pro_name = reaper.GetProjectName(0) 
+pro_name = reaper.GetProjectName(0)
 pro_name = (#pro_name > 0 and pro_name) or "Unsaved project"
 REAPER = reaper.JS_Window_FindChildByID and reaper.JS_Window_FindChildByID(reaper.GetMainHwnd(),1000)
 
@@ -799,7 +805,7 @@ local FUN={}
         local id = tonumber(reaper.GetExtState("Lyx ScriptID", key))
         if id and reaper.ReverseNamedCommandLookup(id) then return id end
         if not reaper.file_exists(path) then
-            if not quiet then reaper.MB("Script not found, please install it with ReaPack:\n"..path, "Lyx Scripts", 0) end
+            if not quiet then reaper.MB("Script not found, please install it with ReaPack:\n"..path.."\n\nRepository: "..LYX_REPO.index, "Lyx Scripts", 0) end
             return 0
         end
         id = reaper.AddRemoveReaScript(true, section or 0, path, true) -- the existing id if already registered

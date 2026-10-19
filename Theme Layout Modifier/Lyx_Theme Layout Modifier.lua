@@ -14,7 +14,7 @@ local SCRIPT_DIR = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 package.path = SCRIPT_DIR .. "?.lua;" .. SCRIPT_DIR .. "../?.lua;" .. reaper.ImGui_GetBuiltinPath() .. "/?.lua;" .. package.path
 local ImGui = require "imgui" "0.10"
 local W = require "tlm_walter"
-local G = require "_Lyx_GUI" -- Lyx global theme (colours + rounding when "Inherit" is on)
+local G = require "_lib._Lyx_GUI" -- Lyx global theme (colours + rounding when "Inherit" is on)
 local THEME_KEY = "ThemeLayoutModifier"
 G.load_theme(THEME_KEY)
 

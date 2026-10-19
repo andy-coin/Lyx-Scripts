@@ -63,7 +63,7 @@
         return print("Envelope value self-check OK")
     end
 
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
 
     SHAPE = { ['0']=1, ['1']=0, ['2']=3, ['3']=4, ['4']=2, ['5']=5}
 

@@ -61,8 +61,8 @@ if not reaper then -- self-check: lua "Lyx_FFMPEG replace audio in video(McS).lu
 end
 
 ---------------------------------------------------------------------------
-require("_Lyx_HOME")
-local G = require("_Lyx_GUI")
+require("_lib._Lyx_HOME")
+local G = require("_lib._Lyx_GUI")
 local R = reaper
 local EXT = "Lyx_FFMPEG"
 local WIN = R.GetOS():find("Win") ~= nil

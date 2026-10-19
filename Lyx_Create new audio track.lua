@@ -1,7 +1,7 @@
     
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
     
     if reaper.NamedCommandLookup("_S&M_ADD_TRTEMPLATE1") == 0 then
         reaper.MB("This script needs the SWS extension (install via ReaPack / sws-extension.org).","Lyx Scripts",0)
