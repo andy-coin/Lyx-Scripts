@@ -7,8 +7,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Add number in drum map.lua" type="script" desc="Lyx_Add number in drum map">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Add%20number%20in%20drum%20map.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Add%20number%20in%20drum%20map.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Add previous track to selection.lua" type="script" desc="Lyx_Add previous track to selection">
@@ -152,8 +152,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Create new recieve track and send select track to it.lua" type="script" desc="Lyx_Create new recieve track and send select track to it">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Create%20new%20recieve%20track%20and%20send%20select%20track%20to%20it.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Create%20new%20recieve%20track%20and%20send%20select%20track%20to%20it.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Create tempo envelope to time selection.lua" type="script" desc="Lyx_Create tempo envelope to time selection">
@@ -192,8 +192,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Empty.lua" type="script" desc="Lyx_Empty">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Empty.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Empty.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_FFMPEG replace audio in video(McS).lua" type="script" desc="Lyx_FFMPEG replace audio in video(McS)">
@@ -537,8 +537,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Open rander stats folder.lua" type="script" desc="Lyx_Open rander stats folder">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Open%20rander%20stats%20folder.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Open%20rander%20stats%20folder.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Open-hide tuner.lua" type="script" desc="Lyx_Open-hide tuner">
@@ -592,13 +592,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Quick open Band's projects.lua" type="script" desc="Lyx_Quick open Band's projects">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Quick%20open%20Band%27s%20projects.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Quick%20open%20Band%27s%20projects.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Quit REAPER and Google Drive.lua" type="script" desc="Lyx_Quit REAPER and Google Drive">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Quit%20REAPER%20and%20Google%20Drive.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Quit%20REAPER%20and%20Google%20Drive.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Randomize....lua" type="script" desc="Lyx_Randomize...">
@@ -622,8 +622,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Render project to disk and open google drive.lua" type="script" desc="Lyx_Render project to disk and open google drive">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Render%20project%20to%20disk%20and%20open%20google%20drive.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Render%20project%20to%20disk%20and%20open%20google%20drive.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Render tracks to new track or seperate a track to mono.lua" type="script" desc="Lyx_Render tracks to new track or seperate a track to mono">
@@ -1257,8 +1257,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle record arm for selected tracks.lua" type="script" desc="Lyx_Toggle record arm for selected tracks">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Toggle%20record%20arm%20for%20selected%20tracks.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Toggle%20record%20arm%20for%20selected%20tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle selected envelope hight to standard-large.lua" type="script" desc="Lyx_Toggle selected envelope hight to standard-large">
@@ -1332,8 +1332,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track icon .lua" type="script" desc="Lyx_Toggle track icon ">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Toggle%20track%20icon%20.lua</source>
+      <version name="2026.10.19.0713" author="Lyx" time="2026-10-19T07:13:54Z">
+        <source main="main">https://github.com/andy-coin/Lyx-Reascripts/raw/c5ae03da86b76ab9cb90fb0475b98bf0e25cafbb/Lyx_Toggle%20track%20icon%20.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track send 1 mute.lua" type="script" desc="Lyx_Toggle track send 1 mute">
