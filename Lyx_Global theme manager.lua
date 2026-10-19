@@ -10,8 +10,8 @@
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 
-local G = require("_Lyx_GUI")
-local T = require("_Lyx_Theme")
+local G = require("_lib._Lyx_GUI")
+local T = require("_lib._Lyx_Theme")
 local R = reaper
 if R.set_action_options then R.set_action_options(3) end -- re-launch = restart, no dialog
 

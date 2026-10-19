@@ -3,7 +3,7 @@
     local script_path = script_name:match("@?(.*[/\\])") or "./"
     --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
     
     -- if there is any razor area, it will insert empty space at sertain track 
     -- otherwise it will insert empty space at edit cursor by time selection length affect whole project.

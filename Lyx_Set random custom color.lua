@@ -1,7 +1,7 @@
    
   local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
-  local r=require("_Lyx_HOME") -- palette: r.RandomColor()
+  local r=require("_lib._Lyx_HOME") -- palette: r.RandomColor()
   
   local midi =reaper.ColorToNative(28,108,53)|0x1000000
   local audio=reaper.ColorToNative(29,73,127)|0x1000000

@@ -1,7 +1,7 @@
         
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
 
         
     -- 定義搜尋目錄和檔案類型 / search folder and file type
@@ -14,7 +14,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
-    local r = require("_Lyx_HOME")
+    local r = require("_lib._Lyx_HOME")
     
     local function get_clipboard_text()
         local clip = io.popen('pbpaste','r')

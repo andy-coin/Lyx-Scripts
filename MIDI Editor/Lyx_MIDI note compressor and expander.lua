@@ -12,7 +12,7 @@ local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path..";"..script_path.."?.lua"
 -- parent "Lyx Scripts/" folder: _Lyx_GUI / _Lyx_Theme (global theme)
 package.path = package.path..";"..(script_path:match("^(.*[/\\])[^/\\]+[/\\]$") or "../").."?.lua"
-local ok_home, r_home = pcall(require, "_Lyx_HOME")
+local ok_home, r_home = pcall(require, "_lib._Lyx_HOME")
 
 -------------------------------------------------------------------------------
 -- ReaImGui check
@@ -38,7 +38,7 @@ do -- fonts below use the ReaImGui 0.10 API (size given to PushFont)
     end
 end
 
-local G = require("_Lyx_GUI")   -- Lyx global theme (colours / rounding / spacing; own fonts kept)
+local G = require("_lib._Lyx_GUI")   -- Lyx global theme (colours / rounding / spacing; own fonts kept)
 local THEME_KEY = "MIDI Compressor"
 G.load_theme(THEME_KEY)
 

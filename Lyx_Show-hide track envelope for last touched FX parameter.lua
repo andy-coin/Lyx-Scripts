@@ -1,6 +1,6 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
 
     -----CUSTOM-----
         env_lane = true

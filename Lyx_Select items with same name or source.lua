@@ -74,7 +74,7 @@ end
 
 -- Lyx global theme (inherited silently; ImGui defaults when Inherit is off)
 package.path = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./") .. "?.lua;" .. package.path
-local G = require("_Lyx_GUI")
+local G = require("_lib._Lyx_GUI")
 G.load_theme("SelectSame")
 
 local ctx = reaper.ImGui_CreateContext("Lyx select same")

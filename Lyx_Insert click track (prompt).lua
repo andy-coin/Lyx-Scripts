@@ -18,7 +18,7 @@
 
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    local r=require("_lib._Lyx_HOME")
 
     -----CUSTOM-----
     local primary_vol   = 0.9 -- 每小節第一下的音量 0~1 / volume of the first beat of each bar, 0~1

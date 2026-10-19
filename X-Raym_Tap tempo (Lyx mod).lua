@@ -58,7 +58,7 @@ if not reaper then -- self-check: lua "X-Raym_Tap tempo (Lyx mod).lua"
 end
 
 ---------------------------------------------------------------------------
-local G = require("_Lyx_GUI")
+local G = require("_lib._Lyx_GUI")
 local R = reaper
 local EXT = "Lyx_TapTempo"
 

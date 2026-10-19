@@ -107,8 +107,8 @@ if not reaper then -- self-check: lua5.4 "Lyx_Insert free fall midi notes .lua"
 end
 
 ---------------------------------------------------------------------------
-require("_Lyx_HOME")
-local G = require("_Lyx_GUI")
+require("_lib._Lyx_HOME")
+local G = require("_lib._Lyx_GUI")
 local R = reaper
 local EXT = "Lyx_FreeFall"
 

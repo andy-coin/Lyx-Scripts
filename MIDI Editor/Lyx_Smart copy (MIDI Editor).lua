@@ -1,7 +1,7 @@
   local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
   package.path = package.path..";"..script_path.."?.lua"
-  local L=require("_Lyx_HOME")
+  local L=require("_lib._Lyx_HOME")
   if not L.Need("SWS") then return end
 
   r=reaper

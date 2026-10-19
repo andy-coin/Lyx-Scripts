@@ -9,8 +9,8 @@
 ]]
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
-require("_Lyx_HOME")
-local F = require("_Lyx_Fade")
+require("_lib._Lyx_HOME")
+local F = require("_lib._Lyx_Fade")
 local R = reaper
 
 local TOUCH = 0.001 -- gap (s) still treated as "touching"

@@ -7,7 +7,7 @@
     Every T.save() bumps ExtState "Lyx_Theme"/"rev" so running GUIs reload (see T.changed).
 
     usage:
-        local T  = require("_Lyx_Theme")
+        local T  = require("_lib._Lyx_Theme")
         local th = T.get()          -- current theme, every field filled
 ]]
 
@@ -18,7 +18,7 @@ local SECTION = "Lyx_Theme"
 T.BUILTIN = "Lyx Dark"
 T.dir  = R.GetResourcePath() .. "/Data/Lyx"
 T.path = T.dir .. "/themes.lua"
-local HERE = debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./"
+local HERE = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./"):gsub("_lib[/\\]$", "") -- scripts live one folder up
 
 function T.mix(a, b, t)
     local function ch(x, s) return (x >> s) & 0xFF end

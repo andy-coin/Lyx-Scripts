@@ -21,7 +21,7 @@
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 script_path = script_path:gsub("[/\\]MIDI Editor[/\\]$", "/")   -- _Lyx_HOME lives one folder up
 package.path = package.path..";"..script_path.."?.lua"
-local ok_home, r_home = pcall(require, "_Lyx_HOME")
+local ok_home, r_home = pcall(require, "_lib._Lyx_HOME")
 
 -------------------------------------------------------------------------------
 -- ReaImGui check
@@ -1150,7 +1150,7 @@ end
 -- ImGui context, fonts, theme
 -------------------------------------------------------------------------------
 local ctx = ImGui.CreateContext(SCRIPT_NAME)
-G = require("_Lyx_GUI")
+G = require("_lib._Lyx_GUI")
 G.load_theme(THEME_KEY)
 sync_theme()
 

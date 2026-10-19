@@ -1,7 +1,7 @@
 
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path..";"..script_path.."?.lua"
-local r=require("_Lyx_HOME")
+local r=require("_lib._Lyx_HOME")
 
 FX_keywords = {"FX: Track","FX: Item","FX: Monitoring","VST:","VSTi:","VST3:","VST3i:","AU:","AUi:","LV2:","LV2i:","JS:","(x86_64)","CLAP:","CALPi:","ReWire:"}
 

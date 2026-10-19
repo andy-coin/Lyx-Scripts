@@ -7,7 +7,7 @@
     accent / scale). Running GUIs reload about once per second after the theme is saved.
 
     usage:
-        local G   = require("_Lyx_GUI")
+        local G   = require("_lib._Lyx_GUI")
         local ctx = G.new("My tool")          -- nil if ReaImGui missing
         G.run(ctx, "My tool", function(ctx) ... return false to close ... end,
               { w = 420, h = 300, on_close = fn })
@@ -18,7 +18,7 @@
 ]]
 
 local R = reaper
-local T = require("_Lyx_Theme")
+local T = require("_lib._Lyx_Theme")
 local G = {}
 local LEGACY = "Lyx_GetUserInputs"
 

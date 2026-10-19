@@ -46,8 +46,8 @@ if not reaper then -- self-check: lua "Lyx_Randomize....lua"
 end
 
 ---------------------------------------------------------------------------
-require("_Lyx_HOME")
-local G = require("_Lyx_GUI")
+require("_lib._Lyx_HOME")
+local G = require("_lib._Lyx_GUI")
 local R = reaper
 local EXT = "lyx_Randomize2"
 
