@@ -37,13 +37,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_MIDI note compressor and expander.lua" type="script" desc="Lyx_MIDI note compressor and expander">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="midi_editor">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/MIDI%20Editor/Lyx_MIDI%20note%20compressor%20and%20expander.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="midi_editor">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/MIDI%20Editor/Lyx_MIDI%20note%20compressor%20and%20expander.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_MIDI_note_quantize_filter.lua" type="script" desc="Lyx_MIDI_note_quantize_filter">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="midi_editor">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/MIDI%20Editor/Lyx_MIDI_note_quantize_filter.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="midi_editor">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/MIDI%20Editor/Lyx_MIDI_note_quantize_filter.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Midi_smart Select all.lua" type="script" desc="Lyx_Midi_smart Select all">
@@ -404,8 +404,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_FFMPEG replace audio in video(McS).lua" type="script" desc="Lyx_FFMPEG replace audio in video(McS)">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="main" file="../Lyx_FFMPEG replace audio in video(McS).lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/Lyx_FFMPEG%20replace%20audio%20in%20video%28McS%29.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_FFMPEG replace audio in video(McS).lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_FFMPEG%20replace%20audio%20in%20video%28McS%29.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Free fall duplicate media file.lua" type="script" desc="Lyx_Free fall duplicate media file">
@@ -424,8 +424,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Global theme manager.lua" type="script" desc="Lyx_Global theme manager">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/Lyx_Global%20theme%20manager.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_Global%20theme%20manager.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Glue items or join midi items.lua" type="script" desc="Lyx_Glue items or join midi items">
@@ -469,8 +469,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Insert free fall midi notes .lua" type="script" desc="Lyx_Insert free fall midi notes ">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="main" file="../Lyx_Insert free fall midi notes .lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/Lyx_Insert%20free%20fall%20midi%20notes%20.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_Insert free fall midi notes .lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_Insert%20free%20fall%20midi%20notes%20.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Insert marker at cursor.lua" type="script" desc="Lyx_Insert marker at cursor">
@@ -589,8 +589,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Move time selection left by same bars or beats.lua" type="script" desc="Lyx_Move time selection left by same bars or beats">
-      <version name="2026.10.19.1642" author="Lyx" time="2026-10-19T16:42:56Z">
-        <source main="main" file="../Lyx_Move time selection left by same bars or beats.lua">https://github.com/andy-coin/Lyx-Scripts/raw/b013b2de6fcb2e0aa1d64abc9412f3a858db9550/Lyx_Move%20time%20selection%20left%20by%20same%20bars%20or%20beats.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_Move time selection left by same bars or beats.lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_Move%20time%20selection%20left%20by%20same%20bars%20or%20beats.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Move time selection right by one grid .lua" type="script" desc="Lyx_Move time selection right by one grid ">
@@ -599,8 +599,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Move time selection right by same bars or beats.lua" type="script" desc="Lyx_Move time selection right by same bars or beats">
-      <version name="2026.10.19.1642" author="Lyx" time="2026-10-19T16:42:56Z">
-        <source main="main" file="../Lyx_Move time selection right by same bars or beats.lua">https://github.com/andy-coin/Lyx-Scripts/raw/b013b2de6fcb2e0aa1d64abc9412f3a858db9550/Lyx_Move%20time%20selection%20right%20by%20same%20bars%20or%20beats.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_Move time selection right by same bars or beats.lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_Move%20time%20selection%20right%20by%20same%20bars%20or%20beats.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Normalize items to +0dB peak.lua" type="script" desc="Lyx_Normalize items to +0dB peak">
@@ -689,8 +689,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Randomize....lua" type="script" desc="Lyx_Randomize...">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="main" file="../Lyx_Randomize....lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/Lyx_Randomize....lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_Randomize....lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_Randomize....lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Record.lua" type="script" desc="Lyx_Record">
@@ -799,8 +799,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Select items with same name or source.lua" type="script" desc="Lyx_Select items with same name or source">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source main="main" file="../Lyx_Select items with same name or source.lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/Lyx_Select%20items%20with%20same%20name%20or%20source.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source main="main" file="../Lyx_Select items with same name or source.lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/Lyx_Select%20items%20with%20same%20name%20or%20source.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Select only track 1.lua" type="script" desc="Lyx_Select only track 1">
@@ -1444,8 +1444,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_GUI.lua" type="script" desc="_Lyx_GUI">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source file="../_Lyx_GUI.lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/_Lyx_GUI.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source file="../_Lyx_GUI.lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/_Lyx_GUI.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_HOME.lua" type="script" desc="_Lyx_HOME">
@@ -1459,8 +1459,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_Theme.lua" type="script" desc="_Lyx_Theme">
-      <version name="2026.10.19.1712" author="Lyx" time="2026-10-19T17:12:15Z">
-        <source file="../_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/9ec8cc8a718e0af5800acd7bd64658231d294a93/_Lyx_Theme.lua</source>
+      <version name="2026.10.19.1806" author="Lyx" time="2026-10-19T18:06:19Z">
+        <source file="../_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/122480a1e65a58df6f71dce9089869317f29b2c7/_Lyx_Theme.lua</source>
       </version>
     </reapack>
   </category>
