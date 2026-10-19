@@ -10,6 +10,8 @@
 
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path..";"..script_path.."?.lua"
+-- parent "Lyx Scripts/" folder: _Lyx_GUI / _Lyx_Theme (global theme)
+package.path = package.path..";"..(script_path:match("^(.*[/\\])[^/\\]+[/\\]$") or "../").."?.lua"
 local ok_home, r_home = pcall(require, "_Lyx_HOME")
 
 -------------------------------------------------------------------------------
@@ -35,6 +37,10 @@ do -- fonts below use the ReaImGui 0.10 API (size given to PushFont)
         return
     end
 end
+
+local G = require("_Lyx_GUI")   -- Lyx global theme (colours / rounding / spacing; own fonts kept)
+local THEME_KEY = "MIDI Compressor"
+G.load_theme(THEME_KEY)
 
 local ImGui = {}
 for name, func in pairs(reaper) do
@@ -111,8 +117,34 @@ local THEME_EDITABLE = {
     { "bypass_on", "Bypass (on)" }, { "diagonal", "Graph 1:1 line" },
 }
 
-local theme = {}
-for k, v in pairs(DEFAULT_THEME) do theme[k] = v end
+local own = {}     -- the script's own colours (Settings → Theme Colors)
+for k, v in pairs(DEFAULT_THEME) do own[k] = v end
+local theme = {}   -- colours actually drawn: `own`, or mapped from the Lyx global theme (apply_theme)
+
+-- Own colours replaced by the Lyx global theme while Inherit is on; the rest
+-- (Compress gradient, Bypass, graph 1:1 line) always stay the script's own.
+local FROM_GLOBAL = { bg = true, panel = true, text = true, text_dim = true, accent = true, slider = true }
+
+local function apply_theme()
+    for k, v in pairs(own) do theme[k] = v end
+    theme.button, theme.title, theme.subtitle = own.panel, own.accent, own.text
+    if not G.inherited then return end
+    local th = G.theme
+    local c, col = th.colors, G.col
+    theme.bg         = col(c.bg, math.floor(th.alpha * 255 + 0.5))
+    theme.panel      = col(th.frame.color)          -- frames, slider tracks, graph canvas
+    theme.button     = col(th.button.color)
+    theme.text       = col(c.text)
+    theme.text_dim   = col(G.dim)
+    theme.stat_val   = col(c.text)
+    theme.icon       = col(G.dim)
+    theme.accent     = col(c.accent)                -- curve, check marks, active slot
+    theme.slider     = col(c.base)                  -- slider grab / fill, hover
+    theme.slider_act = col(c.accent)
+    theme.border     = col(G.mix(c.bg, c.base, 0.65))
+    theme.title      = col(c.title)
+    theme.subtitle   = col(c.subtitle)
+end
 
 local DEFAULT_SETTINGS = {
     ui_scale     = 1.2,
@@ -138,11 +170,11 @@ local function load_settings()
         return s == "1"
     end
     for _, e in ipairs(THEME_EDITABLE) do
-        theme[e[1]] = getN("theme_"..e[1], DEFAULT_THEME[e[1]])
+        own[e[1]] = getN("theme_"..e[1], DEFAULT_THEME[e[1]])
     end
     -- v2.25: the Compress gradient got quieter; move users still on the old default
-    if theme.comp_expand   == rgba( 60, 120, 230, 220) then theme.comp_expand   = DEFAULT_THEME.comp_expand   end
-    if theme.comp_compress == rgba(230,  80,  80, 220) then theme.comp_compress = DEFAULT_THEME.comp_compress end
+    if own.comp_expand   == rgba( 60, 120, 230, 220) then own.comp_expand   = DEFAULT_THEME.comp_expand   end
+    if own.comp_compress == rgba(230,  80,  80, 220) then own.comp_compress = DEFAULT_THEME.comp_compress end
     settings.ui_scale     = getN("ui_scale", DEFAULT_SETTINGS.ui_scale)
     settings.limit_rate   = getB("limit_rate",   DEFAULT_SETTINGS.limit_rate)
     settings.bypass_ghost = getB("bypass_ghost", DEFAULT_SETTINGS.bypass_ghost)
@@ -153,7 +185,7 @@ end
 
 local function save_settings()
     for _, e in ipairs(THEME_EDITABLE) do
-        reaper.SetExtState(EXT_SECTION, "theme_"..e[1], tostring(theme[e[1]]), true)
+        reaper.SetExtState(EXT_SECTION, "theme_"..e[1], tostring(own[e[1]]), true)
     end
     reaper.SetExtState(EXT_SECTION, "ui_scale", tostring(settings.ui_scale), true)
     reaper.SetExtState(EXT_SECTION, "limit_rate", settings.limit_rate and "1" or "0", true)
@@ -164,6 +196,7 @@ local function save_settings()
 end
 
 load_settings()
+apply_theme()
 
 -------------------------------------------------------------------------------
 -- State
@@ -649,7 +682,7 @@ local function push_theme()
     ImGui.PushStyleColor(ctx, K(ImGui.Col_FrameBgActive),   theme.panel)
     ImGui.PushStyleColor(ctx, K(ImGui.Col_Text),            theme.text)
     ImGui.PushStyleColor(ctx, K(ImGui.Col_TextDisabled),    theme.text_dim)
-    ImGui.PushStyleColor(ctx, K(ImGui.Col_Button),          theme.panel)
+    ImGui.PushStyleColor(ctx, K(ImGui.Col_Button),          theme.button)
     ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered),   theme.slider)
     ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive),    theme.slider_act)
     ImGui.PushStyleColor(ctx, K(ImGui.Col_SliderGrab),      theme.slider)
@@ -696,11 +729,18 @@ end
 -- Color editor row (ReaImGui ColorEdit4 uses packed 0xRRGGBBAA)
 local function color_row(label, key)
     ImGui.PushID(ctx, key)
+    local global = G.inherited and FROM_GLOBAL[key]
+    ImGui.BeginDisabled(ctx, global)
     local changed, new_col = ImGui.ColorEdit4(ctx, label, theme[key],
         K(ImGui.ColorEditFlags_NoInputs) | K(ImGui.ColorEditFlags_AlphaBar))
     if changed then
-        theme[key] = new_col
+        own[key] = new_col
+        apply_theme()
         save_settings()
+    end
+    ImGui.EndDisabled(ctx)
+    if global and ImGui.IsItemHovered(ctx, K(ImGui.HoveredFlags_AllowWhenDisabled)) then
+        ImGui.SetTooltip(ctx, "From the Lyx global theme (untick Inherit to use your own)")
     end
     ImGui.PopID(ctx)
 end
@@ -867,19 +907,24 @@ local function draw_settings()
     end
 
     ImGui.Separator(ctx)
-    ImGui.Text(ctx, "Theme Colors")
+    if G.theme_row(ctx, THEME_KEY) then apply_theme() end
+
+    ImGui.Separator(ctx)
+    ImGui.TextColored(ctx, theme.subtitle, "Theme Colors")
     for _, e in ipairs(THEME_EDITABLE) do color_row(e[2], e[1]) end
 
     ImGui.Separator(ctx)
     if ImGui.Button(ctx, "Reset theme to defaults") then
-        for k, v in pairs(DEFAULT_THEME) do theme[k] = v end
+        for k, v in pairs(DEFAULT_THEME) do own[k] = v end
+        apply_theme()
         save_settings()
     end
     ImGui.SameLine(ctx)
     ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.bypass_on)
     if ImGui.Button(ctx, "Reset ALL") then
         -- colours, UI scale, pin, checkboxes, display mode → factory defaults
-        for k, v in pairs(DEFAULT_THEME) do theme[k] = v end
+        for k, v in pairs(DEFAULT_THEME) do own[k] = v end
+        apply_theme()
         rebuild_fonts_if_needed(DEFAULT_SETTINGS.ui_scale)
         for k, v in pairs(DEFAULT_SETTINGS) do settings[k] = v end
         set_limit_rate(settings.limit_rate)          -- also pulls values back if limited; saves
@@ -1661,7 +1706,7 @@ local function draw_main()
 
     -- Header: title + gear (settings)
     push_font("h1")
-    ImGui.TextColored(ctx, theme.accent, "MIDI Note Compressor / Expander")
+    ImGui.TextColored(ctx, theme.title, "MIDI Note Compressor / Expander")
     ImGui.PopFont(ctx)
     -- Header icons, right-aligned: [undo][redo]  [pin]  [gear]
     local isz, sp, big = 26*ui, 4*ui, 12*ui
@@ -1817,9 +1862,16 @@ local STYLE_VARS = { -- { var, value × ui }
 }
 
 local function main()
+    if G.poll() then apply_theme() end
+    -- Inherit on: global theme rounding / spacing / borders + mapped colours; off: own look.
+    -- `inherit` is fixed per frame (the Inherit checkbox may flip G.inherited mid-frame).
+    local inherit = G.inherited
+    if inherit then G.push_theme(ctx) end
     push_theme()
-    for _, sv in ipairs(STYLE_VARS) do
-        ImGui.PushStyleVar(ctx, K(ImGui[sv[1]]), sv[2] * settings.ui_scale)
+    if not inherit then
+        for _, sv in ipairs(STYLE_VARS) do
+            ImGui.PushStyleVar(ctx, K(ImGui[sv[1]]), sv[2] * settings.ui_scale)
+        end
     end
     ImGui.SetNextWindowSize(ctx, 860 * settings.ui_scale, 540 * settings.ui_scale,
         K(ImGui.Cond_FirstUseEver))
@@ -1858,8 +1910,9 @@ local function main()
         if not sopen then show_settings = false end
     end
 
-    ImGui.PopStyleVar(ctx, #STYLE_VARS)
+    if not inherit then ImGui.PopStyleVar(ctx, #STYLE_VARS) end
     pop_theme()
+    if inherit then G.pop_theme(ctx) end
 
     if open then
         reaper.defer(main)

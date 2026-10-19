@@ -241,7 +241,7 @@ end
 ---------------------------------------------------------------------------
 -- GUI
 ---------------------------------------------------------------------------
-local ctx = G.new("FFMPEG")
+local ctx = G.new("FFMPEG", "FFMPEG")
 if not ctx then return end
 local STATUS = { wait = "Waiting", run = "Working…", ok = "Done", fail = "Failed" }
 
@@ -301,7 +301,7 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
 
     -- job list (also the drop zone)
     local _, avail_h = R.ImGui_GetContentRegionAvail(ctx)
-    local list_h = math.max(G.S(120), avail_h - G.S(90))
+    local list_h = math.max(G.S(120), avail_h - G.S(90) - R.ImGui_GetFrameHeightWithSpacing(ctx))
     if R.ImGui_BeginChild(ctx, "jobs", 0, list_h, R.ImGui_ChildFlags_Borders()) then
         if #jobs == 0 then
             R.ImGui_Dummy(ctx, 1, G.S(30))
@@ -338,6 +338,12 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
     R.ImGui_SameLine(ctx)
     if R.ImGui_RadioButton(ctx, "Lossless", codec == "lossless") then codec = "lossless" end
     R.ImGui_SetItemTooltip(ctx, "mov → PCM 24-bit; mp4 / m4v → ALAC; other containers copy as is")
+
+    -- theme
+    R.ImGui_AlignTextToFramePadding(ctx)
+    R.ImGui_Text(ctx, "Theme")
+    R.ImGui_SameLine(ctx)
+    G.theme_row(ctx, "FFMPEG")
 
     -- actions
     if R.ImGui_Button(ctx, "Add videos…") then browse_videos() end

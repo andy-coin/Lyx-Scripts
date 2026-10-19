@@ -127,8 +127,28 @@ local THEME_ROWS = {
     { "Stat value",      "stat_val"  }, { "Filter window",   "band"      },
 }
 
-local theme = {}
-for k, v in pairs(DEFAULT_THEME) do theme[k] = v end
+-- own = this script's saved colours (Settings); theme = colours in use.
+-- With the Lyx global theme inherited, the shared roles come from it;
+-- stat_val and band (filter window) always stay the script's own.
+local own, theme = {}, {}
+for k, v in pairs(DEFAULT_THEME) do own[k] = v end
+local THEME_KEY = "QuantizeFilter"
+local G                                    -- _Lyx_GUI, loaded with the ImGui context
+local OWN_ONLY = { stat_val = true, band = true }
+
+local function sync_theme()
+    for k, v in pairs(own) do theme[k] = v end
+    theme.button, theme.title, theme.subtitle = own.panel, own.accent, own.text
+    if G and G.inherited then
+        local c, col = G.theme.colors, G.col
+        theme.bg, theme.panel, theme.text = col(c.bg), col(c.bg2), col(c.text)
+        theme.text_dim, theme.accent = col(G.dim), col(c.accent)
+        theme.border   = col(G.mix(c.bg, c.base, 0.65))
+        theme.button   = col(G.theme.button.color)
+        theme.title, theme.subtitle = col(c.title), col(c.subtitle)
+    end
+end
+sync_theme()
 
 local DEFAULTS = { mode = 0, strength = 100, threshold = 0, threshold_late = 0,
                    link = true, weighted = false, edge = false }
@@ -156,9 +176,10 @@ local function load_settings()
         if s == "" then return def end
         return s == "1"
     end
-    for k in pairs(theme) do
-        theme[k] = toint(getN("theme_"..k, DEFAULT_THEME[k]))
+    for k in pairs(own) do
+        own[k] = toint(getN("theme_"..k, DEFAULT_THEME[k]))
     end
+    sync_theme()
     settings.ui_scale  = clamp(getN("ui_scale", 1.0), 0.75, 2.5)
     settings.mode      = (getN("quantize_mode", 0) == 1) and 1 or 0
     settings.strength  = clamp(toint(getN("quantize_strength", DEFAULTS.strength)), 0, 100)
@@ -171,7 +192,7 @@ local function load_settings()
 end
 
 local function save_settings()
-    for k, v in pairs(theme) do
+    for k, v in pairs(own) do
         reaper.SetExtState(EXT_SECTION, "theme_"..k, tostring(v), true)
     end
     local function b(v) return v and "1" or "0" end
@@ -1129,6 +1150,9 @@ end
 -- ImGui context, fonts, theme
 -------------------------------------------------------------------------------
 local ctx = ImGui.CreateContext(SCRIPT_NAME)
+G = require("_Lyx_GUI")
+G.load_theme(THEME_KEY)
+sync_theme()
 
 local fonts, font_px = {}, {}
 local function build_fonts()
@@ -1170,8 +1194,11 @@ local function set_ui_scale(v)
     save_settings()
 end
 
-local pushed_colors, pushed_vars = 0, 0
+local pushed_colors, pushed_vars, pushed_global = 0, 0, false
 local function push_theme()
+    -- remembered: Inherit can be toggled between push and pop
+    pushed_global = G.inherited
+    if pushed_global then G.push_theme(ctx); return end
     local ui = settings.ui_scale
     local hover = lighten(theme.panel, 0.07)
     local cols = {
@@ -1215,6 +1242,7 @@ local function push_theme()
 end
 
 local function pop_theme()
+    if pushed_global then G.pop_theme(ctx); return end
     if pushed_vars > 0 then ImGui.PopStyleVar(ctx, pushed_vars) end
     if pushed_colors > 0 then ImGui.PopStyleColor(ctx, pushed_colors) end
 end
@@ -1412,10 +1440,11 @@ end
 -------------------------------------------------------------------------------
 local function color_row(label, key)
     ImGui.PushID(ctx, key)
-    local changed, new_col = ImGui.ColorEdit4(ctx, label, theme[key],
+    local changed, new_col = ImGui.ColorEdit4(ctx, label, own[key],
         K(ImGui.ColorEditFlags_NoInputs) | K(ImGui.ColorEditFlags_AlphaBar))
     if changed then
-        theme[key] = new_col
+        own[key] = new_col
+        sync_theme()
         save_settings()
     end
     ImGui.PopID(ctx)
@@ -1433,11 +1462,18 @@ local function draw_settings()
     if ImGui.Button(ctx, "+##uiup", 28 * ui, 24 * ui) then set_ui_scale(settings.ui_scale + 0.05) end
 
     ImGui.Separator(ctx)
-    ImGui.Text(ctx, "Theme Colors")
-    for _, row in ipairs(THEME_ROWS) do color_row(row[1], row[2]) end
+    ImGui.TextColored(ctx, theme.subtitle, "Theme Colors")
+    if G.theme_row(ctx, THEME_KEY) then sync_theme() end
+    for _, row in ipairs(THEME_ROWS) do
+        local off = G.inherited and not OWN_ONLY[row[2]]   -- set by the global theme
+        if off then ImGui.BeginDisabled(ctx) end
+        color_row(row[1], row[2])
+        if off then ImGui.EndDisabled(ctx) end
+    end
     ImGui.Separator(ctx)
     if ImGui.Button(ctx, "Reset theme to defaults") then
-        for k, v in pairs(DEFAULT_THEME) do theme[k] = v end
+        for k, v in pairs(DEFAULT_THEME) do own[k] = v end
+        sync_theme()
         save_settings()
     end
 
@@ -1462,7 +1498,7 @@ local function draw_main()
 
     -- Header
     push_font("h1")
-    ImGui.TextColored(ctx, theme.accent, "Quantize Filter")
+    ImGui.TextColored(ctx, theme.title, "Quantize Filter")
     ImGui.PopFont(ctx)
     ImGui.SameLine(ctx)
     local sbw = 44 * ui
@@ -1629,9 +1665,9 @@ local function draw_main()
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.accent, 0.22))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.bg)
     else
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.panel)
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.panel, 0.08))
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.panel, 0.14))
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.button)
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.button, 0.08))
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.button, 0.14))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.text_dim)
     end
     push_font("big")
@@ -1705,6 +1741,7 @@ analyze()
 
 local function main()
     poll(false)
+    if G.poll() then sync_theme() end
 
     push_theme()
     ImGui.SetNextWindowSize(ctx, 400 * settings.ui_scale, 590 * settings.ui_scale,

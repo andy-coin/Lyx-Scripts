@@ -1,0 +1,286 @@
+--[[
+    Lyx Global theme manager — edit the theme shared by all Lyx GUIs.
+
+    Left:   theme list. Click a name to edit it; the round button picks the theme in use.
+    Middle: colours, button, frame, font, rounding, alpha, spacing, scale.
+    Right:  live preview. The manager itself always wears the theme being edited.
+    Save writes <REAPER resource>/Data/Lyx/themes.lua; open Lyx GUIs follow within a second.
+    The built-in "Lyx Dark" is read-only: Duplicate it to make your own.
+]]
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+package.path = package.path .. ";" .. script_path .. "?.lua"
+
+local G = require("_Lyx_GUI")
+local T = require("_Lyx_Theme")
+local R = reaper
+if R.set_action_options then R.set_action_options(3) end -- re-launch = restart, no dialog
+
+local ctx = G.new("Lyx Global Theme")
+if not ctx then return end
+
+local saved = T.load()
+local work  = T.copy(saved)
+local sel   = work.current
+local dirty = false
+local renaming, rename_buf, rename_focus = false, "", false
+local confirm_del = false
+local pend = {}          -- values being dragged / typed, committed on release
+local msg              -- { text, colour }
+local pv = { check = true, slider = 0.5, input = "Text input", combo = 0 }
+
+G.apply(work.themes[sel])
+
+local function names()
+    local list = {}
+    for n in pairs(work.themes) do if n ~= T.BUILTIN then list[#list + 1] = n end end
+    table.sort(list, function(a, b) return a:lower() < b:lower() end)
+    table.insert(list, 1, T.BUILTIN)
+    return list
+end
+
+local function unique(base)
+    local n, i = base, 2
+    while work.themes[n] do n = base .. " " .. i; i = i + 1 end
+    return n
+end
+
+local function select_theme(name)
+    sel, renaming, confirm_del, pend = name, false, false, {}
+end
+
+local function add_theme(name, th)
+    work.themes[name] = T.fill(th, name)
+    select_theme(name)
+    renaming, rename_buf, rename_focus = true, name, true
+    dirty = true
+end
+
+local function commit_rename()
+    renaming = false
+    local new = rename_buf:match("^%s*(.-)%s*$")
+    if new == "" or new == sel then return end
+    if work.themes[new] then msg = { "\"" .. new .. "\" already exists", G.bad }; return end
+    local th = work.themes[sel]
+    work.themes[sel], work.themes[new], th.name = nil, th, new
+    if work.current == sel then work.current = new end
+    sel, dirty = new, true
+end
+
+---------------------------------------------------------------------------
+-- Editors
+---------------------------------------------------------------------------
+local function color(label, t, k)
+    local c, v = R.ImGui_ColorEdit3(ctx, label, t[k], R.ImGui_ColorEditFlags_NoInputs())
+    if c then t[k] = v; dirty = true end
+end
+
+local function slider_int(label, t, k, lo, hi)
+    local c, v = R.ImGui_SliderInt(ctx, label, t[k], lo, hi)
+    if c then t[k] = v; dirty = true end
+end
+
+-- widget(value) -> changed, value; the value is committed when the widget is released,
+-- so things like scale / font do not rebuild the window while you drag or type.
+local function deferred(id, widget, value, commit)
+    local c, v = widget(pend[id] == nil and value or pend[id])
+    if c then pend[id] = v end
+    if R.ImGui_IsItemDeactivatedAfterEdit(ctx) and pend[id] ~= nil then
+        commit(pend[id]); pend[id] = nil; dirty = true
+    end
+end
+
+local function editors(th)
+    local w = G.S(150)
+    G.subtitle(ctx, "Colours")
+    color("Background", th.colors, "bg")
+    R.ImGui_SameLine(ctx, w); color("Background 2", th.colors, "bg2")
+    color("Base", th.colors, "base")
+    R.ImGui_SetItemTooltip(ctx, "Sliders, scrollbars, borders, inactive widgets")
+    R.ImGui_SameLine(ctx, w); color("Accent", th.colors, "accent")
+    color("Title", th.colors, "title")
+    R.ImGui_SameLine(ctx, w); color("Subtitle", th.colors, "subtitle")
+    color("Text", th.colors, "text")
+
+    R.ImGui_Spacing(ctx)
+    G.subtitle(ctx, "Button")
+    color("Colour##btn", th.button, "color")
+    R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, G.S(60)); slider_int("Border##btn", th.button, "border", 0, 2)
+    G.subtitle(ctx, "Frame")
+    color("Colour##frm", th.frame, "color")
+    R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, G.S(60)); slider_int("Border##frm", th.frame, "border", 0, 2)
+
+    R.ImGui_Spacing(ctx)
+    G.subtitle(ctx, "Font")
+    R.ImGui_SetNextItemWidth(ctx, -G.S(40))
+    deferred("font", function(v)
+        return R.ImGui_InputTextWithHint(ctx, "Name", "Default (CJK system font)", v)
+    end, th.font.name, function(v) th.font.name = v end)
+    R.ImGui_SetItemTooltip(ctx, "Font family (e.g. Helvetica) or a font file path; empty = default")
+    R.ImGui_SetNextItemWidth(ctx, -G.S(40))
+    deferred("size", function(v) return R.ImGui_SliderInt(ctx, "Size", v, 10, 24) end,
+        th.font.size, function(v) th.font.size = v end)
+
+    R.ImGui_Spacing(ctx)
+    G.subtitle(ctx, "Layout")
+    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    slider_int("Window rounding", th.rounding, "window", 0, 16)
+    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    slider_int("Button rounding", th.rounding, "button", 0, 16)
+    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    slider_int("Frame rounding", th.rounding, "frame", 0, 16)
+    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    local c, v = R.ImGui_SliderDouble(ctx, "Window alpha", th.alpha, 0.3, 1, "%.2f")
+    if c then th.alpha = v; dirty = true end
+    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    deferred("spacing", function(x) return R.ImGui_SliderInt(ctx, "Spacing", x, 2, 16) end,
+        th.spacing, function(x) th.spacing = x end)
+    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    deferred("scale", function(x) return R.ImGui_SliderDouble(ctx, "Scale", x, 0.75, 2, "%.2f") end,
+        th.scale, function(x) th.scale = x end)
+end
+
+local function preview()
+    G.title(ctx, "Title")
+    G.subtitle(ctx, "Subtitle")
+    R.ImGui_TextWrapped(ctx, "Body text looks like this.")
+    G.dim_text(ctx, "Dim hint text")
+    R.ImGui_Spacing(ctx)
+    G.button(ctx, "Button", nil, nil, "plain")
+    R.ImGui_SameLine(ctx)
+    G.button(ctx, "Primary")
+    local c, v = R.ImGui_Checkbox(ctx, "Checkbox", pv.check)
+    if c then pv.check = v end
+    R.ImGui_SetNextItemWidth(ctx, -1)
+    c, v = R.ImGui_SliderDouble(ctx, "##slider", pv.slider, 0, 1, "Slider %.2f")
+    if c then pv.slider = v end
+    R.ImGui_SetNextItemWidth(ctx, -1)
+    c, v = R.ImGui_InputText(ctx, "##input", pv.input)
+    if c then pv.input = v end
+    R.ImGui_SetNextItemWidth(ctx, -1)
+    c, v = R.ImGui_Combo(ctx, "##combo", pv.combo, "Combo item A\0Combo item B\0Combo item C\0")
+    if c then pv.combo = v end
+end
+
+---------------------------------------------------------------------------
+-- Theme list
+---------------------------------------------------------------------------
+local function theme_list(h)
+    if not R.ImGui_BeginChild(ctx, "list", G.S(200), h, R.ImGui_ChildFlags_Borders()) then return end
+    for _, name in ipairs(names()) do
+        R.ImGui_PushID(ctx, name)
+        if R.ImGui_RadioButton(ctx, "##use", work.current == name) and work.current ~= name then
+            work.current, dirty = name, true
+        end
+        R.ImGui_SetItemTooltip(ctx, "Use this theme for all Lyx GUIs (after Save)")
+        R.ImGui_SameLine(ctx)
+        if renaming and name == sel then
+            if rename_focus then R.ImGui_SetKeyboardFocusHere(ctx); rename_focus = false end
+            R.ImGui_SetNextItemWidth(ctx, -1)
+            local enter, buf = R.ImGui_InputText(ctx, "##rename", rename_buf,
+                R.ImGui_InputTextFlags_EnterReturnsTrue() | R.ImGui_InputTextFlags_AutoSelectAll())
+            rename_buf = buf
+            if enter then commit_rename() elseif R.ImGui_IsItemDeactivated(ctx) then renaming = false end
+        else
+            local label = name == T.BUILTIN and (name .. "  (built-in)") or name
+            if R.ImGui_Selectable(ctx, label, sel == name) then select_theme(name) end
+            if R.ImGui_IsItemHovered(ctx) and R.ImGui_IsMouseDoubleClicked(ctx, 0) and name ~= T.BUILTIN then
+                renaming, rename_buf, rename_focus = true, name, true
+            end
+        end
+        R.ImGui_PopID(ctx)
+    end
+    R.ImGui_EndChild(ctx)
+end
+
+local function list_buttons()
+    local builtin = sel == T.BUILTIN
+    if G.button(ctx, "New", nil, nil, "plain") then add_theme(unique("New theme"), T.default) end
+    R.ImGui_SameLine(ctx)
+    if G.button(ctx, "Duplicate", nil, nil, "plain") then add_theme(unique(sel .. " copy"), work.themes[sel]) end
+    R.ImGui_BeginDisabled(ctx, builtin)
+    if G.button(ctx, "Rename", nil, nil, "plain") then renaming, rename_buf, rename_focus = true, sel, true end
+    R.ImGui_SameLine(ctx)
+    if G.button(ctx, "Delete", nil, nil, "plain") then confirm_del = true end
+    R.ImGui_EndDisabled(ctx)
+    if confirm_del and not builtin then
+        G.color_text(ctx, G.warn, "Delete \"" .. sel .. "\"?")
+        if G.button(ctx, "Delete", nil, nil, "bad") then
+            work.themes[sel] = nil
+            if work.current == sel then work.current = T.BUILTIN end
+            select_theme(T.BUILTIN)
+            dirty = true
+        end
+        R.ImGui_SameLine(ctx)
+        if G.button(ctx, "Cancel", nil, nil, "plain") then confirm_del = false end
+    end
+end
+
+---------------------------------------------------------------------------
+-- Main
+---------------------------------------------------------------------------
+local function save()
+    local ok, err = T.save(work)
+    if not ok then msg = { "Save failed: " .. tostring(err), G.bad }; return end
+    saved = T.load()
+    work = T.copy(saved)
+    if not work.themes[sel] then select_theme(work.current) end
+    dirty, msg = false, { "Saved", G.good }
+end
+
+local function revert()
+    work = T.copy(saved)
+    select_theme(work.themes[sel] and sel or work.current)
+    dirty, msg = false, nil
+end
+
+G.run(ctx, "Lyx Global Theme", function(ctx)
+    -- Esc closes (checked first: a text field cancelled with Esc is still active here)
+    if not R.ImGui_IsAnyItemActive(ctx) and R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Escape())
+       and R.ImGui_IsWindowFocused(ctx, R.ImGui_FocusedFlags_RootAndChildWindows()) then
+        return false
+    end
+
+    local th = work.themes[sel]
+    local _, avail_h = R.ImGui_GetContentRegionAvail(ctx)
+    local body_h = avail_h - R.ImGui_GetFrameHeightWithSpacing(ctx) - G.S(8)
+
+    -- left: list + buttons
+    R.ImGui_BeginGroup(ctx)
+    theme_list(body_h - R.ImGui_GetFrameHeightWithSpacing(ctx) * (confirm_del and 4 or 2))
+    list_buttons()
+    R.ImGui_EndGroup(ctx)
+
+    -- middle: editors
+    R.ImGui_SameLine(ctx)
+    local avail_w = R.ImGui_GetContentRegionAvail(ctx)
+    if R.ImGui_BeginChild(ctx, "edit", avail_w * 0.58, body_h, R.ImGui_ChildFlags_Borders()) then
+        if sel == T.BUILTIN then
+            G.dim_text(ctx, "The built-in theme is read-only. Duplicate it to make your own.")
+        end
+        R.ImGui_BeginDisabled(ctx, sel == T.BUILTIN)
+        editors(th)
+        R.ImGui_EndDisabled(ctx)
+        R.ImGui_EndChild(ctx)
+    end
+
+    -- right: preview
+    R.ImGui_SameLine(ctx)
+    if R.ImGui_BeginChild(ctx, "preview", 0, body_h, R.ImGui_ChildFlags_Borders()) then
+        preview()
+        R.ImGui_EndChild(ctx)
+    end
+
+    -- footer
+    R.ImGui_BeginDisabled(ctx, not dirty)
+    if G.button(ctx, "Save", G.S(90)) then save() end
+    R.ImGui_SameLine(ctx)
+    if G.button(ctx, "Revert", G.S(90), nil, "plain") then revert() end
+    R.ImGui_EndDisabled(ctx)
+    R.ImGui_SameLine(ctx)
+    R.ImGui_AlignTextToFramePadding(ctx)
+    if dirty then G.color_text(ctx, G.warn, "● Unsaved changes")
+    elseif msg then G.color_text(ctx, msg[2], msg[1]) end
+
+    -- the manager wears the theme being edited (applied for the next frame)
+    G.apply(work.themes[sel])
+end, { w = 900, h = 560, esc = false, live = false })
