@@ -230,7 +230,7 @@ end
 ---------------------------------------------------------------------------
 -- GUI
 ---------------------------------------------------------------------------
-local ctx = G.new("Randomize")
+local ctx = G.new("Randomize", "Randomize")
 if not ctx then return end
 snapshot()
 local applied, last_sig = false, nil
@@ -361,6 +361,11 @@ G.run(ctx, "Randomize...", function(ctx)
     if R.ImGui_RadioButton(ctx, "Uniform", not gauss) then gauss = false end
     R.ImGui_SameLine(ctx)
     if R.ImGui_RadioButton(ctx, "Normal (centered)", gauss) then gauss = true end
+
+    R.ImGui_AlignTextToFramePadding(ctx)
+    R.ImGui_Text(ctx, "Theme")
+    R.ImGui_SameLine(ctx, G.S(110))
+    G.theme_row(ctx, "Randomize")
 
     R.ImGui_Separator(ctx)
     if #targets == 0 then

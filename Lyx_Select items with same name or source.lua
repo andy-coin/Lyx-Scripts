@@ -72,6 +72,11 @@ local function Run(mode)
     reaper.Undo_EndBlock("Select items with same " .. mode, -1)
 end
 
+-- Lyx global theme (inherited silently; ImGui defaults when Inherit is off)
+package.path = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./") .. "?.lua;" .. package.path
+local G = require("_Lyx_GUI")
+G.load_theme("SelectSame")
+
 local ctx = reaper.ImGui_CreateContext("Lyx select same")
 local mx, my = reaper.GetMousePosition()
 if reaper.ImGui_PointConvertNative then mx, my = reaper.ImGui_PointConvertNative(ctx, mx, my, false) end
@@ -80,6 +85,9 @@ local first = true
 local function loop()
     if first then reaper.ImGui_SetNextWindowPos(ctx, mx, my, reaper.ImGui_Cond_Appearing(), 0.5, 0.5) end
     first = false
+    G.poll()
+    local themed = G.inherited
+    if themed then G.push_theme(ctx) end
     local flags = reaper.ImGui_WindowFlags_AlwaysAutoResize() | reaper.ImGui_WindowFlags_NoCollapse()
     local visible, open = reaper.ImGui_Begin(ctx, "Select items with same...", true, flags)
     local chosen
@@ -87,13 +95,17 @@ local function loop()
         for i, m in ipairs(MODES) do
             if not m.enabled then reaper.ImGui_BeginDisabled(ctx) end
             local w = reaper.ImGui_CalcTextSize(ctx, "2. Same audio source") + 24
-            if reaper.ImGui_Button(ctx, m.label, w) and m.enabled then chosen = m.key end
+            local hit
+            if themed then hit = G.button(ctx, m.label, w, nil, "plain")
+            else hit = reaper.ImGui_Button(ctx, m.label, w) end
+            if hit and m.enabled then chosen = m.key end
             if m.enabled and reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_1() + i - 1, false) then chosen = m.key end
             if not m.enabled then reaper.ImGui_EndDisabled(ctx) end
         end
         if reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Escape(), false) then open = false end
         reaper.ImGui_End(ctx)
     end
+    if themed then G.pop_theme(ctx) end
     if chosen then Run(chosen) return end
     if open then reaper.defer(loop) end
 end

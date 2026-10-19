@@ -301,7 +301,7 @@ end
 ---------------------------------------------------------------------------
 -- GUI
 ---------------------------------------------------------------------------
-local ctx = G.new("Free fall")
+local ctx = G.new("Free fall", "FreeFall")
 if not ctx then return end
 do
     local tk, me = editor_take()
@@ -353,6 +353,14 @@ local function graph(ctx, seq)
     end
 end
 
+-- section label in the global theme's subtitle colour (plain text colour with Inherit off)
+local function section(ctx, text)
+    local sub = G.inherited
+    if sub then R.ImGui_PushStyleColor(ctx, R.ImGui_Col_Text(), G.col(G.subtitle_col)) end
+    R.ImGui_SeparatorText(ctx, text)
+    if sub then R.ImGui_PopStyleColor(ctx) end
+end
+
 -- "Label      [slider.............]" row; `off` = text shown instead of the value while disabled
 local function label(ctx, text, tip)
     R.ImGui_AlignTextToFramePadding(ctx)
@@ -390,7 +398,7 @@ G.run(ctx, "Free fall MIDI notes", function(ctx)
         G.color_text(ctx, G.warn, err)
     end
 
-    R.ImGui_SeparatorText(ctx, "Start")
+    section(ctx, "Start")
     label(ctx, "Start at")
     local srcs = {
         { "Edit cursor",    "One bounce starting at the edit cursor" },
@@ -412,7 +420,7 @@ G.run(ctx, "Free fall MIDI notes", function(ctx)
     R.ImGui_EndDisabled(ctx)
     slider(ctx, "Velocity", "v0", "%d", "Velocity of the first hit", from_note)
 
-    R.ImGui_SeparatorText(ctx, "Bounce")
+    section(ctx, "Bounce")
     local fit = (S.src == 2)
     label(ctx, "First gap", "Time between the first and second hit")
     R.ImGui_BeginDisabled(ctx, fit)
@@ -432,14 +440,17 @@ G.run(ctx, "Free fall MIDI notes", function(ctx)
     slider(ctx, "Bounciness", "e", "%.2f", "How much of each gap is left for the next one.\nHigher = more hits, gaps shrink slower")
     slider(ctx, "Min gap", "min_gap", "%d ms", "Stops when the gap gets shorter than this (the ball comes to rest)")
 
-    R.ImGui_SeparatorText(ctx, "Velocity & length")
+    section(ctx, "Velocity & length")
     slider(ctx, "Min velocity", "vfloor", "%d", "Stops when the velocity drops below this")
     slider(ctx, "Decay curve", "curve", "%.2f", "1 = physically correct\n> 1 fades faster, < 1 keeps the tail louder")
     slider(ctx, "Note length", "len_pct", "%d %%", "Each note's share of the gap to the next hit")
 
-    R.ImGui_SeparatorText(ctx, "Humanize")
+    section(ctx, "Humanize")
     slider(ctx, "Timing", "jit_t", "± %d ms", "Random timing offset (never on the first hit, never enough to swap hits)")
     slider(ctx, "Velocity", "jit_v", "± %d", "Random velocity offset (never on the first hit)")
+
+    section(ctx, "Settings")
+    G.theme_row(ctx, "FreeFall")
 
     R.ImGui_Separator(ctx)
     R.ImGui_BeginDisabled(ctx, S.jit_t == 0 and S.jit_v == 0)
@@ -462,4 +473,4 @@ G.run(ctx, "Free fall MIDI notes", function(ctx)
         insert(take, pl)
         return false -- on_close saves the settings
     end
-end, { w = 480, h = 680, on_close = save })
+end, { w = 480, h = 720, on_close = save })
