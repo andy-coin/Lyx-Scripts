@@ -4,11 +4,11 @@
     Every change previews instantly from a snapshot of the original values.
       Apply  (Enter) -> one undo point
       Cancel (Esc / close window) -> everything restored
-    Same seed = same result; "重抽亂數" draws a new seed. Each parameter uses its own
+    Same seed = same result; "Reroll" draws a new seed. Each parameter uses its own
     random stream, so editing one parameter never re-rolls the others.
     Locked items are left untouched.
 ]]
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 
 ---------------------------------------------------------------------------
@@ -54,27 +54,27 @@ local EXT = "lyx_Randomize2"
 -- kind: "range" (lo..hi), "prob" (lo = %), "toggle"
 local PARAMS = {
     track = {
-        { id = "vol",   name = "音量",       kind = "range", min = -48, max = 12, lo = -6, hi = 0, unit = "dB", can_rel = true,
-          tip = "絕對：直接設成範圍內的值；相對：加在原本音量上" },
+        { id = "vol",   name = "Volume",       kind = "range", min = -48, max = 12, lo = -6, hi = 0, unit = "dB", can_rel = true,
+          tip = "Absolute: set to a value in the range; Relative: add to the current volume" },
         { id = "pan",   name = "Pan",        kind = "range", min = -100, max = 100, lo = -50, hi = 50, unit = "%" },
         { id = "width", name = "Width",      kind = "range", min = -100, max = 100, lo = 60, hi = 100, unit = "%" },
-        { id = "mute",  name = "靜音機率",   kind = "prob",  lo = 20 },
-        { id = "sel",   name = "保留選取",   kind = "prob",  lo = 50, tip = "每條軌有此機率保持選取，其餘取消選取" },
-        { id = "color", name = "隨機顏色",   kind = "toggle" },
+        { id = "mute",  name = "Mute chance",   kind = "prob",  lo = 20 },
+        { id = "sel",   name = "Keep selected",   kind = "prob",  lo = 50, tip = "Each track stays selected with this chance, the rest get unselected" },
+        { id = "color", name = "Random color",   kind = "toggle" },
     },
     item = {
-        { id = "vol",   name = "音量",       kind = "range", min = -48, max = 12, lo = -6, hi = 0, unit = "dB", can_rel = true,
-          tip = "絕對：直接設成範圍內的值；相對：加在原本音量上" },
+        { id = "vol",   name = "Volume",       kind = "range", min = -48, max = 12, lo = -6, hi = 0, unit = "dB", can_rel = true,
+          tip = "Absolute: set to a value in the range; Relative: add to the current volume" },
         { id = "pan",   name = "Pan",        kind = "range", min = -100, max = 100, lo = -50, hi = 50, unit = "%" },
-        { id = "pitch", name = "音高",       kind = "range", min = -24, max = 24, lo = -1, hi = 1, unit = "st", snap = true,
-          tip = "相對於原音高；勾「半音」只取整數半音" },
-        { id = "pos",   name = "位置抖動",   kind = "range", min = -200, max = 200, lo = -10, hi = 10, unit = "ms",
-          tip = "把 item 前後微移，做出人味" },
-        { id = "offs",  name = "起點偏移",   kind = "range", min = -2000, max = 2000, lo = 0, hi = 250, unit = "ms",
-          tip = "移動 item 內容的起點（loop / 環境音很好用）" },
-        { id = "mute",  name = "靜音機率",   kind = "prob",  lo = 20 },
-        { id = "sel",   name = "保留選取",   kind = "prob",  lo = 50 },
-        { id = "color", name = "隨機顏色",   kind = "toggle" },
+        { id = "pitch", name = "Pitch",       kind = "range", min = -24, max = 24, lo = -1, hi = 1, unit = "st", snap = true,
+          tip = "Relative to the original pitch; tick \"Semitones\" for whole semitones only" },
+        { id = "pos",   name = "Position jitter",   kind = "range", min = -200, max = 200, lo = -10, hi = 10, unit = "ms",
+          tip = "Nudge items back and forth for a human feel" },
+        { id = "offs",  name = "Start offset",   kind = "range", min = -2000, max = 2000, lo = 0, hi = 250, unit = "ms",
+          tip = "Shift where the item content starts (great for loops / ambience)" },
+        { id = "mute",  name = "Mute chance",   kind = "prob",  lo = 20 },
+        { id = "sel",   name = "Keep selected",   kind = "prob",  lo = 50 },
+        { id = "color", name = "Random color",   kind = "toggle" },
     },
 }
 
@@ -303,15 +303,15 @@ local function param_row(ctx, p)
         R.ImGui_SetNextItemWidth(ctx, -extra - 1)
         local fmt = "%.1f " .. p.unit
         local cc, lo, hi = R.ImGui_DragFloatRange2(ctx, "##rng", p.lo, p.hi,
-            (p.max - p.min) / 400, p.min, p.max, "最小 " .. fmt, "最大 " .. fmt)
+            (p.max - p.min) / 400, p.min, p.max, "Min " .. fmt, "Max " .. fmt)
         if cc then p.lo, p.hi = math.min(lo, hi), math.max(lo, hi) end
         if p.can_rel then
             R.ImGui_SameLine(ctx)
-            local c2, v2 = R.ImGui_Checkbox(ctx, "相對", p.rel)
+            local c2, v2 = R.ImGui_Checkbox(ctx, "Relative", p.rel)
             if c2 then p.rel = v2 end
         elseif p.snap then
             R.ImGui_SameLine(ctx)
-            local c2, v2 = R.ImGui_Checkbox(ctx, "半音", p.int)
+            local c2, v2 = R.ImGui_Checkbox(ctx, "Semitones", p.int)
             if c2 then p.int = v2 end
         end
     elseif p.kind == "prob" then
@@ -319,7 +319,7 @@ local function param_row(ctx, p)
         local cc, vv = R.ImGui_SliderDouble(ctx, "##p", p.lo, 0, 100, "%.0f %%")
         if cc then p.lo = vv end
     else
-        G.dim_text(ctx, "每個目標隨機一個顏色")
+        G.dim_text(ctx, "A random color for each target")
     end
     if p.on then strip(ctx, p) end
     R.ImGui_EndDisabled(ctx)
@@ -342,52 +342,52 @@ G.run(ctx, "Randomize...", function(ctx)
     -- target switch
     local nt, ni = R.CountSelectedTracks(0), R.CountSelectedMediaItems(0)
     R.ImGui_AlignTextToFramePadding(ctx)
-    R.ImGui_Text(ctx, "目標")
+    R.ImGui_Text(ctx, "Target")
     R.ImGui_SameLine(ctx, G.S(110))
     for _, k in ipairs({ "track", "item" }) do
-        local label = (k == "track") and ("軌道 (" .. (kind == "track" and #targets or nt) .. ")")
+        local label = (k == "track") and ("Tracks (" .. (kind == "track" and #targets or nt) .. ")")
                                      or ("Item (" .. (kind == "item" and #targets or ni) .. ")")
         if R.ImGui_RadioButton(ctx, label, kind == k) and kind ~= k then
             restore(); kind = k; snapshot()
         end
         R.ImGui_SameLine(ctx)
     end
-    if R.ImGui_SmallButton(ctx, "重新讀取選取") then restore(); snapshot() end
-    R.ImGui_SetItemTooltip(ctx, "換了選取之後按這裡（目前的預覽會先還原）")
+    if R.ImGui_SmallButton(ctx, "Reload selection") then restore(); snapshot() end
+    R.ImGui_SetItemTooltip(ctx, "Click after changing the selection (the current preview is undone first)")
 
     R.ImGui_AlignTextToFramePadding(ctx)
-    R.ImGui_Text(ctx, "分布")
+    R.ImGui_Text(ctx, "Distribution")
     R.ImGui_SameLine(ctx, G.S(110))
-    if R.ImGui_RadioButton(ctx, "平均", not gauss) then gauss = false end
+    if R.ImGui_RadioButton(ctx, "Uniform", not gauss) then gauss = false end
     R.ImGui_SameLine(ctx)
-    if R.ImGui_RadioButton(ctx, "常態 (集中在中間)", gauss) then gauss = true end
+    if R.ImGui_RadioButton(ctx, "Normal (centered)", gauss) then gauss = true end
 
     R.ImGui_Separator(ctx)
     if #targets == 0 then
-        G.color_text(ctx, G.warn, (kind == "track") and "沒有選取的軌道" or "沒有選取的 item")
+        G.color_text(ctx, G.warn, (kind == "track") and "No tracks selected" or "No items selected")
     end
     for _, p in ipairs(PARAMS[kind]) do param_row(ctx, p) end
 
     local locked = 0
     for _, t in ipairs(targets) do if t.locked then locked = locked + 1 end end
-    if locked > 0 then G.dim_text(ctx, locked .. " 個上鎖的 item 會被略過") end
+    if locked > 0 then G.dim_text(ctx, locked .. " locked items will be skipped") end
 
     -- live preview
     local sig = signature()
     if sig ~= last_sig then last_sig = sig; apply() end
 
     R.ImGui_Separator(ctx)
-    if R.ImGui_Button(ctx, "重抽亂數") then seed = math.random(1, 2147483646) end
+    if R.ImGui_Button(ctx, "Reroll") then seed = math.random(1, 2147483646) end
     R.ImGui_SameLine(ctx)
-    if R.ImGui_Button(ctx, "全部關閉") then for _, p in ipairs(PARAMS[kind]) do p.on = false end end
+    if R.ImGui_Button(ctx, "All off") then for _, p in ipairs(PARAMS[kind]) do p.on = false end end
     R.ImGui_SameLine(ctx)
     local bw = G.S(90)
     R.ImGui_SetCursorPosX(ctx, R.ImGui_GetWindowWidth(ctx) - bw * 2 - G.S(20))
-    if G.button(ctx, "套用", bw) or (R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Enter()) and not R.ImGui_IsAnyItemActive(ctx)) then
+    if G.button(ctx, "Apply", bw) or (R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Enter()) and not R.ImGui_IsAnyItemActive(ctx)) then
         return close(true)
     end
     R.ImGui_SameLine(ctx)
-    if R.ImGui_Button(ctx, "取消", bw) then return close(false) end
+    if R.ImGui_Button(ctx, "Cancel", bw) then return close(false) end
 end, {
     w = 480, h = 560,
     on_close = function() if not applied then restore(); save_cfg(gauss) end end,

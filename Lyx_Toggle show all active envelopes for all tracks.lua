@@ -1,5 +1,5 @@
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")   
     
@@ -36,13 +36,19 @@
         end
 
         local function DimTheme(dim)
-
-            local DIM = {'col_tr1_peaks','col_tr2_peaks','col_peaksedge','col_peaksedge2','col_peaksedgesel','col_peaksedgesel2','col_tr1_ps2','col_tr2_ps2','col_tr1_bg','col_tr2_bg','selcol_tr1_bg','selcol_tr2_bg','col_arrangebg',}
-            local ORI = {14606046, 14606046, 16777215, 16777215,'col_arrangebg','col_tr1_bg','col_tr2_bg','selcol_tr1_bg','selcol_tr2_bg',}
-
-            for abi=1,4 do
-                local color = reaper.GetThemeColor(DIM[abi])
-                reaper.SetThemeColor(DIM[abi],(dim and 0) or ORI[abi],0)
+            -- peaks go black while envelopes show; the theme's own colors are remembered and put back
+            local NAMES = {'col_tr1_peaks','col_tr2_peaks','col_peaksedge','col_peaksedge2'}
+            for _, name in ipairs(NAMES) do
+                if  dim then
+                    if reaper.GetExtState("envelope view theme", name) == "" then
+                        reaper.SetExtState("envelope view theme", name, reaper.GetThemeColor(name, 0), false)
+                    end
+                    reaper.SetThemeColor(name, 0, 0)
+                else
+                    local ori = tonumber(reaper.GetExtState("envelope view theme", name))
+                    reaper.SetThemeColor(name, ori or -1, 0) -- -1 = theme default
+                    reaper.DeleteExtState("envelope view theme", name, false)
+                end
             end
         end
 
@@ -154,6 +160,6 @@
     end
     
     ------excute main-------
-    api.ubb()
+    -- display-only toggle: no undo block, and running through defer keeps REAPER
+    -- from adding its automatic "ReaScript" undo point
     reaper.defer(main)
-    api.ueb(0,'Toggle show all active envelopes for all tracks',-1)

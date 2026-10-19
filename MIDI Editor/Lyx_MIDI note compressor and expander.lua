@@ -17,14 +17,23 @@ local ok_home, r_home = pcall(require, "_Lyx_HOME")
 -------------------------------------------------------------------------------
 if not reaper.ImGui_GetVersion then
     reaper.MB(
-        "此腳本需要 ReaImGui 擴充套件。\n\n"..
-        "請依以下步驟安裝：\n"..
-        "1) 開啟 REAPER → Extensions → ReaPack → Browse packages\n"..
-        "2) 搜尋 \"ReaImGui\"\n"..
-        "3) 右鍵 → Install，安裝後重啟 REAPER\n\n"..
-        "安裝完成後再次執行此腳本即可。",
-        "缺少 ReaImGui", 0)
+        "This script needs the ReaImGui extension.\n\n"..
+        "To install it:\n"..
+        "1) REAPER → Extensions → ReaPack → Browse packages\n"..
+        "2) Search for \"ReaImGui\"\n"..
+        "3) Right-click → Install, then restart REAPER\n\n"..
+        "Then run this script again.",
+        "ReaImGui missing", 0)
     return
+end
+do -- fonts below use the ReaImGui 0.10 API (size given to PushFont)
+    local _, _, v = reaper.ImGui_GetVersion()
+    local x, y = tostring(v or ""):match("^(%d+)%.(%d+)")
+    x, y = tonumber(x) or 0, tonumber(y) or 0
+    if x == 0 and y < 10 then
+        reaper.MB("This script needs ReaImGui 0.10 or newer (you have "..tostring(v)..").\nUpdate ReaImGui with ReaPack and restart REAPER.", "ReaImGui too old", 0)
+        return
+    end
 end
 
 local ImGui = {}

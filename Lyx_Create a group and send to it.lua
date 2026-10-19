@@ -1,5 +1,5 @@
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
     
@@ -55,7 +55,7 @@
             end
             api.stv(bus,'I_CUSTOMCOLOR',first_color)
         elseif new_color then
-            api.cmd(api.name('_RSb317b34c4b40a6471b5ef38a96ebf8f9a3ce65f7'),0)--set random color
+            api.cmd(r.ScriptID("Lyx Scripts/Lyx_Set random color .lua"),0)--set random color
         end
         
         api.pur(-1)

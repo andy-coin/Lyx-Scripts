@@ -1,5 +1,5 @@
   
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
   
@@ -186,8 +186,8 @@
                  lasttime=starttime+abi*step
              end
 
-             if num~=BperM or demon~=Sig_D then
-                reaper.SetTempoTimeSigMarker(0,-1,lasttime,-1,-1,CBPM,CBperM,CSig_D,false)
+             if lasttime and (num~=BperM or demon~=Sig_D) then -- restore the signature that was there before
+                reaper.SetTempoTimeSigMarker(0,-1,lasttime,-1,-1,BPM,BperM,Sig_D,false)
              end
              reaper.SetEditCurPos(P,false,false)
           end

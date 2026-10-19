@@ -1,5 +1,5 @@
   
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
     
@@ -127,7 +127,7 @@
                 api.cmd(40296,0)
                 api.cmd(42692,0)--turn of  comping
                 
-                cmd=reaper.NamedCommandLookup("_RSa438ff6824908fc7e8a5df9e8cfb1aeb85781461")
+                cmd=r.ScriptID("ReaTeam Scripts/Envelopes/Automation Items/cfillion_Unselect all automation items (all tracks).lua")
                 reaper.Main_OnCommand(cmd,0)--unselect all automation items
                 api.cmd(40769,0)-- Unselect (clear selection of) all tracks/items/envelope points
                 

@@ -1,5 +1,5 @@
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
     
@@ -191,7 +191,7 @@
             reaper.Main_OnCommand(cmd,0)--paste focus track FX chain
         
         elseif state == "Focus FX Data" then
-            cmd=reaper.NamedCommandLookup("_RS1f29d66447fd557d9c3925eaa73930556904a5ef")
+            cmd=r.ScriptID("Lyx Scripts/Lyx_Paste focus FX state.lua")
             reaper.Main_OnCommand(cmd,0)--paste focus FX data
         
         end  

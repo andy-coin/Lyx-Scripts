@@ -1,7 +1,8 @@
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
+    local SwitchVersion=require("Lyx_Track versions alternative-switch to selected version")
 
     local function main()
 
@@ -10,24 +11,10 @@
         if not track then return end
         
         local idx,first,last,low,high
-        lane_n = api.gtv(track,"I_NUMFIXEDLANES")
-        
-        if  lane_n > 1 and api.gtv(track,"C_LANESCOLLAPSED")==0 then
-            api.cmd(40297,0)
-            api.cmd(42478,0)--play lanes under mouse
-            for abi=1,lane_n do
-                if  api.gtv(track,"C_LANEPLAYS:"..(abi-1))==1 then 
-                    --change name
-                    _,tr_name=api.ts(track,"P_NAME","",false)
-                    _,lane_name=api.ts(track,"P_LANENAME:"..(abi-1),"",false)
-                    new_name=tr_name:gsub("(   %[ .* %])","").."   [ "..lane_name..' ]'
-                    api.ts(track,"P_NAME",new_name,true)
-                    break
-                end
-            end
-            return
-        end
-        
+
+        -- track with expanded fixed lanes: switch version instead of selecting
+        if SwitchVersion(track) then return end
+
         idx   = api.gtv(track,"IP_TRACKNUMBER")
         
         if  api.cst(0)>0 then

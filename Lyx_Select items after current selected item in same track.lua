@@ -1,4 +1,4 @@
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
 
@@ -11,8 +11,6 @@
         mouse_track = api.mct()
 
         if  not mouse_item then return end
-        
-        api.pur(1)
 
         all_lane = api.gtv(mouse_track,'C_LANESCOLLAPSED') == 0
         lane     = api.giv(mouse_item,'I_FIXEDLANE')
@@ -21,6 +19,8 @@
         next_item = api.gti(mouse_track,idx+1)
         
         if not next_item then return end
+
+        api.pur(1) -- after every early return, so the UI never stays frozen
         
         selected = api.giv(mouse_item,'B_UISEL') + api.giv(next_item,'B_UISEL') == 2
         

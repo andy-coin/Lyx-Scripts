@@ -12,7 +12,7 @@
                         (keeps its pitch / velocity / channel)
       Time selection  — fits the whole bounce into the time selection
 ]]
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 
 ---------------------------------------------------------------------------
@@ -243,28 +243,28 @@ G.run(ctx, "Free fall MIDI notes", function(ctx)
 
     graph(ctx, seq)
     local dur = (#seq > 0) and (seq[#seq].t + seq[#seq].len) or 0
-    G.dim_text(ctx, ("%d 個音 · 總長 %.2f s%s"):format(#seq, dur,
-        (#list > 1) and ("  · ×" .. #list .. " 組") or ""))
+    G.dim_text(ctx, ("%d notes · total %.2f s%s"):format(#seq, dur,
+        (#list > 1) and ("  · ×" .. #list .. " sets") or ""))
 
-    R.ImGui_SeparatorText(ctx, "起點")
-    local srcs = { "編輯游標", "選取的音符", "時間選區 (塞滿)" }
+    R.ImGui_SeparatorText(ctx, "Start")
+    local srcs = { "Edit cursor", "Selected notes", "Time selection (fill)" }
     for i, name in ipairs(srcs) do
         if i > 1 then R.ImGui_SameLine(ctx) end
         if R.ImGui_RadioButton(ctx, name, S.src == i - 1) then S.src = i - 1 end
     end
 
-    R.ImGui_SeparatorText(ctx, "彈跳")
+    R.ImGui_SeparatorText(ctx, "Bounce")
     if S.src ~= 2 then
         R.ImGui_SetNextItemWidth(ctx, -G.S(190))
         local c, v
         if S.unit == 0 then
-            c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, 0.0625, 8, "第一下間隔 %.3f 拍", R.ImGui_SliderFlags_Logarithmic())
+            c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, 0.0625, 8, "First gap %.3f beats", R.ImGui_SliderFlags_Logarithmic())
         else
-            c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, 20, 4000, "第一下間隔 %.0f ms", R.ImGui_SliderFlags_Logarithmic())
+            c, v = R.ImGui_SliderDouble(ctx, "##first", S.first, 20, 4000, "First gap %.0f ms", R.ImGui_SliderFlags_Logarithmic())
         end
         if c then S.first = v end
         R.ImGui_SameLine(ctx)
-        if R.ImGui_RadioButton(ctx, "拍", S.unit == 0) and S.unit ~= 0 then
+        if R.ImGui_RadioButton(ctx, "Beats", S.unit == 0) and S.unit ~= 0 then
             S.unit = 0; S.first = 1
         end
         R.ImGui_SameLine(ctx)
@@ -272,38 +272,38 @@ G.run(ctx, "Free fall MIDI notes", function(ctx)
             S.unit = 1; S.first = 500
         end
     end
-    slider_d(ctx, "彈性", "e", 0.30, 0.95, "%.2f", "反彈係數：越大彈越久、間隔縮得越慢")
-    slider_i(ctx, "最小間隔", "min_gap", 5, 80, "%d ms", "間隔短於此值就停（球停下來）")
+    slider_d(ctx, "Bounciness", "e", 0.30, 0.95, "%.2f", "Restitution: higher bounces longer, gaps shrink slower")
+    slider_i(ctx, "Min gap", "min_gap", 5, 80, "%d ms", "Stops when the gap gets shorter (the ball comes to rest)")
 
-    R.ImGui_SeparatorText(ctx, "力度 & 音長")
-    if S.src ~= 1 then slider_i(ctx, "起始力度", "v0", 1, 127, "%d") end
-    slider_i(ctx, "最小力度", "vfloor", 1, 127, "%d", "力度低於此值就停")
-    slider_d(ctx, "衰減曲線", "curve", 0.3, 2.5, "%.2f", "1 = 物理正確；>1 越快變小聲；<1 尾巴更響")
-    slider_i(ctx, "音長", "len_pct", 5, 100, "%d %%", "每個音佔下一個間隔的百分比")
+    R.ImGui_SeparatorText(ctx, "Velocity & length")
+    if S.src ~= 1 then slider_i(ctx, "Start velocity", "v0", 1, 127, "%d") end
+    slider_i(ctx, "Min velocity", "vfloor", 1, 127, "%d", "Stops when velocity drops below this")
+    slider_d(ctx, "Decay curve", "curve", 0.3, 2.5, "%.2f", "1 = physically correct; >1 fades faster; <1 louder tail")
+    slider_i(ctx, "Length", "len_pct", 5, 100, "%d %%", "Each note's share of the gap to the next one")
     if S.src ~= 1 then
         R.ImGui_SetNextItemWidth(ctx, -G.S(110))
-        local c, v = R.ImGui_SliderInt(ctx, "音高", S.pitch, 0, 127, pitch_label(take, S.pitch))
+        local c, v = R.ImGui_SliderInt(ctx, "Pitch", S.pitch, 0, 127, pitch_label(take, S.pitch))
         if c then S.pitch = v end
     end
 
-    R.ImGui_SeparatorText(ctx, "人性化")
-    slider_i(ctx, "時間抖動", "jit_t", 0, 20, "± %d ms")
-    slider_i(ctx, "力度抖動", "jit_v", 0, 20, "± %d")
+    R.ImGui_SeparatorText(ctx, "Humanize")
+    slider_i(ctx, "Timing jitter", "jit_t", 0, 20, "± %d ms")
+    slider_i(ctx, "Velocity jitter", "jit_v", 0, 20, "± %d")
     if S.jit_t > 0 or S.jit_v > 0 then
-        if R.ImGui_Button(ctx, "重抽亂數") then S.seed = math.random(1, 2147483646) end
+        if R.ImGui_Button(ctx, "Reroll") then S.seed = math.random(1, 2147483646) end
     end
 
     R.ImGui_Dummy(ctx, 1, G.S(4))
     local can = take ~= nil and #seq > 0 and not (S.src == 1 and #list == 0)
     if not can then
-        G.color_text(ctx, G.warn, take and (S.src == 1 and "沒有選取的音符" or "沒有可插入的音") or "請先開啟 MIDI editor")
+        G.color_text(ctx, G.warn, take and (S.src == 1 and "No notes selected" or "Nothing to insert") or "Open a MIDI editor first")
     end
     R.ImGui_BeginDisabled(ctx, not can)
-    local go = G.button(ctx, "插入 (Enter)", G.S(110))
+    local go = G.button(ctx, "Insert (Enter)", G.S(110))
         or (can and R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Enter()) and not R.ImGui_IsAnyItemActive(ctx))
     R.ImGui_EndDisabled(ctx)
     R.ImGui_SameLine(ctx)
-    if R.ImGui_Button(ctx, "取消", G.S(80)) then return false end
+    if R.ImGui_Button(ctx, "Cancel", G.S(80)) then return false end
 
     if go then
         save()

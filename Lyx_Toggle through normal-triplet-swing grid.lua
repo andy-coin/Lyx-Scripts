@@ -1,5 +1,5 @@
 
-  local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
   package.path = package.path..";"..script_path.."?.lua"
   local r=require("_Lyx_HOME")
   
@@ -7,7 +7,6 @@
       
       triplet=reaper.NamedCommandLookup("_SWS_AWTOGGLETRIPLET")
       swing=reaper.NamedCommandLookup("_SWS_AWTOGGLESWING")
-      Swing=reaper.NamedCommandLookup("_RS1da5aa836af30a1c8f6fba1f4b7c6a38f7084e9e")
       
       if  reaper.GetToggleCommandState(triplet)==0 and  reaper.GetToggleCommandState(swing)==0 then
           Act="Set grid mode to : Triplet"

@@ -1,3 +1,7 @@
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+  script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
+  package.path = package.path..";"..script_path.."?.lua"
+  local L=require("_Lyx_HOME")
   r=reaper
   
   local function main()
@@ -10,8 +14,8 @@
       if seg~="cc_lane" then
          reaper.MIDIEditor_OnCommand(E,40011)
       else
-         cmd=reaper.NamedCommandLookup("_RS7d3c_ed7caffb63f9d053027021a1f0e5e516f1ecce7d")
-         reaper.MIDIEditor_OnCommand(E,cmd)
+         cmd=L.ScriptID("MPL Scripts/MIDI editor/mpl_Paste selected CC.lua", 32060)
+         if cmd~=0 then reaper.MIDIEditor_OnCommand(E,cmd) end
       end
   end
   

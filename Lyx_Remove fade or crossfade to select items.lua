@@ -6,7 +6,7 @@
                       neighbours and their fades are cleared.
     Only items visible on screen are processed.  Engine: _Lyx_Fade.lua
 ]]
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 require("_Lyx_HOME")
 local F = require("_Lyx_Fade")

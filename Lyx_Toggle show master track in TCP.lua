@@ -1,7 +1,7 @@
 
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_Lyx_HOME")
     
@@ -14,7 +14,9 @@
         api.cmd(41050,0)
         master = api.gmt()
         api.sot(master)
-        api.cmd(api.name('_1d978b78de314723a612d2b159ac8482'),0)--show volume envelope
+        api.cmd(40406,0)--show volume envelope (was a custom action: 40406 + WOL lane + WOL height slot 1)
+        api.cmd(api.name('_WOL_PUTSELENVINENVLANE'),0)
+        api.cmd(api.name('_WOL_APPHSELENVSLOT1'),0)
         --end
 
         r.RestoreTracks(true)

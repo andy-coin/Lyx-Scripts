@@ -1,7 +1,7 @@
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
-    --script_path=script_path:gsub("/MIDI Editor","")
+    --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
     local r=require("_Lyx_HOME")
     
     -----CUSTOM-----

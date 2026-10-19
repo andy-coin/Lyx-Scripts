@@ -42,11 +42,11 @@
                   local areaEnd = tonumber(str[j+1])
                   local GUID = str[j+2]
                   
-                  items = GetItemsInRange(track, areaStart, areaEnd)
+                  items = (GUID == '""' and GetItemsInRange(track, areaStart, areaEnd)) or {} -- razor on an envelope lane: no items
                   for abi=1,#items do
                       local newItem = reaper.SplitMediaItem(items[abi],areaStart)
                         if newItem == nil then
-                            r_item=reaper.SplitMediaItem(item,areaEnd)
+                            r_item=reaper.SplitMediaItem(items[abi],areaEnd)
                             table.insert(newItems,items[abi])
                         else
                             r_item=reaper.SplitMediaItem(newItem,areaEnd)

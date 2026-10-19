@@ -1,16 +1,16 @@
 --[[
     FFMPEG — replace the audio of video files (job list).
 
-    Add videos:  selected video items (opened automatically), "加入影片…", or drag files
+    Add videos:  selected video items (opened automatically), "Add videos…", or drag files
                  from Finder onto the window. Audio files dropped on the window go to
                  the first job without audio; drop on a row's audio button to target it.
-    Audio:       pick a file, or "渲染檔" = the file your last render settings write.
+    Audio:       pick a file, or "Render" = the file your last render settings write.
     Codec:       AAC (copied as-is when the audio already is AAC/M4A) or lossless
                  (mov → PCM, mp4/m4v → ALAC, others → copy).
     Output:      <video>_Remuxed(-NN).<ext> next to the video. Jobs run in the background.
                  For video items, the item's source is swapped only after ffmpeg succeeds.
 ]]
-local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 
 ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ local br_idx = tonumber(R.GetExtState(EXT, "br")) or 2
 do
     local app = "/Applications/Permute 3.app"
     if not WIN and R.file_exists(app .. "/Contents/Info.plist")
-       and R.MB("要同時開啟轉檔軟體 Permute 3 嗎？", "FFMPEG replace audio", 4) == 6 then
+       and R.MB("Also open the converter app Permute 3?", "FFMPEG replace audio", 4) == 6 then
         os.execute('open -a "Permute 3"')
     end
 end
@@ -198,13 +198,13 @@ local function reveal(p)
 end
 
 local function pick_audio(j)
-    local ok, f = R.GetUserFileNameForRead("", "選擇音檔：" .. select(2, split_path(j.video)), "")
+    local ok, f = R.GetUserFileNameForRead("", "Choose audio for: " .. select(2, split_path(j.video)), "")
     if ok then j.audio = f end
 end
 
 local function browse_videos()
     if not R.JS_Dialog_BrowseForOpenFiles then return end
-    local rv, files = R.JS_Dialog_BrowseForOpenFiles("加入影片", "", "",
+    local rv, files = R.JS_Dialog_BrowseForOpenFiles("Add videos", "", "",
         "Video\0*.mov;*.mp4;*.m4v;*.avi;*.mkv\0\0", true)
     if rv < 1 then return end
     local list = {}
@@ -238,7 +238,7 @@ end
 ---------------------------------------------------------------------------
 local ctx = G.new("FFMPEG")
 if not ctx then return end
-local STATUS = { wait = "等待", run = "處理中…", ok = "完成", fail = "失敗" }
+local STATUS = { wait = "Waiting", run = "Working…", ok = "Done", fail = "Failed" }
 
 local function base(p) local _, n, e = split_path(p); return n .. "." .. e end
 
@@ -249,12 +249,12 @@ local function job_row(ctx, j, i)
     R.ImGui_TableNextColumn(ctx)
     R.ImGui_AlignTextToFramePadding(ctx)
     R.ImGui_Text(ctx, base(j.video))
-    R.ImGui_SetItemTooltip(ctx, j.video .. (j.item and "\n(來自專案中的 item，完成後自動替換)" or ""))
+    R.ImGui_SetItemTooltip(ctx, j.video .. (j.item and "\n(from an item in the project, replaced automatically when done)" or ""))
 
     R.ImGui_TableNextColumn(ctx)
     local busy = j.status ~= "wait"
     R.ImGui_BeginDisabled(ctx, busy)
-    if R.ImGui_Button(ctx, j.audio and base(j.audio) or "選擇音檔…", -G.S(56)) then pick_audio(j) end
+    if R.ImGui_Button(ctx, j.audio and base(j.audio) or "Choose audio…", -G.S(56)) then pick_audio(j) end
     if j.audio then R.ImGui_SetItemTooltip(ctx, j.audio) end
     for _, f in ipairs(dropped_files(ctx)) do
         local _, _, e = split_path(f)
@@ -263,9 +263,9 @@ local function job_row(ctx, j, i)
     R.ImGui_SameLine(ctx)
     local rf = render_file()
     R.ImGui_BeginDisabled(ctx, not rf)
-    if R.ImGui_SmallButton(ctx, "渲染檔") then j.audio = rf end
+    if R.ImGui_SmallButton(ctx, "Render") then j.audio = rf end
     R.ImGui_EndDisabled(ctx)
-    R.ImGui_SetItemTooltip(ctx, rf and ("使用最近的渲染檔：\n" .. rf) or "找不到最近的渲染檔")
+    R.ImGui_SetItemTooltip(ctx, rf and ("Use the latest render:\n" .. rf) or "No recent render found")
     R.ImGui_EndDisabled(ctx)
 
     R.ImGui_TableNextColumn(ctx)
@@ -274,7 +274,7 @@ local function job_row(ctx, j, i)
     if j.status == "fail" and j.log then R.ImGui_SetItemTooltip(ctx, j.log:sub(-800)) end
     if j.status == "ok" then
         R.ImGui_SameLine(ctx)
-        if R.ImGui_SmallButton(ctx, "顯示") then reveal(j.out) end
+        if R.ImGui_SmallButton(ctx, "Show") then reveal(j.out) end
         R.ImGui_SetItemTooltip(ctx, j.out)
     end
 
@@ -287,11 +287,11 @@ local function job_row(ctx, j, i)
     return remove
 end
 
-G.run(ctx, "FFMPEG — 替換影片音軌", function(ctx)
+G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
     poll()
 
     if not FFMPEG then
-        G.color_text(ctx, G.bad, "找不到 ffmpeg。請用 Homebrew 安裝（brew install ffmpeg），或放進 REAPER/UserPlugins。")
+        G.color_text(ctx, G.bad, "ffmpeg not found. Install it with Homebrew (brew install ffmpeg) or put it in REAPER/UserPlugins.")
     end
 
     -- job list (also the drop zone)
@@ -300,13 +300,13 @@ G.run(ctx, "FFMPEG — 替換影片音軌", function(ctx)
     if R.ImGui_BeginChild(ctx, "jobs", 0, list_h, R.ImGui_ChildFlags_Borders()) then
         if #jobs == 0 then
             R.ImGui_Dummy(ctx, 1, G.S(30))
-            G.dim_text(ctx, "把影片（和音檔）從 Finder 拖進這裡，或按下方「加入影片…」")
+            G.dim_text(ctx, "Drag videos (and audio) here from Finder, or click \"Add videos…\" below")
         else
             local flags = R.ImGui_TableFlags_RowBg() | R.ImGui_TableFlags_SizingStretchProp()
             if R.ImGui_BeginTable(ctx, "t", 4, flags) then
-                R.ImGui_TableSetupColumn(ctx, "影片", 0, 3)
-                R.ImGui_TableSetupColumn(ctx, "音檔", 0, 4)
-                R.ImGui_TableSetupColumn(ctx, "狀態", 0, 2)
+                R.ImGui_TableSetupColumn(ctx, "Video", 0, 3)
+                R.ImGui_TableSetupColumn(ctx, "Audio", 0, 4)
+                R.ImGui_TableSetupColumn(ctx, "Status", 0, 2)
                 R.ImGui_TableSetupColumn(ctx, "", 0, 0.4)
                 R.ImGui_TableHeadersRow(ctx)
                 local drop
@@ -321,7 +321,7 @@ G.run(ctx, "FFMPEG — 替換影片音軌", function(ctx)
 
     -- codec
     R.ImGui_AlignTextToFramePadding(ctx)
-    R.ImGui_Text(ctx, "音訊編碼")
+    R.ImGui_Text(ctx, "Audio codec")
     R.ImGui_SameLine(ctx)
     if R.ImGui_RadioButton(ctx, "AAC", codec == "aac") then codec = "aac" end
     if codec == "aac" then
@@ -331,11 +331,11 @@ G.run(ctx, "FFMPEG — 替換影片音軌", function(ctx)
         if c then br_idx = v + 1 end
     end
     R.ImGui_SameLine(ctx)
-    if R.ImGui_RadioButton(ctx, "無損", codec == "lossless") then codec = "lossless" end
-    R.ImGui_SetItemTooltip(ctx, "mov → PCM 24-bit；mp4 / m4v → ALAC；其他容器直接複製")
+    if R.ImGui_RadioButton(ctx, "Lossless", codec == "lossless") then codec = "lossless" end
+    R.ImGui_SetItemTooltip(ctx, "mov → PCM 24-bit; mp4 / m4v → ALAC; other containers copy as is")
 
     -- actions
-    if R.ImGui_Button(ctx, "加入影片…") then browse_videos() end
+    if R.ImGui_Button(ctx, "Add videos…") then browse_videos() end
     R.ImGui_SameLine(ctx)
     local ready, waiting = FFMPEG ~= nil, 0
     for _, j in ipairs(jobs) do
@@ -345,13 +345,13 @@ G.run(ctx, "FFMPEG — 替換影片音軌", function(ctx)
         end
     end
     R.ImGui_BeginDisabled(ctx, not ready or waiting == 0)
-    if G.button(ctx, ("開始 (%d)"):format(waiting), G.S(110)) then
+    if G.button(ctx, ("Start (%d)"):format(waiting), G.S(110)) then
         for _, j in ipairs(jobs) do if j.status == "wait" then start(j) end end
     end
     R.ImGui_EndDisabled(ctx)
     if waiting > 0 and not ready and FFMPEG then
         R.ImGui_SameLine(ctx)
-        G.color_text(ctx, G.warn, "還有影片沒選音檔")
+        G.color_text(ctx, G.warn, "Some videos have no audio yet")
     end
 end, {
     w = 640, h = 380,

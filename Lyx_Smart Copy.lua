@@ -1,5 +1,5 @@
     
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
+    local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_Lyx_HOME")
     
@@ -95,7 +95,7 @@
         win=reaper.BR_GetMouseCursorContext()
         
         if  FX and parm ~= 1 then  
-            cmd=reaper.NamedCommandLookup("_RS0824da028c2fdfc08841c7a6d69fc6b5d6329644")
+            cmd=r.ScriptID("Lyx Scripts/Lyx_Copy focus FX state.lua")
             reaper.Main_OnCommand(cmd,0) --copy focus FX data
             state=6
             

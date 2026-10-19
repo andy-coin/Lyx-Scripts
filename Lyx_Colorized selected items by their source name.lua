@@ -1,110 +1,46 @@
+    -- Color selected audio items by their source file: same file = same color.
+    -- The color comes from the file name, so a file keeps its color every time you run this
+    -- (handy before editing/comping: every take of one recording pass reads as one color).
 
-    local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
-    package.path = package.path..";"..script_path.."?.lua"
-    local r=require("_Lyx_HOME")
+    -----CUSTOM-----
+    SATURATION = 0.55   -- 0..1
+    BRIGHTNESS = 0.80   -- 0..1
+    ----------------
 
-    function stringToColour(str)
-        local hash = 0
-        for i = 1, #str do
-            hash = string.byte( string.sub(str, i, i+1) ) + (  (hash << 5) - hash)
-        end
-        local colour = '#'
-        
-        for i = 0, 2 do
-            local value = (hash >> (i * 8)) & 0xFF
-            colour = colour .. ( string.sub('00' .. string.format('%02X', tostring(value)),-2))
-        end
-        return colour
+    local function HashColor(str)
+        local h = 5381
+        for i = 1, #str do h = (h * 33 + str:byte(i)) % 4294967296 end
+        -- hue from the hash, fixed saturation/brightness so every color is readable
+        local hue = (h % 360) / 60
+        local c = BRIGHTNESS * SATURATION
+        local x = c * (1 - math.abs(hue % 2 - 1))
+        local m = BRIGHTNESS - c
+        local rgb = ({ {c,x,0}, {x,c,0}, {0,c,x}, {0,x,c}, {x,0,c}, {c,0,x} })[math.floor(hue) + 1]
+        local function b(v) return math.floor((v + m) * 255 + 0.5) end
+        return reaper.ColorToNative(b(rgb[1]), b(rgb[2]), b(rgb[3])) | 0x1000000
     end
 
-    function GetStringFromMIDIbytes( buf )
-
-        local pos=1
-        local main_out = ""
-        while pos <= buf:len() do
-
-            local offs,flag,msg=string.unpack("IBs4",buf,pos)
-            local adv=4+1+4+msg:len() -- int+char+int+msg
-
-            local out="+"..offs.."\t"
-
-            for j=1,msg:len() do out=out..string.format("%02X ",msg:byte(j)) end
-            if flag ~= 0 then out=out.."\t" end
-            if flag&1 == 1 then out=out.."sel " end
-            if flag&2 == 2 then out=out.."mute " end
-            main_out = main_out .. "\n" .. out
-            pos=pos+adv          
-        end
-        return main_out
+    local function SourceName(take)
+        local src = reaper.GetMediaItemTake_Source(take)
+        if not src then return end
+        src = reaper.GetMediaSourceParent(src) or src -- reversed / section sources
+        local name = reaper.GetMediaSourceFileName(src)
+        return name ~= "" and name:match("[^/\\]+$") or nil
     end
 
-    function HexToRGB( hex )
-        local hex = hex:gsub("#","")
-        local R = tonumber("0x"..hex:sub(1,2))
-        local G = tonumber("0x"..hex:sub(3,4))
-        local B = tonumber("0x"..hex:sub(5,6))
-        return R, G, B
-    end
+    local count = reaper.CountSelectedMediaItems(0)
+    if count == 0 then return end
 
-    function HexToInt( hex )
-        local r, g, b = HexToRGB( hex )
-        local int =  reaper.ColorToNative( r, g, b )|16777216
-        return int
-    end
-
-    function GetTakeSource(take)
-        local source =  reaper.GetMediaItemTake_Source( take )
-        if not source then return nil end
-        local source_section = reaper.GetMediaSourceParent( source ) -- Necesseary for reversed section cause reversed section have 'SECTION' section type
-        if source_section then source = source_section end
-        return source
-    end
-
-    function Main()
-        
-        for i = 0, count_sel_items do
-            local item = reaper.GetSelectedMediaItem(0,i)
-            if  item then
-                local take = reaper.GetActiveTake( item )
-                if  take and not reaper.TakeIsMIDI( take ) then
-                    local source = GetTakeSource(take)
-                    if source then
-                        local source_filename = reaper.GetMediaSourceFileName( source, "" )
-                        if not ITEMs.source_filename then
-                            ITEMs.source_filename = {}
-                        end
-                        table.insert(ITEMs.source_filename, item)
-                    end
-                end
-            end
-        end
-
-        for k, same_source in pairs(ITEMS) do
-            for abi = 1, #same_source do
-                 local item = same_source[abi]
-                 
-                
-            end
+    reaper.Undo_BeginBlock()
+    reaper.PreventUIRefresh(1)
+    for i = 0, count - 1 do
+        local item = reaper.GetSelectedMediaItem(0, i)
+        local take = reaper.GetActiveTake(item)
+        local name = take and not reaper.TakeIsMIDI(take) and SourceName(take)
+        if name then
+            reaper.SetMediaItemInfo_Value(item, "I_CUSTOMCOLOR", HashColor(name))
         end
     end
-
-        -- See if there is items selected
-    count_sel_items = reaper.CountSelectedMediaItems(0)
-
-    if count_sel_items > 0 then
-
-        reaper.PreventUIRefresh(1)
-        reaper.Undo_BeginBlock() -- Begining of the undo block. Leave it at the top of your main function.
-        reaper.ClearConsole()
-        
-        Main()
-
-        reaper.Undo_EndBlock("Color selected items according to their source file name", -1) -- End of the undo block. Leave it at the bottom of your main function.
-        reaper.UpdateArrange()
-        reaper.PreventUIRefresh(-1)
-
-    end
-
-    local color_hex = stringToColour(source_filename)
-    local color_int = HexToInt(color_hex)
-    reaper.SetMediaItemTakeInfo_Value(take, "I_CUSTOMCOLOR", color_int)
+    reaper.PreventUIRefresh(-1)
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock("Color selected items by source file", -1)

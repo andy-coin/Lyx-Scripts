@@ -27,13 +27,13 @@ local ok_home, r_home = pcall(require, "_Lyx_HOME")
 -------------------------------------------------------------------------------
 if not reaper.ImGui_GetVersion then
     reaper.MB(
-        "此腳本需要 ReaImGui 擴充套件。\n\n"..
-        "請依以下步驟安裝：\n"..
-        "1) 開啟 REAPER → Extensions → ReaPack → Browse packages\n"..
-        "2) 搜尋 \"ReaImGui\"\n"..
-        "3) 右鍵 → Install，安裝後重啟 REAPER\n\n"..
-        "安裝完成後再次執行此腳本即可。",
-        "缺少 ReaImGui", 0)
+        "This script needs the ReaImGui extension.\n\n"..
+        "To install it:\n"..
+        "1) REAPER → Extensions → ReaPack → Browse packages\n"..
+        "2) Search for \"ReaImGui\"\n"..
+        "3) Right-click → Install, then restart REAPER\n\n"..
+        "Then run this script again.",
+        "ReaImGui missing", 0)
     return
 end
 

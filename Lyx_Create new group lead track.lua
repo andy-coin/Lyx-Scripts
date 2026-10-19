@@ -34,8 +34,7 @@
       
       if reaper.CountTracks(0)==0 then return end
       
-      cmd=reaper.NamedCommandLookup("_RS239d26e2d82d9743d5dd6ad97307495aba9e14dd")
-      reaper.Main_OnCommand(cmd,0)--create group
+      -- (removed: call to a "create group" script id that is not registered on any machine, it did nothing)
       
       trz,ID,ID_High=CheckFollowTrack()
       if #trz==0 then return end
