@@ -288,20 +288,59 @@ local function strip(ctx, p)
     end
 end
 
+-- per-frame layout metrics: theme font / spacing / scale can change live
+local L = {}
+local function tw(ctx, s) return (R.ImGui_CalcTextSize(ctx, s)) end
+local function measure(ctx)
+    L.sp    = R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_ItemSpacing())
+    L.inner = R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_ItemInnerSpacing())
+    L.pad   = R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_FramePadding())
+    L.fh    = R.ImGui_GetFrameHeight(ctx)
+    L.x0    = R.ImGui_GetCursorPosX(ctx)
+    -- label column: widest of the row labels ([x] name) and the header labels
+    local w = math.max(tw(ctx, "Target"), tw(ctx, "Distribution"), tw(ctx, "Theme"))
+    for _, list in pairs(PARAMS) do
+        for _, p in ipairs(list) do w = math.max(w, L.fh + L.sp + tw(ctx, p.name)) end
+    end
+    L.col = L.x0 + w + L.sp
+end
+local function check_w(ctx, label) return L.fh + L.inner + tw(ctx, label) end
+
+-- SameLine when an item of width w still fits on this row, else start a new row
+local function same_line_fit(ctx, w)
+    R.ImGui_SameLine(ctx)
+    if R.ImGui_GetContentRegionAvail(ctx) < w then R.ImGui_NewLine(ctx) end
+end
+
+-- smallest width that shows both range values in full
+local function range_w(ctx, p)
+    local fmt = "Max %.1f " .. p.unit:gsub("%%", "%%%%")
+    local v = math.max(tw(ctx, fmt:format(p.min)), tw(ctx, fmt:format(p.max)))
+    return 2 * (v + 2 * L.pad) + L.inner
+end
+
 local function param_row(ctx, p)
     R.ImGui_PushID(ctx, p.id)
+    local row_w = R.ImGui_GetContentRegionAvail(ctx)
     local c, v = R.ImGui_Checkbox(ctx, "##on", p.on)
     if c then p.on = v end
     R.ImGui_SameLine(ctx)
     R.ImGui_AlignTextToFramePadding(ctx)
     if p.on then R.ImGui_Text(ctx, p.name) else G.color_text(ctx, G.dim, p.name) end
     if p.tip then R.ImGui_SetItemTooltip(ctx, p.tip) end
-    R.ImGui_SameLine(ctx, G.S(110))
+    -- controls next to the name when they fit, else on the next row under the name
+    local extra = (p.can_rel and check_w(ctx, "Relative") + L.sp)
+               or (p.snap and check_w(ctx, "Semitones") + L.sp) or 0
+    local need = extra + ((p.kind == "range" and range_w(ctx, p)) or (p.kind == "prob" and G.S(80)) or 0)
+    if row_w - (L.col - L.x0) >= need then
+        R.ImGui_SameLine(ctx, L.col)
+    else
+        R.ImGui_SetCursorPosX(ctx, L.x0 + L.fh + L.sp)
+    end
     R.ImGui_BeginDisabled(ctx, not p.on)
     if p.kind == "range" then
-        local extra = (p.can_rel or p.snap) and G.S(70) or 0
-        R.ImGui_SetNextItemWidth(ctx, -extra - 1)
-        local fmt = "%.1f " .. p.unit
+        R.ImGui_SetNextItemWidth(ctx, -extra)
+        local fmt = "%.1f " .. p.unit:gsub("%%", "%%%%") -- "%" unit must be "%%" in a format
         local cc, lo, hi = R.ImGui_DragFloatRange2(ctx, "##rng", p.lo, p.hi,
             (p.max - p.min) / 400, p.min, p.max, "Min " .. fmt, "Max " .. fmt)
         if cc then p.lo, p.hi = math.min(lo, hi), math.max(lo, hi) end
@@ -340,31 +379,35 @@ end
 
 G.run(ctx, "Randomize...", function(ctx)
     -- target switch
+    measure(ctx)
     local nt, ni = R.CountSelectedTracks(0), R.CountSelectedMediaItems(0)
     R.ImGui_AlignTextToFramePadding(ctx)
     R.ImGui_Text(ctx, "Target")
-    R.ImGui_SameLine(ctx, G.S(110))
+    R.ImGui_SameLine(ctx, L.col)
     for _, k in ipairs({ "track", "item" }) do
         local label = (k == "track") and ("Tracks (" .. (kind == "track" and #targets or nt) .. ")")
                                      or ("Item (" .. (kind == "item" and #targets or ni) .. ")")
         if R.ImGui_RadioButton(ctx, label, kind == k) and kind ~= k then
             restore(); kind = k; snapshot()
         end
-        R.ImGui_SameLine(ctx)
+        same_line_fit(ctx, k == "track" and check_w(ctx, "Item (0000)") or tw(ctx, "Reload selection") + 2 * L.pad)
     end
     if R.ImGui_SmallButton(ctx, "Reload selection") then restore(); snapshot() end
     R.ImGui_SetItemTooltip(ctx, "Click after changing the selection (the current preview is undone first)")
+    same_line_fit(ctx, L.fh)
+    G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
+    G.pin(ctx)
 
     R.ImGui_AlignTextToFramePadding(ctx)
     R.ImGui_Text(ctx, "Distribution")
-    R.ImGui_SameLine(ctx, G.S(110))
+    R.ImGui_SameLine(ctx, L.col)
     if R.ImGui_RadioButton(ctx, "Uniform", not gauss) then gauss = false end
-    R.ImGui_SameLine(ctx)
+    same_line_fit(ctx, check_w(ctx, "Normal (centered)"))
     if R.ImGui_RadioButton(ctx, "Normal (centered)", gauss) then gauss = true end
 
     R.ImGui_AlignTextToFramePadding(ctx)
     R.ImGui_Text(ctx, "Theme")
-    R.ImGui_SameLine(ctx, G.S(110))
+    R.ImGui_SameLine(ctx, L.col)
     G.theme_row(ctx, "Randomize")
 
     R.ImGui_Separator(ctx)
@@ -385,16 +428,16 @@ G.run(ctx, "Randomize...", function(ctx)
     if R.ImGui_Button(ctx, "Reroll") then seed = math.random(1, 2147483646) end
     R.ImGui_SameLine(ctx)
     if R.ImGui_Button(ctx, "All off") then for _, p in ipairs(PARAMS[kind]) do p.on = false end end
-    R.ImGui_SameLine(ctx)
-    local bw = G.S(90)
-    R.ImGui_SetCursorPosX(ctx, R.ImGui_GetWindowWidth(ctx) - bw * 2 - G.S(20))
+    local bw = math.max(G.S(90), tw(ctx, "Cancel") + 2 * L.pad)
+    same_line_fit(ctx, bw * 2 + L.sp)
+    G.align_right(ctx, bw * 2 + L.sp)
     if G.button(ctx, "Apply", bw) or (R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Enter()) and not R.ImGui_IsAnyItemActive(ctx)) then
         return close(true)
     end
     R.ImGui_SameLine(ctx)
     if R.ImGui_Button(ctx, "Cancel", bw) then return close(false) end
 end, {
-    w = 480, h = 560,
+    w = 480, h = 560, min_w = 360, min_h = 300,
     on_close = function() if not applied then restore(); save_cfg(gauss) end end,
     on_exit  = function() if not applied then restore() end end,
 })

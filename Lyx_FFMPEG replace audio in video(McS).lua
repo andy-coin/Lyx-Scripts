@@ -243,9 +243,12 @@ end
 ---------------------------------------------------------------------------
 local ctx = G.new("FFMPEG", "FFMPEG")
 if not ctx then return end
-local STATUS = { wait = "Waiting", run = "Working…", ok = "Done", fail = "Failed" }
+local STATUS = { wait = "Waiting", run = "Working…", ok = "Done", fail = "Failed", noaudio = "No audio yet" }
 
 local function base(p) local _, n, e = split_path(p); return n .. "." .. e end
+local function tw(ctx, s) return (R.ImGui_CalcTextSize(ctx, s)) end
+local function pad_x(ctx) return (R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_FramePadding())) end
+local function small_btn_w(ctx, label) return tw(ctx, label) + 2 * pad_x(ctx) end
 
 local function job_row(ctx, j, i)
     R.ImGui_PushID(ctx, j.id)
@@ -259,7 +262,8 @@ local function job_row(ctx, j, i)
     R.ImGui_TableNextColumn(ctx)
     local busy = j.status ~= "wait"
     R.ImGui_BeginDisabled(ctx, busy)
-    if R.ImGui_Button(ctx, j.audio and base(j.audio) or "Choose audio…", -G.S(56)) then pick_audio(j) end
+    local sp = R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_ItemSpacing())
+    if R.ImGui_Button(ctx, j.audio and base(j.audio) or "Choose audio…", -(small_btn_w(ctx, "Render") + sp)) then pick_audio(j) end
     if j.audio then R.ImGui_SetItemTooltip(ctx, j.audio) end
     for _, f in ipairs(dropped_files(ctx)) do
         local _, _, e = split_path(f)
@@ -274,8 +278,10 @@ local function job_row(ctx, j, i)
     R.ImGui_EndDisabled(ctx)
 
     R.ImGui_TableNextColumn(ctx)
-    local col = (j.status == "ok" and G.good) or (j.status == "fail" and G.bad) or (j.status == "run" and G.warn) or G.dim
-    G.color_text(ctx, col, STATUS[j.status])
+    local st = (j.status == "wait" and not j.audio) and "noaudio" or j.status
+    local col = (st == "ok" and G.good) or (st == "fail" and G.bad) or ((st == "run" or st == "noaudio") and G.warn) or G.dim
+    R.ImGui_AlignTextToFramePadding(ctx)
+    G.color_text(ctx, col, STATUS[st])
     if j.status == "fail" and j.log then R.ImGui_SetItemTooltip(ctx, j.log:sub(-800)) end
     if j.status == "ok" then
         R.ImGui_SameLine(ctx)
@@ -296,12 +302,15 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
     poll()
 
     if not FFMPEG then
-        G.color_text(ctx, G.bad, "ffmpeg not found. Install it with Homebrew (brew install ffmpeg) or put it in REAPER/UserPlugins.")
+        R.ImGui_PushStyleColor(ctx, R.ImGui_Col_Text(), G.col(G.bad))
+        R.ImGui_TextWrapped(ctx, "ffmpeg not found. Install it with Homebrew (brew install ffmpeg) or put it in REAPER/UserPlugins.")
+        R.ImGui_PopStyleColor(ctx)
     end
 
-    -- job list (also the drop zone)
+    -- job list (also the drop zone); the 3 rows below it keep their room
     local _, avail_h = R.ImGui_GetContentRegionAvail(ctx)
-    local list_h = math.max(G.S(120), avail_h - G.S(90) - R.ImGui_GetFrameHeightWithSpacing(ctx))
+    local row_h = R.ImGui_GetFrameHeightWithSpacing(ctx)
+    local list_h = math.max(row_h * 3, avail_h - row_h * 3)
     if R.ImGui_BeginChild(ctx, "jobs", 0, list_h, R.ImGui_ChildFlags_Borders()) then
         if #jobs == 0 then
             R.ImGui_Dummy(ctx, 1, G.S(30))
@@ -311,8 +320,12 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
             if R.ImGui_BeginTable(ctx, "t", 4, flags) then
                 R.ImGui_TableSetupColumn(ctx, "Video", 0, 3)
                 R.ImGui_TableSetupColumn(ctx, "Audio", 0, 4)
-                R.ImGui_TableSetupColumn(ctx, "Status", 0, 2)
-                R.ImGui_TableSetupColumn(ctx, "", 0, 0.4)
+                -- status / remove columns sized to their widest content so they never clip
+                local sp = R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_ItemSpacing())
+                local st_w = math.max(tw(ctx, "No audio yet"), tw(ctx, "Working…"),
+                                      tw(ctx, "Done") + sp + small_btn_w(ctx, "Show"))
+                R.ImGui_TableSetupColumn(ctx, "Status", R.ImGui_TableColumnFlags_WidthFixed(), st_w)
+                R.ImGui_TableSetupColumn(ctx, "", R.ImGui_TableColumnFlags_WidthFixed(), small_btn_w(ctx, "×"))
                 R.ImGui_TableHeadersRow(ctx)
                 local drop
                 for i, j in ipairs(jobs) do if job_row(ctx, j, i) then drop = i end end
@@ -331,7 +344,7 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
     if R.ImGui_RadioButton(ctx, "AAC", codec == "aac") then codec = "aac" end
     if codec == "aac" then
         R.ImGui_SameLine(ctx)
-        R.ImGui_SetNextItemWidth(ctx, G.S(80))
+        R.ImGui_SetNextItemWidth(ctx, small_btn_w(ctx, "512k") + R.ImGui_GetFrameHeight(ctx))
         local c, v = R.ImGui_Combo(ctx, "##br", br_idx - 1, table.concat(BITRATES, "\0") .. "\0")
         if c then br_idx = v + 1 end
     end
@@ -344,6 +357,9 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
     R.ImGui_Text(ctx, "Theme")
     R.ImGui_SameLine(ctx)
     G.theme_row(ctx, "FFMPEG")
+    R.ImGui_SameLine(ctx)
+    G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
+    G.pin(ctx)
 
     -- actions
     if R.ImGui_Button(ctx, "Add videos…") then browse_videos() end
@@ -356,16 +372,13 @@ G.run(ctx, "FFMPEG — Replace video audio", function(ctx)
         end
     end
     R.ImGui_BeginDisabled(ctx, not ready or waiting == 0)
-    if G.button(ctx, ("Start (%d)"):format(waiting), G.S(110)) then
+    local start_lbl = ("Start (%d)"):format(waiting)
+    if G.button(ctx, start_lbl, math.max(G.S(110), small_btn_w(ctx, start_lbl))) then
         for _, j in ipairs(jobs) do if j.status == "wait" then start(j) end end
     end
     R.ImGui_EndDisabled(ctx)
-    if waiting > 0 and not ready and FFMPEG then
-        R.ImGui_SameLine(ctx)
-        G.color_text(ctx, G.warn, "Some videos have no audio yet")
-    end
 end, {
-    w = 640, h = 380,
+    w = 640, h = 380, min_w = 420, min_h = 260,
     on_close = function()
         R.SetExtState(EXT, "codec", codec, true)
         R.SetExtState(EXT, "br", tostring(br_idx), true)

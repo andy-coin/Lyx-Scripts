@@ -43,8 +43,8 @@ local THEME_KEY = "MIDI Compressor"
 G.load_theme(THEME_KEY)
 
 local ImGui = {}
-for name, func in pairs(reaper) do
-    name = name:match('^ImGui_(.+)$')
+for key, func in pairs(reaper) do
+    local name = key:match('^ImGui_(.+)$')
     if name then ImGui[name] = func end
 end
 
@@ -718,6 +718,16 @@ local function format_value(p)
     end
 end
 
+-- Horizontal frame padding (large with a roomy global theme): fixed-width buttons must fit text + 2× this
+local function pad_x() return (ImGui.GetStyleVar(ctx, K(ImGui.StyleVar_FramePadding))) end
+
+-- SameLine at x px from the content start (ImGui's offset counts from the window edge, so
+-- a large window padding would push the label under the item); never on top of the previous item.
+local function same_line_at(x)
+    ImGui.SameLine(ctx)
+    ImGui.SetCursorPosX(ctx, math.max(ImGui.GetCursorPosX(ctx), ImGui.GetCursorStartPos(ctx) + x))
+end
+
 local function stat_row(label, value)
     ImGui.TextColored(ctx, theme.text_dim, label)
     ImGui.SameLine(ctx, 140 * settings.ui_scale)
@@ -865,15 +875,17 @@ local function draw_settings()
     push_font("body")
     local ui = settings.ui_scale
     ImGui.Text(ctx, "UI Scale")
-    ImGui.SameLine(ctx, 100*ui)
-    if ImGui.Button(ctx, "-##uidown", 28*ui, 24*ui) then
+    same_line_at(100*ui)
+    local bh = math.max(24*ui, ImGui.GetFrameHeight(ctx))   -- room for the frame padding
+    local bw = math.max(28*ui, bh)
+    if ImGui.Button(ctx, "-##uidown", bw, bh) then
         rebuild_fonts_if_needed(math.max(0.75, settings.ui_scale - 0.05))
         save_settings()
     end
     ImGui.SameLine(ctx)
     ImGui.Text(ctx, string.format("%.2fx", settings.ui_scale))
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "+##uiup", 28*ui, 24*ui) then
+    if ImGui.Button(ctx, "+##uiup", bw, bh) then
         rebuild_fonts_if_needed(math.min(2.5, settings.ui_scale + 0.05))
         save_settings()
     end
@@ -1123,7 +1135,8 @@ local function draw_controls(dl, ui, col_w)
     ImGui.SameLine(ctx, 100*ui)
     local mode_order  = { "avg", "med", "mod", "custom" }
     local mode_labels = { avg="Average", med="Median", mod="Mode", custom="Custom" }
-    if ImGui.Button(ctx, mode_labels[threshold_mode] or "Average", 90*ui, 0) then
+    if ImGui.Button(ctx, mode_labels[threshold_mode] or "Average",
+            math.max(90*ui, ImGui.CalcTextSize(ctx, "Average") + 2 * pad_x()), 0) then
         local next_idx = 1
         for i, m in ipairs(mode_order) do
             if m == threshold_mode then
@@ -1148,7 +1161,7 @@ local function draw_controls(dl, ui, col_w)
         ImGui.TextColored(ctx, theme.accent, "=")
         ImGui.PopFont(ctx)
         ImGui.SameLine(ctx)
-        ImGui.SetNextItemWidth(ctx, 60*ui)
+        ImGui.SetNextItemWidth(ctx, math.max(60*ui, ImGui.CalcTextSize(ctx, "127") + 2 * pad_x()))
         local ch_t, v_t = ImGui.InputInt(ctx, "##thr_custom", custom_thr, 0, 0)
         if ch_t then
             if v_t < 1   then v_t = 1   end
@@ -1261,7 +1274,8 @@ end
 local function draw_buttons(dl, ui, w, btn_h)
     local big_sz = font_sizes.stat * 1.35
     local sp     = 8*ui
-    local btn_w  = (w - 2*sp) * 0.25          -- Reset / Bypass: a quarter each, slots: the rest
+    local btn_w  = math.max((w - 2*sp) * 0.25,  -- Reset / Bypass: a quarter each, slots: the rest
+                            ImGui.CalcTextSize(ctx, "Bypass") + 2 * pad_x())
     local cell   = (w - 2*sp - 2*btn_w) / #SLOT_NAMES
     -- Positioned explicitly: this group sits on the left column's line, so SameLine()
     -- would snap Bypass / slots back up to that line's y.
@@ -1712,7 +1726,7 @@ local function draw_main()
     local isz, sp, big = 26*ui, 4*ui, 12*ui
     ImGui.SameLine(ctx)
     local avail_w = ImGui.GetContentRegionAvail(ctx)
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + avail_w - inset - (4*isz + sp + 2*big))
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, avail_w - inset - (4*isz + sp + 2*big)))
     if icon_button("##undo", isz, string.format("Undo (%s+Z) — %d step%s", KEY_CMD, #undo_stack,
             #undo_stack == 1 and "" or "s"), #undo_stack > 0, false, draw_undo) then
         undo()
@@ -1791,7 +1805,8 @@ local function draw_main()
     ImGui.BeginGroup(ctx)
     local rx = ImGui.GetCursorScreenPos(ctx)
     local rw = ImGui.GetContentRegionAvail(ctx) - inset
-    local btn_h = font_sizes.stat * 1.35 + 12*ui   -- centred on Note count .. Min — Max
+    local btn_h = math.max(font_sizes.stat * 1.35 + 12*ui,   -- centred on Note count .. Min — Max
+                           ImGui.GetFrameHeight(ctx))       -- (never shorter than text + frame padding)
     ImGui.SetCursorScreenPos(ctx, rx, stats_top + (stats_bot - stats_top - btn_h) / 2)
     if not enabled then ImGui.BeginDisabled(ctx) end
     draw_buttons(dl, ui, rw, btn_h)

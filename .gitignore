@@ -8,10 +8,9 @@ Realive/
 solger_*.ini
 handoff.md
 convert_bform_to_stereo_uhj.py
-Buss Driver/
-Theme Layout Modifier/
+Buss Driver/_backup/
+Theme Layout Modifier/_backup/
 neutronic_Quick Adder (Lyx mod)/
 Realauncher*
-X-Raym_*
 Script- *
 MIDI Editor/_Lyx_HOME.lua

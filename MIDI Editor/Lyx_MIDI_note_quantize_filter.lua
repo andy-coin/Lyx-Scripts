@@ -39,8 +39,8 @@ if not reaper.ImGui_GetVersion then
 end
 
 local ImGui = {}
-for name, func in pairs(reaper) do
-    name = name:match('^ImGui_(.+)$')
+for key, func in pairs(reaper) do
+    local name = key:match('^ImGui_(.+)$')
     if name then ImGui[name] = func end
 end
 
@@ -1265,9 +1265,20 @@ local function tip(text)
     end
 end
 
+-- Horizontal frame padding (large with a roomy global theme): fixed-size buttons must fit text + 2x this
+local function pad_x() return (ImGui.GetStyleVar(ctx, K(ImGui.StyleVar_FramePadding))) end
+
+-- SameLine at x px from the content start (ImGui's offset counts from the window edge, so
+-- a large window padding would push the label under the item); never on top of the previous item.
+local function same_line_at(x)
+    ImGui.SameLine(ctx)
+    ImGui.SetCursorPosX(ctx, max(ImGui.GetCursorPosX(ctx), ImGui.GetCursorStartPos(ctx) + x))
+end
+
 local function text_right(text, col)
     ImGui.SameLine(ctx)
     local tw = ImGui.CalcTextSize(ctx, text)
+    if ImGui.GetContentRegionAvail(ctx) < tw then ImGui.NewLine(ctx) end   -- no room: next line
     local avail = ImGui.GetContentRegionAvail(ctx)
     ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + max(0, avail - tw))
     ImGui.TextColored(ctx, col, text)
@@ -1454,12 +1465,14 @@ local function draw_settings()
     push_font("body")
     local ui = settings.ui_scale
     ImGui.Text(ctx, "UI Scale")
-    ImGui.SameLine(ctx, 100 * ui)
-    if ImGui.Button(ctx, "-##uidown", 28 * ui, 24 * ui) then set_ui_scale(settings.ui_scale - 0.05) end
+    same_line_at(100 * ui)
+    local bh = max(24 * ui, ImGui.GetFrameHeight(ctx))   -- room for the frame padding
+    local bw = max(28 * ui, bh)
+    if ImGui.Button(ctx, "-##uidown", bw, bh) then set_ui_scale(settings.ui_scale - 0.05) end
     ImGui.SameLine(ctx)
     ImGui.Text(ctx, string.format("%.2fx", settings.ui_scale))
     ImGui.SameLine(ctx)
-    if ImGui.Button(ctx, "+##uiup", 28 * ui, 24 * ui) then set_ui_scale(settings.ui_scale + 0.05) end
+    if ImGui.Button(ctx, "+##uiup", bw, bh) then set_ui_scale(settings.ui_scale + 0.05) end
 
     ImGui.Separator(ctx)
     ImGui.TextColored(ctx, theme.subtitle, "Theme Colors")
@@ -1479,9 +1492,11 @@ local function draw_settings()
 
     ImGui.Dummy(ctx, 0, 6 * ui)
     push_font("small")
-    ImGui.TextColored(ctx, theme.text_dim,
+    ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.text_dim)
+    ImGui.TextWrapped(ctx,
         HAS_JS and "js_ReaScriptAPI found: MIDI editor indicator available."
                or  "js_ReaScriptAPI not installed: no MIDI editor indicator.")
+    ImGui.PopStyleColor(ctx)
     ImGui.PopFont(ctx)
     ImGui.PopFont(ctx)
 end
@@ -1501,9 +1516,11 @@ local function draw_main()
     ImGui.TextColored(ctx, theme.title, "Quantize Filter")
     ImGui.PopFont(ctx)
     ImGui.SameLine(ctx)
-    local sbw = 44 * ui
-    local avail = ImGui.GetContentRegionAvail(ctx)
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + avail - sbw)
+    local sbw, gap = max(44 * ui, ImGui.CalcTextSize(ctx, "Set") + 2 * pad_x()), 4 * ui
+    -- header icons, right-aligned: [pin] [Set]
+    G.align_right(ctx, ImGui.GetFrameHeight(ctx) + gap + sbw)
+    G.pin(ctx, THEME_KEY)
+    ImGui.SameLine(ctx, 0, gap)
     if ImGui.Button(ctx, "Set", sbw, 0) then S.show_settings = not S.show_settings end
     ImGui.Separator(ctx)
 
@@ -1604,7 +1621,7 @@ local function draw_main()
 
     -- Target + weighting
     ImGui.Text(ctx, "Pull to")
-    ImGui.SameLine(ctx, 100 * ui)
+    same_line_at(100 * ui)
     if ImGui.RadioButton(ctx, "Grid", not settings.edge) and settings.edge then
         settings.edge = false; on_param_change(); request_commit(param_desc(), 0)
     end
@@ -1622,7 +1639,7 @@ local function draw_main()
     tip("Pull grows with distance: a note half a grid step off gets half of Strength, "..
         "closer notes proportionally less. Keeps the order of timing deviations, "..
         "so strums and flams keep their shape.")
-    ImGui.SameLine(ctx, W * 0.5)
+    same_line_at(W * 0.5)
     if not HAS_JS then ImGui.BeginDisabled(ctx) end
     local ci, iv = ImGui.Checkbox(ctx, "Show indicator", settings.indicator)
     if ci then settings.indicator = iv; save_settings() end
@@ -1671,19 +1688,20 @@ local function draw_main()
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.text_dim)
     end
     push_font("big")
-    if ImGui.Button(ctx, label.."##bypass", W, 34 * ui) then toggle_bypass() end
+    if ImGui.Button(ctx, label.."##bypass", W, max(34 * ui, ImGui.GetFrameHeight(ctx))) then toggle_bypass() end
     ImGui.PopFont(ctx)
     ImGui.PopStyleColor(ctx, 4)
     tip("Bypass (B): A/B the result against the original notes.")
 
     local hw = (W - 6 * ui) * 0.5
+    local bh = max(26 * ui, ImGui.GetFrameHeight(ctx))   -- never shorter than text + frame padding
     if S.bypassed then ImGui.BeginDisabled(ctx) end
-    if ImGui.Button(ctx, "Apply", hw, 26 * ui) then do_apply() end
+    if ImGui.Button(ctx, "Apply", hw, bh) then do_apply() end
     if S.bypassed then ImGui.EndDisabled(ctx) end
     tip("Apply (Enter): keep the result and make it the new original, "..
         "so another pass works on top of it (iterative quantize).")
     ImGui.SameLine(ctx, 0, 6 * ui)
-    if ImGui.Button(ctx, "Reset", hw, 26 * ui) then do_reset() end
+    if ImGui.Button(ctx, "Reset", hw, bh) then do_reset() end
     tip("Restore the original notes and the default parameters.")
     if not has_notes then ImGui.EndDisabled(ctx) end
 
@@ -1746,7 +1764,10 @@ local function main()
     push_theme()
     ImGui.SetNextWindowSize(ctx, 400 * settings.ui_scale, 590 * settings.ui_scale,
         K(ImGui.Cond_FirstUseEver))
-    local visible, open = ImGui.Begin(ctx, SCRIPT_NAME, true, WINDOW_FLAGS)
+    -- narrowest width at which the rows still fit (plus the theme's window padding)
+    local wpad = ImGui.GetStyleVar(ctx, K(ImGui.StyleVar_WindowPadding))
+    ImGui.SetNextWindowSizeConstraints(ctx, 300 * settings.ui_scale + 2 * wpad, 200 * settings.ui_scale, 10000, 10000)
+    local visible, open = ImGui.Begin(ctx, SCRIPT_NAME, true, WINDOW_FLAGS | G.pin_flag(THEME_KEY))
     if visible then
         local focused = ImGui.IsWindowFocused(ctx, FOCUS_FLAGS)
         if focused then ImGui.SetNextFrameWantCaptureKeyboard(ctx, true) end
@@ -1758,7 +1779,8 @@ local function main()
     if S.show_settings then
         ImGui.SetNextWindowSize(ctx, 340 * settings.ui_scale, 470 * settings.ui_scale,
             K(ImGui.Cond_FirstUseEver))
-        local svis, sopen = ImGui.Begin(ctx, "Settings##lyx_qf", true, K(ImGui.WindowFlags_NoCollapse))
+        local svis, sopen = ImGui.Begin(ctx, "Settings##lyx_qf", true,
+            K(ImGui.WindowFlags_NoCollapse) | G.pin_flag(THEME_KEY))
         if svis then
             draw_settings()
             ImGui.End(ctx)
