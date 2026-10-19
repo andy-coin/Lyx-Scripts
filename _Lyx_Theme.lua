@@ -3,7 +3,7 @@
 
     File: <REAPER resource>/Data/Lyx/themes.lua
           return { current = "Lyx Dark", themes = { ["Lyx Dark"] = {...}, ... } }
-    Colours are 0xRRGGBB integers. The built-in "Lyx Dark" always exists and is read-only.
+    Colours are 0xRRGGBB integers. The presets in T.PRESETS ("Lyx Dark", "Lyx Lake") always exist and are read-only.
     Every T.save() bumps ExtState "Lyx_Theme"/"rev" so running GUIs reload (see T.changed).
 
     usage:
@@ -49,6 +49,24 @@ end
 
 T.default = T.derive(0x1E1E2E, 0xCDD6F4, 0x89B4FA)
 
+-- Read-only presets shipped with the scripts (T.BUILTIN first). Duplicate one to edit it.
+T.PRESETS = { T.BUILTIN, "Lyx Lake" }
+local preset_data = {
+    ["Lyx Lake"] = {
+        colors   = { bg = 0x0C2C42, bg2 = 0x172B3A, base = 0x195172, title = 0xE1BB48,
+                     subtitle = 0x1CD7D5, accent = 0xB5973C, text = 0xE6ECFF },
+        button   = { color = 0xA27E11, border = 1 },
+        frame    = { color = 0x414B5A, border = 1 },
+        font     = { name = "", size = 15 },
+        rounding = { window = 11, button = 5, frame = 5 },
+        alpha = 0.95, spacing = 10, scale = 0.9,
+    },
+}
+function T.is_builtin(name)
+    for _, n in ipairs(T.PRESETS) do if n == name then return true end end
+    return false
+end
+
 local function copy(t)
     if type(t) ~= "table" then return t end
     local o = {}
@@ -87,7 +105,9 @@ function T.fill(th, name)
     return o
 end
 
-local function builtin() return T.fill(T.default, T.BUILTIN) end
+local function add_presets(themes)
+    for _, n in ipairs(T.PRESETS) do themes[n] = T.fill(preset_data[n] or T.default, n) end
+end
 
 -- Always returns a valid db; missing / corrupt file -> built-in only.
 function T.load()
@@ -108,7 +128,7 @@ function T.load()
         end
         if type(db.current) == "string" then out.current = db.current end
     end
-    out.themes[T.BUILTIN] = builtin()
+    add_presets(out.themes)
     if not out.themes[out.current] then out.current = T.BUILTIN end
     return out
 end
@@ -138,9 +158,9 @@ end
 function T.save(db)
     local out = { current = db.current, themes = {} }
     for name, th in pairs(db.themes or {}) do
-        if name ~= T.BUILTIN then out.themes[name] = T.fill(th, name) end
+        if not T.is_builtin(name) then out.themes[name] = T.fill(th, name) end
     end
-    out.themes[T.BUILTIN] = builtin()
+    add_presets(out.themes)
     if not out.themes[out.current] then out.current = T.BUILTIN end
 
     R.RecursiveCreateDirectory(T.dir, 0)

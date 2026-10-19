@@ -256,7 +256,49 @@ function G.theme_row(ctx, key)
     return c
 end
 
+-- Pin (always on top), remembered per script key. G.run adds TopMost by itself;
+-- own-ctx scripts OR G.pin_flag(key) into their Begin flags.
+local PIN = "Lyx_GUI"
+function G.pinned(key) return R.GetExtState(PIN, "pin:" .. (key or G.key or "Lyx")) == "1" end
+function G.pin_flag(key) return G.pinned(key) and R.ImGui_WindowFlags_TopMost() or 0 end
+
+-- Push-pin icon button (same look as the MIDI compressor): upright = pinned, tilted = not.
+-- Place it yourself, e.g. right-aligned on the first row. Returns true when toggled.
+function G.pin(ctx, key, size)
+    key = key or G.key or "Lyx"
+    local on = G.pinned(key)
+    local sz = size or R.ImGui_GetFrameHeight(ctx)
+    local clicked = R.ImGui_InvisibleButton(ctx, "##lyx_pin", sz, sz)
+    local hov = R.ImGui_IsItemHovered(ctx)
+    local x0, y0 = R.ImGui_GetItemRectMin(ctx)
+    local col = on and G.accent or G.dim
+    if hov then col = G.mix(col, 0xFFFFFF, 0.4) end
+    col = G.col(col)
+    local dl, cx, cy, r = R.ImGui_GetWindowDrawList(ctx), x0 + sz / 2, y0 + sz / 2, sz * 0.42
+    local a = on and 0 or math.pi / 4
+    local ca, sa = math.cos(a), math.sin(a)
+    local function P(x, y) return cx + x * ca - y * sa, cy + x * sa + y * ca end
+    local hx, hy = P(0, -r * 0.45)
+    R.ImGui_DrawList_AddCircleFilled(dl, hx, hy, r * 0.38, col)                       -- head
+    local x1, y1 = P(-r * 0.55, -r * 0.05)
+    local x2, y2 = P(r * 0.55, -r * 0.05)
+    R.ImGui_DrawList_AddLine(dl, x1, y1, x2, y2, col, r * 0.22)                       -- collar
+    local n1x, n1y = P(0, -r * 0.05)
+    local n2x, n2y = P(0, r * 0.95)
+    R.ImGui_DrawList_AddLine(dl, n1x, n1y, n2x, n2y, col, math.max(1, r * 0.12))     -- needle
+    if hov then R.ImGui_SetTooltip(ctx, on and "Unpin window" or "Pin window (always on top)") end
+    if clicked then R.SetExtState(PIN, "pin:" .. key, on and "0" or "1", true) end
+    return clicked
+end
+
+-- Moves the cursor so an item of width w ends at the right edge of the current row.
+function G.align_right(ctx, w)
+    local avail = R.ImGui_GetContentRegionAvail(ctx)
+    R.ImGui_SetCursorPosX(ctx, R.ImGui_GetCursorPosX(ctx) + math.max(0, avail - w))
+end
+
 -- Defer loop. draw(ctx) returns false to close. Esc closes unless opts.esc == false.
+-- opts: w, h (first-use size), min_w, min_h (smallest size), flags, font_size, on_close, on_exit.
 -- opts.live == false disables theme live reload.
 function G.run(ctx, title, draw, opts)
     opts = opts or {}
@@ -267,7 +309,10 @@ function G.run(ctx, title, draw, opts)
         if opts.w then
             R.ImGui_SetNextWindowSize(ctx, G.S(opts.w), G.S(opts.h or 300), R.ImGui_Cond_FirstUseEver())
         end
-        local flags = opts.flags or R.ImGui_WindowFlags_NoCollapse()
+        if opts.min_w then -- design px, like w / h
+            R.ImGui_SetNextWindowSizeConstraints(ctx, G.S(opts.min_w), G.S(opts.min_h or 0), 1e6, 1e6)
+        end
+        local flags = (opts.flags or R.ImGui_WindowFlags_NoCollapse()) | G.pin_flag()
         local visible, open = R.ImGui_Begin(ctx, title, true, flags)
         local keep = true
         if visible then

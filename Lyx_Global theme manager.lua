@@ -32,9 +32,9 @@ G.apply(work.themes[sel])
 
 local function names()
     local list = {}
-    for n in pairs(work.themes) do if n ~= T.BUILTIN then list[#list + 1] = n end end
+    for n in pairs(work.themes) do if not T.is_builtin(n) then list[#list + 1] = n end end
     table.sort(list, function(a, b) return a:lower() < b:lower() end)
-    table.insert(list, 1, T.BUILTIN)
+    for i, n in ipairs(T.PRESETS) do table.insert(list, i, n) end
     return list
 end
 
@@ -89,8 +89,21 @@ local function deferred(id, widget, value, commit)
     end
 end
 
+local function tw(s) return (R.ImGui_CalcTextSize(ctx, s)) end
+local function style_x(var) return (R.ImGui_GetStyleVar(ctx, var)) end
+
+-- negative item width that leaves room for the widest of these labels on the right
+local function label_room(...)
+    local w = 0
+    for _, s in ipairs({ ... }) do w = math.max(w, tw(s)) end
+    return -(w + style_x(R.ImGui_StyleVar_ItemInnerSpacing()))
+end
+
 local function editors(th)
-    local w = G.S(150)
+    -- second colour column starts after the widest first-column swatch + label
+    local inner, sp = style_x(R.ImGui_StyleVar_ItemInnerSpacing()), style_x(R.ImGui_StyleVar_ItemSpacing())
+    local w = R.ImGui_GetCursorPosX(ctx) + R.ImGui_GetFrameHeight(ctx) + inner + sp
+        + math.max(tw("Background"), tw("Base"), tw("Title"), tw("Colour"))
     G.subtitle(ctx, "Colours")
     color("Background", th.colors, "bg")
     R.ImGui_SameLine(ctx, w); color("Background 2", th.colors, "bg2")
@@ -104,37 +117,39 @@ local function editors(th)
     R.ImGui_Spacing(ctx)
     G.subtitle(ctx, "Button")
     color("Colour##btn", th.button, "color")
-    R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, G.S(60)); slider_int("Border##btn", th.button, "border", 0, 2)
+    R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, label_room("Border")); slider_int("Border##btn", th.button, "border", 0, 2)
     G.subtitle(ctx, "Frame")
     color("Colour##frm", th.frame, "color")
-    R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, G.S(60)); slider_int("Border##frm", th.frame, "border", 0, 2)
+    R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, label_room("Border")); slider_int("Border##frm", th.frame, "border", 0, 2)
 
     R.ImGui_Spacing(ctx)
     G.subtitle(ctx, "Font")
-    R.ImGui_SetNextItemWidth(ctx, -G.S(40))
+    local font_w = label_room("Name", "Size")
+    R.ImGui_SetNextItemWidth(ctx, font_w)
     deferred("font", function(v)
         return R.ImGui_InputTextWithHint(ctx, "Name", "Default (CJK system font)", v)
     end, th.font.name, function(v) th.font.name = v end)
     R.ImGui_SetItemTooltip(ctx, "Font family (e.g. Helvetica) or a font file path; empty = default")
-    R.ImGui_SetNextItemWidth(ctx, -G.S(40))
+    R.ImGui_SetNextItemWidth(ctx, font_w)
     deferred("size", function(v) return R.ImGui_SliderInt(ctx, "Size", v, 10, 24) end,
         th.font.size, function(v) th.font.size = v end)
 
     R.ImGui_Spacing(ctx)
     G.subtitle(ctx, "Layout")
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    local lay_w = label_room("Window rounding", "Button rounding", "Frame rounding", "Window alpha", "Spacing", "Scale")
+    R.ImGui_SetNextItemWidth(ctx, lay_w)
     slider_int("Window rounding", th.rounding, "window", 0, 16)
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    R.ImGui_SetNextItemWidth(ctx, lay_w)
     slider_int("Button rounding", th.rounding, "button", 0, 16)
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    R.ImGui_SetNextItemWidth(ctx, lay_w)
     slider_int("Frame rounding", th.rounding, "frame", 0, 16)
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    R.ImGui_SetNextItemWidth(ctx, lay_w)
     local c, v = R.ImGui_SliderDouble(ctx, "Window alpha", th.alpha, 0.3, 1, "%.2f")
     if c then th.alpha = v; dirty = true end
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    R.ImGui_SetNextItemWidth(ctx, lay_w)
     deferred("spacing", function(x) return R.ImGui_SliderInt(ctx, "Spacing", x, 2, 16) end,
         th.spacing, function(x) th.spacing = x end)
-    R.ImGui_SetNextItemWidth(ctx, -G.S(110))
+    R.ImGui_SetNextItemWidth(ctx, lay_w)
     deferred("scale", function(x) return R.ImGui_SliderDouble(ctx, "Scale", x, 0.75, 2, "%.2f") end,
         th.scale, function(x) th.scale = x end)
 end
@@ -164,8 +179,20 @@ end
 ---------------------------------------------------------------------------
 -- Theme list
 ---------------------------------------------------------------------------
+-- list width: fits the longest name and the button rows below it
+local function list_width()
+    local pad, sp = style_x(R.ImGui_StyleVar_FramePadding()), style_x(R.ImGui_StyleVar_ItemSpacing())
+    local w = math.max(tw("New") + tw("Duplicate"), tw("Rename") + tw("Delete")) + 4 * pad + sp
+    for _, name in ipairs(names()) do
+        local label = T.is_builtin(name) and (name .. "  (built-in)") or name
+        w = math.max(w, R.ImGui_GetFrameHeight(ctx) + sp + tw(label)
+            + 2 * style_x(R.ImGui_StyleVar_WindowPadding()) + style_x(R.ImGui_StyleVar_ScrollbarSize()))
+    end
+    return math.max(G.S(200), w)
+end
+
 local function theme_list(h)
-    if not R.ImGui_BeginChild(ctx, "list", G.S(200), h, R.ImGui_ChildFlags_Borders()) then return end
+    if not R.ImGui_BeginChild(ctx, "list", list_width(), h, R.ImGui_ChildFlags_Borders()) then return end
     for _, name in ipairs(names()) do
         R.ImGui_PushID(ctx, name)
         if R.ImGui_RadioButton(ctx, "##use", work.current == name) and work.current ~= name then
@@ -181,9 +208,9 @@ local function theme_list(h)
             rename_buf = buf
             if enter then commit_rename() elseif R.ImGui_IsItemDeactivated(ctx) then renaming = false end
         else
-            local label = name == T.BUILTIN and (name .. "  (built-in)") or name
+            local label = T.is_builtin(name) and (name .. "  (built-in)") or name
             if R.ImGui_Selectable(ctx, label, sel == name) then select_theme(name) end
-            if R.ImGui_IsItemHovered(ctx) and R.ImGui_IsMouseDoubleClicked(ctx, 0) and name ~= T.BUILTIN then
+            if R.ImGui_IsItemHovered(ctx) and R.ImGui_IsMouseDoubleClicked(ctx, 0) and not T.is_builtin(name) then
                 renaming, rename_buf, rename_focus = true, name, true
             end
         end
@@ -193,7 +220,7 @@ local function theme_list(h)
 end
 
 local function list_buttons()
-    local builtin = sel == T.BUILTIN
+    local builtin = T.is_builtin(sel)
     if G.button(ctx, "New", nil, nil, "plain") then add_theme(unique("New theme"), T.default) end
     R.ImGui_SameLine(ctx)
     if G.button(ctx, "Duplicate", nil, nil, "plain") then add_theme(unique(sel .. " copy"), work.themes[sel]) end
@@ -254,10 +281,10 @@ G.run(ctx, "Lyx Global Theme", function(ctx)
     R.ImGui_SameLine(ctx)
     local avail_w = R.ImGui_GetContentRegionAvail(ctx)
     if R.ImGui_BeginChild(ctx, "edit", avail_w * 0.58, body_h, R.ImGui_ChildFlags_Borders()) then
-        if sel == T.BUILTIN then
-            G.dim_text(ctx, "The built-in theme is read-only. Duplicate it to make your own.")
+        if T.is_builtin(sel) then
+            G.dim_text(ctx, "Built-in presets are read-only. Duplicate one to make your own.")
         end
-        R.ImGui_BeginDisabled(ctx, sel == T.BUILTIN)
+        R.ImGui_BeginDisabled(ctx, T.is_builtin(sel))
         editors(th)
         R.ImGui_EndDisabled(ctx)
         R.ImGui_EndChild(ctx)
@@ -280,7 +307,10 @@ G.run(ctx, "Lyx Global Theme", function(ctx)
     R.ImGui_AlignTextToFramePadding(ctx)
     if dirty then G.color_text(ctx, G.warn, "● Unsaved changes")
     elseif msg then G.color_text(ctx, msg[2], msg[1]) end
+    R.ImGui_SameLine(ctx)
+    G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
+    G.pin(ctx)
 
     -- the manager wears the theme being edited (applied for the next frame)
     G.apply(work.themes[sel])
-end, { w = 900, h = 560, esc = false, live = false })
+end, { w = 900, h = 560, min_w = 640, min_h = 420, esc = false, live = false })

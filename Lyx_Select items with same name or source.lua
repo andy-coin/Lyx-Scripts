@@ -94,7 +94,8 @@ local function loop()
     if visible then
         for i, m in ipairs(MODES) do
             if not m.enabled then reaper.ImGui_BeginDisabled(ctx) end
-            local w = reaper.ImGui_CalcTextSize(ctx, "2. Same audio source") + 24
+            local pad_x = reaper.ImGui_GetStyleVar(ctx, reaper.ImGui_StyleVar_FramePadding()) -- theme spacing can be large
+            local w = reaper.ImGui_CalcTextSize(ctx, "2. Same audio source") + math.max(24, 2 * pad_x + 2)
             local hit
             if themed then hit = G.button(ctx, m.label, w, nil, "plain")
             else hit = reaper.ImGui_Button(ctx, m.label, w) end
