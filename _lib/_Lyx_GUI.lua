@@ -51,7 +51,7 @@ function G.load_theme(key)
     if G.inherited then
         G.apply(T.get())
     else
-        local th = T.derive(num("bg", 0x1E1E2E), num("fg", 0xCDD6F4), num("accent", 0x89B4FA),
+        local th = T.derive(num("bg", 0x0C2C42), num("fg", 0xE6ECFF), num("accent", 0xB5973C), -- Lyx Lake base colours
                             math.max(0.5, math.min(2.5, num("scale", 1.0))))
         G.apply(th)
     end

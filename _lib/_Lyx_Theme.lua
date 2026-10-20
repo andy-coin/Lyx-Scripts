@@ -2,7 +2,7 @@
     _Lyx_Theme.lua  —  Lyx global theme storage (pure data, no ImGui).
 
     File: <REAPER resource>/Data/Lyx/themes.lua
-          return { current = "Lyx Dark", themes = { ["Lyx Dark"] = {...}, ... } }
+          return { current = "Lyx Lake", themes = { ["Lyx Dark"] = {...}, ... } }
     Colours are 0xRRGGBB integers. The presets in T.PRESETS ("Lyx Dark", "Lyx Lake") always exist and are read-only.
     Every T.save() bumps ExtState "Lyx_Theme"/"rev" so running GUIs reload (see T.changed).
 
@@ -16,6 +16,7 @@ local T = {}
 local SECTION = "Lyx_Theme"
 
 T.BUILTIN = "Lyx Dark"
+T.DEFAULT = "Lyx Lake"   -- theme used when none is chosen yet (or the chosen one was deleted)
 T.dir  = R.GetResourcePath() .. "/Data/Lyx"
 T.path = T.dir .. "/themes.lua"
 local HERE = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./"):gsub("_lib[/\\]$", "") -- scripts live one folder up
@@ -62,6 +63,8 @@ local preset_data = {
         alpha = 0.95, spacing = 10, scale = 0.9,
     },
 }
+function T.preset(name) return T.fill(preset_data[name] or T.default, name) end
+
 function T.is_builtin(name)
     for _, n in ipairs(T.PRESETS) do if n == name then return true end end
     return false
@@ -121,7 +124,7 @@ function T.load()
             if ok2 and type(res) == "table" then db = res end
         end
     end
-    local out = { current = T.BUILTIN, themes = {} }
+    local out = { current = T.DEFAULT, themes = {} }
     if db and type(db.themes) == "table" then
         for name, th in pairs(db.themes) do
             if type(name) == "string" and name ~= "" then out.themes[name] = T.fill(th, name) end
@@ -129,7 +132,7 @@ function T.load()
         if type(db.current) == "string" then out.current = db.current end
     end
     add_presets(out.themes)
-    if not out.themes[out.current] then out.current = T.BUILTIN end
+    if not out.themes[out.current] then out.current = T.DEFAULT end
     return out
 end
 
@@ -161,7 +164,7 @@ function T.save(db)
         if not T.is_builtin(name) then out.themes[name] = T.fill(th, name) end
     end
     add_presets(out.themes)
-    if not out.themes[out.current] then out.current = T.BUILTIN end
+    if not out.themes[out.current] then out.current = T.DEFAULT end
 
     R.RecursiveCreateDirectory(T.dir, 0)
     local tmp = T.path .. ".tmp"
