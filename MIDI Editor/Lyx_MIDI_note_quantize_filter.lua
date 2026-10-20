@@ -118,6 +118,7 @@ local DEFAULT_THEME = {
     border    = rgba( 70,  70,  80, 255),
     stat_val  = rgba(140, 220, 170, 255),
     band      = rgba(240, 180,  80, 255),   -- filter window (timing view + MIDI editor)
+    exempt    = rgba(255,  60, 170, 255),   -- MIDI editor: stripes on notes Quantize leaves alone
 }
 local THEME_ROWS = {
     { "Background",      "bg"        }, { "Panel",           "panel"     },
@@ -125,16 +126,17 @@ local THEME_ROWS = {
     { "Accent",          "accent"    }, { "Slider",          "slider"    },
     { "Slider (active)", "slider_act"}, { "Border",          "border"    },
     { "Stat value",      "stat_val"  }, { "Filter window",   "band"      },
+    { "Exempt notes",    "exempt"    },
 }
 
 -- own = this script's saved colours (Settings); theme = colours in use.
 -- With the Lyx global theme inherited, the shared roles come from it;
--- stat_val and band (filter window) always stay the script's own.
+-- stat_val, band (filter window) and exempt always stay the script's own.
 local own, theme = {}, {}
 for k, v in pairs(DEFAULT_THEME) do own[k] = v end
 local THEME_KEY = "QuantizeFilter"
 local G                                    -- _Lyx_GUI, loaded with the ImGui context
-local OWN_ONLY = { stat_val = true, band = true }
+local OWN_ONLY = { stat_val = true, band = true, exempt = true }
 
 local function sync_theme()
     for k, v in pairs(own) do theme[k] = v end
@@ -943,6 +945,7 @@ local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
 -- js_Mouse editing uses). Calibration knob: if the boxes sit a constant
 -- distance above/below the notes, adjust this.
 local IND_RULER_H = 62
+local IND_DEBUG = true   -- TEMP: print the indicator's numbers to the console on every redraw
 
 -- theme RGBA -> LICE ARGB. Compositing expects premultiplied alpha on
 -- Windows and straight alpha elsewhere (same convention as js_Multi Tool).
@@ -1029,7 +1032,7 @@ local function ind_update()
     local pe, pl = window_pct()
     local te, tl = pe * 0.01 * g * 0.5, pl * 0.01 * g * 0.5
     local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d|%.4f|%.4f|%d|%d|%d",
-        tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band,
+        tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band ~ theme.exempt,
         v.top, v.rh, v.lanes, settings.mode, S.snap_n)
     if key == IND.key and IND.hwnd == mv then return end
 
@@ -1058,67 +1061,114 @@ local function ind_update()
         end
         grid_flush()
         grid_use(g, sw)
-        local line = around(ql - te)
-        if x_of(line + g) - x_of(line) >= 6 then          -- not too dense
-            -- Only around the selected notes: one box per note boundary and
-            -- grid line, 1.2 note rows tall, centred on the note's row.
-            local fill = lice_color(theme.band, 0.10)
-            local dash = lice_color(theme.band, 0.85)
-            local ny0, ny1 = IND_RULER_H, h - v.lanes        -- notes area
-            local rh = v.rh
-            local half = rh * 0.6
-            local function dashed(x, y0, y1)
-                if x < 0 or x >= w then return end
-                for y = y0, y1 - 1, 10 do
-                    reaper.JS_LICE_FillRect(bmp, x, y, 1, min(6, y1 - y), dash, 1, "COPY")
-                end
+        -- Only around the selected notes: one box per note boundary and
+        -- grid line, 1.2 note rows tall, centred on the note's row.
+        -- No density limit: boxes follow the notes, not every grid line.
+        local fill = lice_color(theme.band, 0.25)
+        local dash = lice_color(theme.band, 1)
+        local hatch = lice_color(theme.exempt, 1)
+        local ny0, ny1 = IND_RULER_H, h - v.lanes        -- notes area
+        local rh = v.rh
+        local half = rh * 0.6
+        local function dashed(x, y0, y1)
+            if x < 0 or x >= w then return end
+            for y = y0, y1 - 1, 6 do
+                reaper.JS_LICE_FillRect(bmp, max(0, x - 1), y, 2, min(4, y1 - y), dash, 1, "COPY")
             end
-            local qlo, qhi = ql - tl - g, qr + te + g
-            local seen, count = {}, 0
-            local function box(q, pitch, yc)
-                if q < qlo or q > qhi then return end
-                local X = nearest(q)
-                local k = X * 128 + pitch
-                if seen[k] then return end
-                seen[k] = true
-                local y0 = max(ny0, floor(yc - half + 0.5))
-                local y1 = min(ny1, floor(yc + half + 0.5))
-                if y1 - y0 < 1 then return end
-                local il = floor(x_of(X - te) + 0.5)
-                local ir = floor(x_of(X + tl) + 0.5)
-                if ir > il then
-                    reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
-                end
-                if te > EPS then dashed(il, y0, y1) end
-                if tl > EPS then dashed(ir, y0, y1) end
-                count = count + 1
+        end
+        -- 45° stripes clipped to a rectangle
+        local function hatched(x0, x1, y0, y1)
+            x0, x1 = max(0, x0), min(w - 1, x1)
+            if x1 - x0 < 1 or y1 - y0 < 1 then return end
+            local H = y1 - y0
+            for d = -H, x1 - x0, 4 do
+                local xa, ya, xb, yb = x0 + d, y1, x0 + d + H, y0
+                if xa < x0 then ya, xa = ya - (x0 - xa), x0 end
+                if xb > x1 then yb, xb = yb + (xb - x1), x1 end
+                if xb >= xa then reaper.JS_LICE_Line(bmp, xa, ya, xb, yb, hatch, 1, "COPY", false) end
             end
-            local length_mode = settings.mode == 1
-            for _, t in ipairs(S.takes) do
-                local sess = S.sessions[t]
-                if sess then
-                    for _, nt in ipairs(sess.notes) do
-                        if count >= 4096 then break end   -- ponytail: hard cap, raise if huge visible selections get cut off
-                        local yc = ny0 + (v.top - nt.pitch + 0.5) * rh
-                        if yc + half > ny0 and yc - half < ny1 then
-                            box(nt.qs, nt.pitch, yc)
-                            if length_mode then box(nt.qe, nt.pitch, yc) end
+        end
+        local qlo, qhi = ql - tl - g, qr + te + g
+        local seen, count = {}, 0
+        local function box(q, pitch, yc)
+            if q < qlo or q > qhi then return end
+            local X = nearest(q)
+            local k = X * 128 + pitch
+            if seen[k] then return end
+            seen[k] = true
+            local y0 = max(ny0, floor(yc - half + 0.5))
+            local y1 = min(ny1, floor(yc + half + 0.5))
+            if y1 - y0 < 1 then return end
+            local il = floor(x_of(X - te) + 0.5)
+            local ir = floor(x_of(X + tl) + 0.5)
+            if ir > il then
+                reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
+            end
+            if te > EPS then dashed(il, y0, y1) end
+            if tl > EPS then dashed(ir, y0, y1) end
+            count = count + 1
+        end
+        -- Exempt = inside the window but off the grid, so Quantize leaves it alone.
+        -- A full-strength plain pull moves every boundary outside the window, so
+        -- whatever it leaves in place (and isn't on a line already) is exempt.
+        local P1 = make_params(g)
+        P1.str, P1.weighted, P1.edge = 1, false, false
+        local function exempt(q, nq) return abs(nq - q) < EPS and abs(q - nearest(q)) > EPS end
+        local length_mode = settings.mode == 1
+        local n_ex = 0
+        for _, t in ipairs(S.takes) do
+            local sess = S.sessions[t]
+            if sess then
+                for _, nt in ipairs(sess.notes) do
+                    if count >= 4096 then break end   -- ponytail: hard cap, raise if huge visible selections get cut off
+                    local yc = ny0 + (v.top - nt.pitch + 0.5) * rh
+                    if yc + half > ny0 and yc - half < ny1 then
+                        box(nt.qs, nt.pitch, yc)
+                        if length_mode then box(nt.qe, nt.pitch, yc) end
+                        if nt.qe >= qlo and nt.qs <= qhi then
+                            local nqs, nqe = plan_note(nt.qs, nt.qe, P1)
+                            local ex_s = exempt(nt.qs, nqs)
+                            local ex_e = length_mode and exempt(nt.qe, nqe)
+                            if ex_s or ex_e then
+                                local xs, xe = floor(x_of(nt.qs) + 0.5), floor(x_of(nt.qe) + 0.5)
+                                local xm = floor((xs + xe) / 2)
+                                local r0 = max(ny0, floor(yc - rh / 2 + 0.5))
+                                local r1 = min(ny1, floor(yc + rh / 2 + 0.5))
+                                if not length_mode or (ex_s and ex_e) then hatched(xs, xe, r0, r1)
+                                elseif ex_s then hatched(xs, xm, r0, r1)
+                                else hatched(xm, xe, r0, r1) end
+                                n_ex = n_ex + 1
+                            end
                         end
                     end
                 end
             end
         end
+        if IND_DEBUG then
+            local n, p, qs = 0, "-", "-"
+            for _, t in ipairs(S.takes) do local ss = S.sessions[t] if ss and ss.notes[1] then n = n + #ss.notes p, qs = ss.notes[1].pitch, ss.notes[1].qs end end
+            reaper.ShowConsoleMsg(string.format("[IND] view w=%s h=%s top=%s rh=%s lanes=%s notes area y=%s..%s | grid=%.4g win L/R=%.4g/%.4g QN | visible QN %.3f..%.3f | sel notes=%d first pitch=%s qs=%s -> y=%s | boxes=%d exempt=%d\n",
+                w, h, v.top, v.rh, v.lanes, ny0, ny1, g, te, tl, ql, qr, n, p, qs,
+                p ~= "-" and string.format("%.0f", ny0 + (v.top - p + 0.5) * rh) or "-", count, n_ex))
+        end
+    elseif IND_DEBUG then
+        reaper.ShowConsoleMsg(string.format("[IND] nothing to draw: grid=%.4g window L/R=%.4g/%.4g QN\n", g, te, tl))
     end
     reaper.JS_Window_InvalidateRect(mv, 0, 0, w, h, false)
 end
 
 local function ind_safe_update()
+    -- an error never switches the setting off (that got saved and stuck): drop
+    -- this frame, report each new error once, try again on the next redraw
     local ok, err = pcall(ind_update)
     if not ok then
-        settings.indicator = false
         pcall(ind_detach)
-        status("Indicator disabled: see the REAPER console", 6)
-        reaper.ShowConsoleMsg("["..SCRIPT_NAME.."] indicator: "..tostring(err).."\n")
+        err = tostring(err)
+        if err ~= IND.last_err then
+            IND.last_err = err
+            status("Indicator error: see the REAPER console", 6)
+            reaper.ShowConsoleMsg("["..SCRIPT_NAME.."] indicator: "..err.."\n")
+        end
     end
 end
 

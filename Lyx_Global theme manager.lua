@@ -221,7 +221,7 @@ end
 
 local function list_buttons()
     local builtin = T.is_builtin(sel)
-    if G.button(ctx, "New", nil, nil, "plain") then add_theme(unique("New theme"), T.default) end
+    if G.button(ctx, "New", nil, nil, "plain") then add_theme(unique("New theme"), T.preset(T.DEFAULT)) end
     R.ImGui_SameLine(ctx)
     if G.button(ctx, "Duplicate", nil, nil, "plain") then add_theme(unique(sel .. " copy"), work.themes[sel]) end
     R.ImGui_BeginDisabled(ctx, builtin)
@@ -233,8 +233,8 @@ local function list_buttons()
         G.color_text(ctx, G.warn, "Delete \"" .. sel .. "\"?")
         if G.button(ctx, "Delete", nil, nil, "bad") then
             work.themes[sel] = nil
-            if work.current == sel then work.current = T.BUILTIN end
-            select_theme(T.BUILTIN)
+            if work.current == sel then work.current = T.DEFAULT end
+            select_theme(T.DEFAULT)
             dirty = true
         end
         R.ImGui_SameLine(ctx)
