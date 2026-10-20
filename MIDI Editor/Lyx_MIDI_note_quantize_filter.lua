@@ -118,7 +118,6 @@ local DEFAULT_THEME = {
     border    = rgba( 70,  70,  80, 255),
     stat_val  = rgba(140, 220, 170, 255),
     band      = rgba(240, 180,  80, 255),   -- filter window (timing view + MIDI editor)
-    exempt    = rgba(255,  60, 170, 255),   -- MIDI editor: stripes on notes Quantize leaves alone
 }
 local THEME_ROWS = {
     { "Background",      "bg"        }, { "Panel",           "panel"     },
@@ -126,17 +125,16 @@ local THEME_ROWS = {
     { "Accent",          "accent"    }, { "Slider",          "slider"    },
     { "Slider (active)", "slider_act"}, { "Border",          "border"    },
     { "Stat value",      "stat_val"  }, { "Filter window",   "band"      },
-    { "Exempt notes",    "exempt"    },
 }
 
 -- own = this script's saved colours (Settings); theme = colours in use.
 -- With the Lyx global theme inherited, the shared roles come from it;
--- stat_val, band (filter window) and exempt always stay the script's own.
+-- stat_val and band (filter window) always stay the script's own.
 local own, theme = {}, {}
 for k, v in pairs(DEFAULT_THEME) do own[k] = v end
 local THEME_KEY = "QuantizeFilter"
 local G                                    -- _Lyx_GUI, loaded with the ImGui context
-local OWN_ONLY = { stat_val = true, band = true, exempt = true }
+local OWN_ONLY = { stat_val = true, band = true }
 
 local function sync_theme()
     for k, v in pairs(own) do theme[k] = v end
@@ -1069,7 +1067,7 @@ local function ind_update()
     local pe, pl = window_pct()
     local te, tl = pe * 0.01 * g * 0.5, pl * 0.01 * g * 0.5
     local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d|%.4f|%.4f|%d|%d|%d",
-        tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band ~ theme.exempt,
+        tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band,
         v.top, v.rh, v.lanes, settings.mode, S.snap_n) .. "|" .. ruler .. (blink_on and "|on" or "|off")
     if key == IND.key and IND.hwnd == mv then return end
 
@@ -1101,9 +1099,11 @@ local function ind_update()
         -- Only around the selected notes: one box per note boundary and
         -- grid line, 1.2 note rows tall, centred on the note's row.
         -- No density limit: boxes follow the notes, not every grid line.
-        local fill = lice_color(theme.band, 0.25)
+        -- Every selected note boundary gets a faint box = its filter window, 1.2 note rows
+        -- tall around the note's row. Boundaries the window keeps out of Quantize (inside the
+        -- window, off the grid) also get a blinking dashed line on the note edge itself.
+        local fill = lice_color(theme.band, 0.12)
         local dash = lice_color(theme.band, 1)
-        local hatch = lice_color(theme.exempt, 1)
         local ny0, ny1 = ruler, h - v.lanes              -- notes area
         local rh = v.rh
         local half = rh * 0.6
@@ -1113,36 +1113,22 @@ local function ind_update()
                 reaper.JS_LICE_FillRect(bmp, max(0, x - 1), y, 2, min(4, y1 - y), dash, 1, "COPY")
             end
         end
-        -- 45° stripes clipped to a rectangle
-        local function hatched(x0, x1, y0, y1)
-            x0, x1 = max(0, x0), min(w - 1, x1)
-            if x1 - x0 < 1 or y1 - y0 < 1 then return end
-            local H = y1 - y0
-            for d = -H, x1 - x0, 4 do
-                local xa, ya, xb, yb = x0 + d, y1, x0 + d + H, y0
-                if xa < x0 then ya, xa = ya - (x0 - xa), x0 end
-                if xb > x1 then yb, xb = yb + (xb - x1), x1 end
-                if xb >= xa then reaper.JS_LICE_Line(bmp, xa, ya, xb, yb, hatch, 1, "COPY", false) end
-            end
-        end
         local qlo, qhi = ql - tl - g, qr + te + g
         local seen, count = {}, 0
-        local function box(q, pitch, yc)
+        local function box(q, pitch, yc, exempt)
             if q < qlo or q > qhi then return end
-            local X = nearest(q)
-            local k = X * 128 + pitch
-            if seen[k] then return end
-            seen[k] = true
             local y0 = max(ny0, floor(yc - half + 0.5))
             local y1 = min(ny1, floor(yc + half + 0.5))
             if y1 - y0 < 1 then return end
-            local il = floor(x_of(X - te) + 0.5)
-            local ir = floor(x_of(X + tl) + 0.5)
-            if ir > il then
-                reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
+            local X = nearest(q)
+            local k = X * 128 + pitch
+            if not seen[k] then
+                seen[k] = true
+                local il = floor(x_of(X - te) + 0.5)
+                local ir = floor(x_of(X + tl) + 0.5)
+                if ir > il then reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY") end
             end
-            if blink_on and te > EPS then dashed(il, y0, y1) end
-            if blink_on and tl > EPS then dashed(ir, y0, y1) end
+            if exempt and blink_on then dashed(floor(x_of(q) + 0.5), y0, y1) end
             count = count + 1
         end
         -- Exempt = inside the window but off the grid, so Quantize leaves it alone.
@@ -1160,23 +1146,12 @@ local function ind_update()
                     if count >= 4096 then break end   -- ponytail: hard cap, raise if huge visible selections get cut off
                     local yc = ny0 + (v.top - nt.pitch + 0.5) * rh
                     if yc + half > ny0 and yc - half < ny1 then
-                        box(nt.qs, nt.pitch, yc)
-                        if length_mode then box(nt.qe, nt.pitch, yc) end
-                        if nt.qe >= qlo and nt.qs <= qhi then
-                            local nqs, nqe = plan_note(nt.qs, nt.qe, P1)
-                            local ex_s = exempt(nt.qs, nqs)
-                            local ex_e = length_mode and exempt(nt.qe, nqe)
-                            if ex_s or ex_e then
-                                local xs, xe = floor(x_of(nt.qs) + 0.5), floor(x_of(nt.qe) + 0.5)
-                                local xm = floor((xs + xe) / 2)
-                                local r0 = max(ny0, floor(yc - rh / 2 + 0.5))
-                                local r1 = min(ny1, floor(yc + rh / 2 + 0.5))
-                                if not length_mode or (ex_s and ex_e) then hatched(xs, xe, r0, r1)
-                                elseif ex_s then hatched(xs, xm, r0, r1)
-                                else hatched(xm, xe, r0, r1) end
-                                n_ex = n_ex + 1
-                            end
-                        end
+                        local nqs, nqe = plan_note(nt.qs, nt.qe, P1)
+                        local ex_s = exempt(nt.qs, nqs)
+                        local ex_e = length_mode and exempt(nt.qe, nqe)
+                        if ex_s or ex_e then n_ex = n_ex + 1 end
+                        box(nt.qs, nt.pitch, yc, ex_s)
+                        if length_mode then box(nt.qe, nt.pitch, yc, ex_e) end
                     end
                 end
             end
