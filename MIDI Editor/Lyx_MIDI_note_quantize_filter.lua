@@ -944,38 +944,14 @@ local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
 -- distance above/below the notes, adjust this.
 local IND_RULER_H = 62
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
-local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed window edges (0 = steady)
+local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed exempt note edges (0 = steady)
 
--- The real ruler height is learned from the mouse: SWS reports the note row under the
--- mouse, and every sample narrows the range of ruler heights that put that row there.
--- Survives restarts (ExtState). Theme, OS scaling and REAPER versions all change it.
-local CAL = { lo = -math.huge, hi = math.huge,
-              saved = tonumber(reaper.GetExtState("Lyx_MIDI_QuantizeFilter", "ind_ruler_h")) }
-local function ind_ruler()
-    if CAL.hi - CAL.lo < 1e6 then return (CAL.lo + CAL.hi) / 2 end
-    return CAL.saved or IND_RULER_H
-end
-local function ind_calibrate(mv, v, w, h)
-    if not (reaper.BR_GetMouseCursorContext_MIDI and reaper.JS_Window_ScreenToClient) then return end
-    local cx, cy = reaper.JS_Window_ScreenToClient(mv, reaper.GetMousePosition())
-    if not cx or cx < 0 or cy < 0 or cx >= w or cy >= h - v.lanes then return end
-    local _, seg = reaper.BR_GetMouseCursorContext()
-    if seg ~= "notes" then return end
-    local _, inline, row = reaper.BR_GetMouseCursorContext_MIDI()
-    if inline or not row or row < 0 or row > 127 then return end
-    local k = v.top - row                                  -- rows between the top of the view and this row
-    local lo, hi = cy - (k + 1) * v.rh, cy - k * v.rh      -- ruler heights that put the mouse on this row
-    if lo > CAL.lo then CAL.lo = lo end
-    if hi < CAL.hi then CAL.hi = hi end
-    if CAL.lo > CAL.hi then CAL.lo, CAL.hi = lo, hi end    -- contradiction (layout changed): start over
-    if CAL.hi - CAL.lo < 2 then
-        local r = floor((CAL.lo + CAL.hi) / 2 + 0.5)
-        if r ~= CAL.saved then
-            CAL.saved = r
-            reaper.SetExtState("Lyx_MIDI_QuantizeFilter", "ind_ruler_h", tostring(r), true)
-        end
-    end
-end
+-- Vertical fine-tune in pixels (Settings > Indicator offset), stored per machine:
+-- the ruler height differs between REAPER versions, themes and OS scaling, and no API
+-- reports it (SWS's note-row-under-mouse uses its own fixed ruler, so it can't calibrate).
+local IND_OFFSET_KEY = "ind_offset"
+local ind_offset = toint(tonumber(reaper.GetExtState("Lyx_MIDI_QuantizeFilter", IND_OFFSET_KEY)) or 0)
+
 
 -- theme RGBA -> LICE ARGB. Compositing expects premultiplied alpha on
 -- Windows and straight alpha elsewhere (same convention as js_Multi Tool).
@@ -1047,10 +1023,8 @@ local function ind_update()
     if not okc or not w or w < 8 or h < 8 then return end
 
     local now = reaper.time_precise()
-    local fresh = false
     if IND.view_take ~= take or now - IND.view_t > IND.view_dt then
         IND.view, IND.view_take = read_view(take), take
-        fresh = true
         -- the item chunk can be MBs: re-read every 0.1 s when it is cheap,
         -- backing off to 0.5 s for heavy items
         local t1 = reaper.time_precise()
@@ -1058,8 +1032,7 @@ local function ind_update()
     end
     local v = IND.view
     if not v then ind_detach(); return end
-    if fresh then ind_calibrate(mv, v, w, h) end   -- only with a just-read scroll position
-    local ruler = floor(ind_ruler() + 0.5)        -- LICE wants whole pixels
+    local ruler = IND_RULER_H + ind_offset
     local blink_on = IND_BLINK <= 0 or (reaper.time_precise() % IND_BLINK) < IND_BLINK / 2
 
     local g, sw = reaper.MIDI_GetGrid(take)
@@ -1159,8 +1132,8 @@ local function ind_update()
         if IND_DEBUG then
             local n, p, qs = 0, "-", "-"
             for _, t in ipairs(S.takes) do local ss = S.sessions[t] if ss and ss.notes[1] then n = n + #ss.notes p, qs = ss.notes[1].pitch, ss.notes[1].qs end end
-            reaper.ShowConsoleMsg(string.format("[IND] ruler %.1f (learned %.1f..%.1f) view w=%s h=%s top=%s rh=%s lanes=%s notes area y=%s..%s | grid=%.4g win L/R=%.4g/%.4g QN | visible QN %.3f..%.3f | sel notes=%d first pitch=%s qs=%s -> y=%s | boxes=%d exempt=%d\n",
-                ruler, CAL.lo, CAL.hi, w, h, v.top, v.rh, v.lanes, ny0, ny1, g, te, tl, ql, qr, n, p, qs,
+            reaper.ShowConsoleMsg(string.format("[IND] ruler %d view w=%s h=%s top=%s rh=%s lanes=%s notes area y=%s..%s | grid=%.4g win L/R=%.4g/%.4g QN | visible QN %.3f..%.3f | sel notes=%d first pitch=%s qs=%s -> y=%s | boxes=%d exempt=%d\n",
+                ruler, w, h, v.top, v.rh, v.lanes, ny0, ny1, g, te, tl, ql, qr, n, p, qs,
                 p ~= "-" and string.format("%.0f", ny0 + (v.top - p + 0.5) * rh) or "-", count, n_ex))
         end
     elseif IND_DEBUG then
@@ -1204,7 +1177,6 @@ if rawget(_G, "LYX_QF_TEST") then
         grid_use = grid_use, grid_flush = grid_flush, nearest = nearest,
         next_line = next_line, prev_line = prev_line, around = around,
         read_view = read_view, ind_update = ind_update, IND = IND,
-        ind_calibrate = ind_calibrate, ind_ruler = ind_ruler, CAL = CAL,
     })
     if not rawget(_G, "LYX_QF_TEST_GUI") then return end
 end
@@ -1551,6 +1523,21 @@ local function draw_settings()
         for k, v in pairs(DEFAULT_THEME) do own[k] = v end
         sync_theme()
         save_settings()
+    end
+
+    if HAS_JS then
+        ImGui.Separator(ctx)
+        ImGui.Text(ctx, "Indicator offset")
+        same_line_at(130 * ui)
+        ImGui.SetNextItemWidth(ctx, -1)
+        local ch, v = ImGui.SliderInt(ctx, "##ind_offset", ind_offset, -40, 40, "%d px")
+        if ch then
+            ind_offset = v
+            reaper.SetExtState("Lyx_MIDI_QuantizeFilter", IND_OFFSET_KEY, tostring(v), true)
+        end
+        if ImGui.IsItemHovered(ctx) then
+            ImGui.SetTooltip(ctx, "Moves the MIDI editor boxes up (-) or down (+) until their middle\nlines up with the notes. Saved for this computer.")
+        end
     end
 
     ImGui.Dummy(ctx, 0, 6 * ui)
