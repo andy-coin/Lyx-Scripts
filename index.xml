@@ -1498,8 +1498,8 @@
       </version>
     </reapack>
     <reapack name="neutronic_Quick Adder 2.lua" type="script" desc="neutronic_Quick Adder 2">
-      <version name="2026.10.20.0911" author="Lyx" time="2026-10-20T09:11:35Z">
-        <source main="main" file="../neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d86110b7ca5190bb80f38397d2cdab2be61e1a89/neutronic_Quick%20Adder%20%28Lyx%20mod%29/neutronic_Quick%20Adder%202.lua</source>
+      <version name="2026.10.20.0912" author="Lyx" time="2026-10-20T09:12:58Z">
+        <source main="main" file="../neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua">https://github.com/andy-coin/Lyx-Scripts/raw/4a036ecbf378bb1474695630270f35c0568dc155/neutronic_Quick%20Adder%20%28Lyx%20mod%29/neutronic_Quick%20Adder%202.lua</source>
       </version>
     </reapack>
   </category>
