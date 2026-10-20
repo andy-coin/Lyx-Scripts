@@ -649,8 +649,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Open item editor.lua" type="script" desc="Lyx_Open item editor">
-      <version name="2026.10.20.0828" author="Lyx" time="2026-10-20T08:28:12Z">
-        <source main="main" file="../Lyx_Open item editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/5b3fabd927a4e6b90b17d4a82e2d18bb153c0928/Lyx_Open%20item%20editor.lua</source>
+      <version name="2026.10.20.0911" author="Lyx" time="2026-10-20T09:11:35Z">
+        <source main="main" file="../Lyx_Open item editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d86110b7ca5190bb80f38397d2cdab2be61e1a89/Lyx_Open%20item%20editor.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Open item properties, subproject, notes.lua" type="script" desc="Lyx_Open item properties, subproject, notes">
@@ -1471,6 +1471,35 @@
     <reapack name="_Lyx_Theme.lua" type="script" desc="_Lyx_Theme">
       <version name="2026.10.20.0755" author="Lyx" time="2026-10-20T07:55:58Z">
         <source file="../_lib/_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/609ec119695b85612af6f7dc8fc65a0023076605/_lib/_Lyx_Theme.lua</source>
+      </version>
+    </reapack>
+    <reapack name="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua" type="script" desc="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks">
+      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
+        <source main="main" file="../Buss Driver/MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/MB_Buss%20Driver%28LYX%20mod%29%20-%20Routing%20Utility%20GUI%20Manager%20Tool%20-%20Batch%20add%20or%20remove%20sends%20or%20receives%20on%20selected%20tracks.lua</source>
+        <source file="../Buss Driver/bussdriver_logo_nobg.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/bussdriver_logo_nobg.png</source>
+        <source file="../Buss Driver/gen_midi_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gen_midi_off.png</source>
+        <source file="../Buss Driver/gen_midi_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gen_midi_on.png</source>
+        <source file="../Buss Driver/gen_mono_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gen_mono_off.png</source>
+        <source file="../Buss Driver/gen_mono_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gen_mono_on.png</source>
+        <source file="../Buss Driver/gen_phase_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gen_phase_off.png</source>
+        <source file="../Buss Driver/gen_phase_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gen_phase_on.png</source>
+        <source file="../Buss Driver/gnu_license_v3.txt">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/gnu_license_v3.txt</source>
+        <source file="../Buss Driver/mb-dev-functions.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/mb-dev-functions.lua</source>
+        <source file="../Buss Driver/rtk.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/rtk.lua</source>
+        <source file="../Buss Driver/serpent.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/serpent.lua</source>
+        <source file="../Buss Driver/table_mute_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/table_mute_off.png</source>
+        <source file="../Buss Driver/table_mute_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Buss%20Driver/table_mute_on.png</source>
+      </version>
+    </reapack>
+    <reapack name="Lyx_Theme Layout Modifier.lua" type="script" desc="Lyx_Theme Layout Modifier">
+      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
+        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
+        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Theme%20Layout%20Modifier/tlm_walter.lua</source>
+      </version>
+    </reapack>
+    <reapack name="neutronic_Quick Adder 2.lua" type="script" desc="neutronic_Quick Adder 2">
+      <version name="2026.10.20.0911" author="Lyx" time="2026-10-20T09:11:35Z">
+        <source main="main" file="../neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d86110b7ca5190bb80f38397d2cdab2be61e1a89/neutronic_Quick%20Adder%20%28Lyx%20mod%29/neutronic_Quick%20Adder%202.lua</source>
       </version>
     </reapack>
   </category>
