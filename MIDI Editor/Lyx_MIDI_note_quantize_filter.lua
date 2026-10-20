@@ -947,9 +947,9 @@ end
 -------------------------------------------------------------------------------
 local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
               view = nil, view_t = -1, view_dt = 0.1, view_take = nil }
--- Height of the ruler / marker area at the top of the piano roll. js_Mouse editing
--- uses 62; measured 56 on REAPER 7.82 / macOS (screenshot 2026-10-20). Per-machine
--- fine-tune: Settings > Indicator offset.
+-- Height of the ruler / marker area at the top of the piano roll. Normally derived
+-- from the piano roll's vertical scrollbar (see ind_ruler); this is only the fallback
+-- when that fails (measured on REAPER 7.82 / macOS). Fine-tune: Settings > Indicator offset.
 local IND_RULER_H = 56
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
 local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed outline on moving notes (0 = steady)
@@ -1017,6 +1017,19 @@ local function read_view(take)
              top = 127 - vs, rh = rh, lanes = lanes }
 end
 
+-- The ruler differs per machine / theme / marker lanes, so measure it: the vertical
+-- scrollbar's page is the visible notes area (scaled from scroll units by its full
+-- range = 128 rows), and the notes area ends where the CC lanes start.
+local function ind_ruler(mv, h, v)
+    local ok, _, page, smin, smax = reaper.JS_Window_GetScrollInfo(mv, "v")
+    if ok and page and smax and smax > smin then
+        local notes_h = page * 128 * v.rh / (smax - smin)
+        local r = floor(h - v.lanes - notes_h + 0.5)
+        if r >= 0 and r < h * 0.5 then return r, true end
+    end
+    return IND_RULER_H, false
+end
+
 local function ind_update()
     local me = S.editor
     if not (HAS_JS and settings.indicator and me) or reaper.MIDIEditor_GetMode(me) ~= 0 then
@@ -1040,7 +1053,13 @@ local function ind_update()
     end
     local v = IND.view
     if not v then ind_detach(); return end
-    local ruler = IND_RULER_H + ind_offset
+    local ruler_raw, measured = ind_ruler(mv, h, v)
+    local ruler = ruler_raw + ind_offset
+    if IND.calib_shown ~= ruler_raw then   -- ponytail: temporary one-line report while the measurement is verified on several machines
+        IND.calib_shown = ruler_raw
+        reaper.ShowConsoleMsg(string.format("[IND] ruler %d (%s) h=%d lanes=%d rh=%s\n",
+            ruler_raw, measured and "measured" or "fallback", h, v.lanes, v.rh))
+    end
     local blink_on = IND_BLINK <= 0 or (reaper.time_precise() % IND_BLINK) < IND_BLINK / 2
 
     local g, sw = reaper.MIDI_GetGrid(take)
@@ -1081,9 +1100,8 @@ local function ind_update()
         -- grid line, 1.2 note rows tall, centred on the note's row.
         -- No density limit: boxes follow the notes, not every grid line.
         -- Every selected note boundary gets a faint box = its filter window, 1.2 note rows
-        -- tall around the note's row. Boundaries Quantize will move (outside the window)
-        -- also get a blinking dashed outline around that box; the ones it leaves alone
-        -- (inside the window, or already on the grid) keep just the box.
+        -- tall around the note's row. Notes Quantize will move (a boundary outside the
+        -- window) also get a blinking dashed outline around the whole note.
         local fill = lice_color(theme.band, 0.20)
         local dash = lice_color(theme.band, 1)
         local ny0, ny1 = ruler, h - v.lanes              -- notes area
@@ -1102,7 +1120,18 @@ local function ind_update()
         end
         local qlo, qhi = ql - tl - g, qr + te + g
         local seen, count = {}, 0
-        local function box(q, pitch, yc, moves)
+        -- blinking dashed outline around the whole note (its own row, start to end)
+        local function outline(qs, qe, yc)
+            local y0 = max(ny0, floor(yc - rh / 2 + 0.5))
+            local y1 = min(ny1, floor(yc + rh / 2 + 0.5))
+            if y1 - y0 < 2 then return end
+            local xl = floor(x_of(qs) + 0.5)
+            local xr = max(xl + 3, floor(x_of(qe) + 0.5))
+            if xr < 0 or xl >= w then return end
+            dashed(xl + 1, y0, y1); dashed(xr - 1, y0, y1)
+            dashed_h(y0, xl, xr); dashed_h(y1 - 2, xl, xr)
+        end
+        local function box(q, pitch, yc)
             if q < qlo or q > qhi then return end
             local y0 = max(ny0, floor(yc - half + 0.5))
             local y1 = min(ny1, floor(yc + half + 0.5))
@@ -1115,11 +1144,7 @@ local function ind_update()
                 seen[k] = true
                 reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
             end
-            if moves and blink_on then
-                dashed(il + 1, y0, y1); dashed(ir - 1, y0, y1)
-                dashed_h(y0, il, ir); dashed_h(y1 - 2, il, ir)
-            end
-            count = count + 1
+                count = count + 1
         end
         -- Moves = Quantize pulls this boundary (outside the window). A full-strength plain
         -- pull moves exactly those, so it tells them apart whatever Strength is set to.
@@ -1139,8 +1164,9 @@ local function ind_update()
                         local mv_s = moves(nt.qs, nqs)
                         local mv_e = length_mode and moves(nt.qe, nqe)
                         if mv_s or mv_e then n_ex = n_ex + 1 end
-                        box(nt.qs, nt.pitch, yc, mv_s)
-                        if length_mode then box(nt.qe, nt.pitch, yc, mv_e) end
+                        box(nt.qs, nt.pitch, yc)
+                        if length_mode then box(nt.qe, nt.pitch, yc) end
+                        if (mv_s or mv_e) and blink_on then outline(nt.qs, nt.qe, yc) end
                     end
                 end
             end
