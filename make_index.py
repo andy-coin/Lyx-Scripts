@@ -32,7 +32,26 @@ def pick(f):
     if name.startswith("Lyx_"): return ("Main", "main")
     return None
 
+# Folder tools: one package each, every published file of the folder installed beside the main
+# script (same layout as the local folder). Version = last commit touching any of those files.
+BUNDLES = {
+    "Buss Driver": "Buss Driver/MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua",
+    "Theme Layout Modifier": "Theme Layout Modifier/Lyx_Theme Layout Modifier.lua",
+    "neutronic_Quick Adder (Lyx mod)": "neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua",
+}
+BUNDLE_SKIP = re.compile(r"(^|/)(test|_backup)/|_test\.lua$|handoff\.md$")
+
 cats = {}
+bundles = []
+for folder, main_file in sorted(BUNDLES.items()):
+    parts = [f for f in files if f.startswith(folder + "/") and not BUNDLE_SKIP.search(f)
+             and modes.get(f) in ("100644", "100755")]
+    if main_file not in parts: continue
+    h, t = git("log", "-1", "--format=%H %cI", "--", *parts).split()
+    ts = datetime.fromisoformat(t).astimezone(timezone.utc)
+    bundles.append((main_file, sorted(parts), h, ts))
+cats["Main"] = []
+
 for f in files:
     p = pick(f)
     if not p: continue
@@ -54,7 +73,18 @@ for cat in sorted(cats):
         out.append(f"        <source{m}>{escape(url)}</source>")
         out.append("      </version>")
         out.append("    </reapack>")
+    if cat == "Main":
+        for main_file, parts, h, ts in bundles:
+            name = main_file.rsplit("/", 1)[-1]
+            out.append(f"    <reapack name={quoteattr(name)} type=\"script\" desc={quoteattr(name[:-4])}>")
+            out.append(f"      <version name=\"{ts:%Y.%m.%d.%H%M}\" author=\"Lyx\" time=\"{ts:%Y-%m-%dT%H:%M:%SZ}\">")
+            for f in parts:
+                url = f"https://github.com/{REPO}/raw/{h}/{quote(f)}"
+                m = ' main="main"' if f == main_file else ""
+                out.append(f"        <source{m} file={quoteattr('../' + f)}>{escape(url)}</source>")
+            out.append("      </version>")
+            out.append("    </reapack>")
     out.append("  </category>")
 out.append("</index>")
 open("index.xml", "w", encoding="utf-8").write("\n".join(out) + "\n")
-print({c: len(v) for c, v in cats.items()}, file=sys.stderr)
+print({c: len(v) for c, v in cats.items()}, "bundles:", [b[0].split("/")[0] for b in bundles], file=sys.stderr)

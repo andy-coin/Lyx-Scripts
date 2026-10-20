@@ -10,7 +10,10 @@ handoff.md
 convert_bform_to_stereo_uhj.py
 Buss Driver/_backup/
 Theme Layout Modifier/_backup/
-neutronic_Quick Adder (Lyx mod)/
+# Quick Adder: the script is published, its per-user database / settings / favourites are not
+neutronic_Quick Adder (Lyx mod)/*_db
+neutronic_Quick Adder (Lyx mod)/*_cfg
+neutronic_Quick Adder (Lyx mod)/*_fav
 Realauncher*
 Script- *
 MIDI Editor/_Lyx_HOME.lua

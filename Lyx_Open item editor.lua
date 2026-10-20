@@ -22,7 +22,7 @@
     end
 
     local midi_editor = {
-                    screen_height = TCP_max*0.85,
+                    screen_height = TCP_max,                    -- zoomed tracks share the arrange view height
                     single_zoom   = math.floor(TCP_max*0.45),   --single item vertical zoom pixel
                     bound_limit   = true,                     -- zoom in media item with limit
                     bound=10,                               -- limit left edge to right edge to setting seconds
@@ -227,7 +227,19 @@
             target=midi_editor.screen_height/#target_trs
         end
 
-        r.SameTCPH(target_trs,target,false)
+        for _, tr in ipairs(target_trs) do
+            reaper.SetMediaTrackInfo_Value(tr, "I_HEIGHTOVERRIDE", math.floor(target))
+        end
+        reaper.TrackList_AdjustWindows(false)
+
+        -- scroll so the last zoomed track's bottom (envelopes included) sits on the arrange view's bottom
+        -- ponytail: visible envelopes add height, so the top tracks may then start above the view
+        local last = target_trs[#target_trs]
+        local bottom = reaper.GetMediaTrackInfo_Value(last,"I_TCPY") + reaper.GetMediaTrackInfo_Value(last,"I_WNDH")
+        local _, pos = reaper.JS_Window_GetScrollInfo(windowHWND, "v")
+        reaper.JS_Window_SetScrollPos(windowHWND, "v", math.max(0, math.floor(pos + bottom - midi_editor.screen_height)))
+        reaper.CSurf_OnScroll(0,1)
+        reaper.CSurf_OnScroll(0,-1)
 
         if  M-m < 2 then
             local center = (M+m)/2
