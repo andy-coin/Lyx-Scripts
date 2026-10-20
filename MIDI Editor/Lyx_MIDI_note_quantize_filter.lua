@@ -952,7 +952,7 @@ local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
 -- fine-tune: Settings > Indicator offset.
 local IND_RULER_H = 56
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
-local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed exempt note edges (0 = steady)
+local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed outline on moving notes (0 = steady)
 
 -- Vertical fine-tune in pixels (Settings > Indicator offset), stored per machine:
 -- the ruler height differs between REAPER versions, themes and OS scaling, and no API
@@ -1063,7 +1063,7 @@ local function ind_update()
     local bmp = IND.bmp
     reaper.JS_LICE_Clear(bmp, 0)
 
-    if g > EPS and (te > EPS or tl > EPS) then
+    if g > EPS then   -- 0 % window too: then every off-grid note moves
         local x_of, ql, qr
         if v.beats then
             x_of = function(q) return (reaper.MIDI_GetPPQPosFromProjQN(take, q) - v.left) * v.zoom end
@@ -1081,9 +1081,10 @@ local function ind_update()
         -- grid line, 1.2 note rows tall, centred on the note's row.
         -- No density limit: boxes follow the notes, not every grid line.
         -- Every selected note boundary gets a faint box = its filter window, 1.2 note rows
-        -- tall around the note's row. Boundaries the window keeps out of Quantize (inside the
-        -- window, off the grid) also get a blinking dashed line on the note edge itself.
-        local fill = lice_color(theme.band, 0.12)
+        -- tall around the note's row. Boundaries Quantize will move (outside the window)
+        -- also get a blinking dashed outline around that box; the ones it leaves alone
+        -- (inside the window, or already on the grid) keep just the box.
+        local fill = lice_color(theme.band, 0.20)
         local dash = lice_color(theme.band, 1)
         local ny0, ny1 = ruler, h - v.lanes              -- notes area
         local rh = v.rh
@@ -1094,30 +1095,37 @@ local function ind_update()
                 reaper.JS_LICE_FillRect(bmp, max(0, x - 1), y, 2, min(4, y1 - y), dash, 1, "COPY")
             end
         end
+        local function dashed_h(y, x0, x1)
+            for x = max(0, x0), min(w, x1) - 1, 6 do
+                reaper.JS_LICE_FillRect(bmp, x, y, min(4, x1 - x), 2, dash, 1, "COPY")
+            end
+        end
         local qlo, qhi = ql - tl - g, qr + te + g
         local seen, count = {}, 0
-        local function box(q, pitch, yc, exempt)
+        local function box(q, pitch, yc, moves)
             if q < qlo or q > qhi then return end
             local y0 = max(ny0, floor(yc - half + 0.5))
             local y1 = min(ny1, floor(yc + half + 0.5))
             if y1 - y0 < 1 then return end
             local X = nearest(q)
+            local il = floor(x_of(X - te) + 0.5)
+            local ir = max(il + 2, floor(x_of(X + tl) + 0.5))   -- 0 % window: still a thin box to outline
             local k = X * 128 + pitch
             if not seen[k] then
                 seen[k] = true
-                local il = floor(x_of(X - te) + 0.5)
-                local ir = floor(x_of(X + tl) + 0.5)
-                if ir > il then reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY") end
+                reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
             end
-            if exempt and blink_on then dashed(floor(x_of(q) + 0.5), y0, y1) end
+            if moves and blink_on then
+                dashed(il + 1, y0, y1); dashed(ir - 1, y0, y1)
+                dashed_h(y0, il, ir); dashed_h(y1 - 2, il, ir)
+            end
             count = count + 1
         end
-        -- Exempt = inside the window but off the grid, so Quantize leaves it alone.
-        -- A full-strength plain pull moves every boundary outside the window, so
-        -- whatever it leaves in place (and isn't on a line already) is exempt.
+        -- Moves = Quantize pulls this boundary (outside the window). A full-strength plain
+        -- pull moves exactly those, so it tells them apart whatever Strength is set to.
         local P1 = make_params(g)
         P1.str, P1.weighted, P1.edge = 1, false, false
-        local function exempt(q, nq) return abs(nq - q) < EPS and abs(q - nearest(q)) > EPS end
+        local function moves(q, nq) return abs(nq - q) > EPS end
         local length_mode = settings.mode == 1
         local n_ex = 0
         for _, t in ipairs(S.takes) do
@@ -1128,11 +1136,11 @@ local function ind_update()
                     local yc = ny0 + (v.top - nt.pitch + 0.5) * rh
                     if yc + half > ny0 and yc - half < ny1 then
                         local nqs, nqe = plan_note(nt.qs, nt.qe, P1)
-                        local ex_s = exempt(nt.qs, nqs)
-                        local ex_e = length_mode and exempt(nt.qe, nqe)
-                        if ex_s or ex_e then n_ex = n_ex + 1 end
-                        box(nt.qs, nt.pitch, yc, ex_s)
-                        if length_mode then box(nt.qe, nt.pitch, yc, ex_e) end
+                        local mv_s = moves(nt.qs, nqs)
+                        local mv_e = length_mode and moves(nt.qe, nqe)
+                        if mv_s or mv_e then n_ex = n_ex + 1 end
+                        box(nt.qs, nt.pitch, yc, mv_s)
+                        if length_mode then box(nt.qe, nt.pitch, yc, mv_e) end
                     end
                 end
             end
@@ -1140,7 +1148,7 @@ local function ind_update()
         if IND_DEBUG then
             local n, p, qs = 0, "-", "-"
             for _, t in ipairs(S.takes) do local ss = S.sessions[t] if ss and ss.notes[1] then n = n + #ss.notes p, qs = ss.notes[1].pitch, ss.notes[1].qs end end
-            reaper.ShowConsoleMsg(string.format("[IND] ruler %d view w=%s h=%s top=%s rh=%s lanes=%s notes area y=%s..%s | grid=%.4g win L/R=%.4g/%.4g QN | visible QN %.3f..%.3f | sel notes=%d first pitch=%s qs=%s -> y=%s | boxes=%d exempt=%d\n",
+            reaper.ShowConsoleMsg(string.format("[IND] ruler %d view w=%s h=%s top=%s rh=%s lanes=%s notes area y=%s..%s | grid=%.4g win L/R=%.4g/%.4g QN | visible QN %.3f..%.3f | sel notes=%d first pitch=%s qs=%s -> y=%s | boxes=%d moving=%d\n",
                 ruler, w, h, v.top, v.rh, v.lanes, ny0, ny1, g, te, tl, ql, qr, n, p, qs,
                 p ~= "-" and string.format("%.0f", ny0 + (v.top - p + 0.5) * rh) or "-", count, n_ex))
         end
