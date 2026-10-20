@@ -946,6 +946,7 @@ local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
 -- distance above/below the notes, adjust this.
 local IND_RULER_H = 62
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
+local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed window edges (0 = steady)
 
 -- The real ruler height is learned from the mouse: SWS reports the note row under the
 -- mouse, and every sample narrows the range of ruler heights that put that row there.
@@ -1060,7 +1061,8 @@ local function ind_update()
     local v = IND.view
     if not v then ind_detach(); return end
     if fresh then ind_calibrate(mv, v, w, h) end   -- only with a just-read scroll position
-    local ruler = ind_ruler()
+    local ruler = floor(ind_ruler() + 0.5)        -- LICE wants whole pixels
+    local blink_on = IND_BLINK <= 0 or (reaper.time_precise() % IND_BLINK) < IND_BLINK / 2
 
     local g, sw = reaper.MIDI_GetGrid(take)
     g, sw = g or 0, sw or 0
@@ -1068,7 +1070,7 @@ local function ind_update()
     local te, tl = pe * 0.01 * g * 0.5, pl * 0.01 * g * 0.5
     local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d|%.4f|%.4f|%d|%d|%d",
         tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band ~ theme.exempt,
-        v.top, v.rh, v.lanes, settings.mode, S.snap_n) .. string.format("|%.1f", ruler)
+        v.top, v.rh, v.lanes, settings.mode, S.snap_n) .. "|" .. ruler .. (blink_on and "|on" or "|off")
     if key == IND.key and IND.hwnd == mv then return end
 
     if IND.hwnd ~= mv or IND.w ~= w or IND.h ~= h or not IND.bmp then
@@ -1139,8 +1141,8 @@ local function ind_update()
             if ir > il then
                 reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
             end
-            if te > EPS then dashed(il, y0, y1) end
-            if tl > EPS then dashed(ir, y0, y1) end
+            if blink_on and te > EPS then dashed(il, y0, y1) end
+            if blink_on and tl > EPS then dashed(ir, y0, y1) end
             count = count + 1
         end
         -- Exempt = inside the window but off the grid, so Quantize leaves it alone.
