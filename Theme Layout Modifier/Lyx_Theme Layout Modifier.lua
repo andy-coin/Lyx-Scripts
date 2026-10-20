@@ -236,14 +236,13 @@ local function split_lines(s)
   return t
 end
 
+-- via a temp file, not io.popen: reading a pipe can fail with "Interrupted system call"
 local function zip_list(path)
-  local t = {}
-  local p = io.popen("/usr/bin/unzip -Z1 " .. q(path) .. " 2>/dev/null")
-  if p then
-    for l in p:lines() do t[#t + 1] = l end
-    p:close()
-  end
-  return t
+  local tmp = os.tmpname()
+  os.execute("/usr/bin/unzip -Z1 " .. q(path) .. " > " .. q(tmp) .. " 2>/dev/null")
+  local s = read_file(tmp) or ""
+  os.remove(tmp)
+  return split_lines(s)
 end
 
 local function set_ui_img(content, val)
