@@ -2725,8 +2725,15 @@
       end
     end
   end
-  function lyx.on() return lyx.stops and config.theme == "dark" end
+  -- same per-script "Inherit" flag as the Lyx ImGui scripts (on unless switched off);
+  -- read once per frame in main(). The checkbox in Preferences toggles it through lyx.flag.
+  lyx.KEY = "QuickAdder"
+  lyx.flag = setmetatable({}, {
+    __index = function() return lyx.T and lyx.T.inherit(lyx.KEY) end,
+    __newindex = function(_, _, v) if lyx.T then lyx.T.set_inherit(lyx.KEY, v); lyx.inherit = v end end})
+  function lyx.on() return lyx.inherit and lyx.stops and config.theme == "dark" end
   lyx.load()
+  lyx.inherit = lyx.flag.inherit
 
   function color(r, g, b, a)
     if not g and lyx.on() then r, g, b = lyx.grey(r) end
@@ -2756,20 +2763,15 @@
     return (clamp(r) << 16) | (clamp(g) << 8) | clamp(b)
   end
 
-  -- untouched stock list colours -> Lyx theme colours
-  local lyx_stock = {bg = 0x2A2A2A, txt = 0xDDDDDD, fav_bg = 0x3A3A3A, fav_txt = 0xFFD700}
   function resolveCustomColor(key)
     local cc = config.custom_colors
     if not cc then return 0x808080 end
     local v = cc[key]
-    if lyx.on() and v == lyx_stock[key] then
+    if lyx.on() then -- inherited: the theme decides, the own colours stay stored for later
       local c = lyx.c
-      v = key == "bg" and c.bg2 or key == "txt" and c.text or
-          key == "fav_bg" and lyx.T.mix(c.bg2, c.base, 0.5) or c.title
-    end
-    if v == "auto" and lyx.on() then
-      if key == "sel_bg"  then return lyx.c.accent end
-      if key == "sel_txt" then return lyx.c.bg end
+      return key == "bg" and c.bg2 or key == "txt" and c.text or
+             key == "fav_bg" and lyx.T.mix(c.bg2, c.base, 0.5) or key == "fav_txt" and c.title or
+             key == "sel_bg" and c.accent or c.bg
     end
     if v == "auto" then
       if key == "sel_bg"  then return rgbAutoInverse(cc.bg  or 0) end
@@ -4319,6 +4321,7 @@
 
   scr.actions.pickColor = function(o)
     if not o or not o.color_key then return end
+    if lyx.on() then return end -- colours come from the Lyx global theme
     local key = o.color_key
     local cc = config.custom_colors
     local is_sel = (key == "sel_bg" or key == "sel_txt")
@@ -5965,11 +5968,24 @@
         reset:drawTxt("Reset"):hover()
       end
       
+      -- INHERIT LYX GLOBAL THEME (Lyx mod)
+
+      gui.Prefs.Body.Section_1.Cb_lyx = gui.Prefs.Body.Section_1.Cb:setChild({
+                                           id = "cb_inherit", table = lyx.flag, table_name = "lyx_flag",
+                                           float_b = gui.Prefs.Body.Section_1.Colors_caption or gui.Prefs.Body.Section_1.Resolution,
+                                           }, nil, nil, padding, padding)
+      gui.Prefs.Body.Section_1.Cb_lyx:drawRect():setStyle("search")
+      gui.Prefs.Body.Section_1.Cb_lyx:drawCb("Inherit Lyx global theme")
+      if gui.over == "cb_inherit" then
+        gui.hints_txt = lyx.T and "Use the Lyx global theme (dark mode); off = the colours above" or
+                        "Lyx global theme not found (_lib/_Lyx_Theme.lua)"
+      end
+
       -- RESULT PLACEHOLDERS
       
       gui.Prefs.Body.Section_1.Cb_1 = gui.Prefs.Body.Section_1.Cb:setChild({
                                            id = "cb_results_ph",
-                                           float_b = gui.Prefs.Body.Section_1.Colors_caption or gui.Prefs.Body.Section_1.Resolution,
+                                           float_b = gui.Prefs.Body.Section_1.Cb_lyx,
                                            }, nil, nil, padding, padding)
         
       gui.Prefs.Body.Section_1.Cb_1:drawRect():setStyle("search")
@@ -6660,6 +6676,7 @@
   function a_main()end
   function main()
     if lyx.T and lyx.T.changed() then lyx.load() end -- theme saved in the theme manager
+    lyx.inherit = lyx.flag.inherit
     wrong_list=true
     local act = reaper.GetExtState("Quick Adder", "ACT")
     scr.ext_refresh = act == "refresh" and true or nil
