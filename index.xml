@@ -42,8 +42,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_MIDI_note_quantize_filter.lua" type="script" desc="Lyx_MIDI_note_quantize_filter">
-      <version name="2026.10.20.1118" author="Lyx" time="2026-10-20T11:18:14Z">
-        <source main="midi_editor">https://github.com/andy-coin/Lyx-Scripts/raw/8aba2f594d5a502e06ccbdbf147febd400f4defc/MIDI%20Editor/Lyx_MIDI_note_quantize_filter.lua</source>
+      <version name="2026.10.20.1134" author="Lyx" time="2026-10-20T11:34:41Z">
+        <source main="midi_editor">https://github.com/andy-coin/Lyx-Scripts/raw/4ee09a461fe1b3669a48e8404f070537a2e88a52/MIDI%20Editor/Lyx_MIDI_note_quantize_filter.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Midi_smart Select all.lua" type="script" desc="Lyx_Midi_smart Select all">
