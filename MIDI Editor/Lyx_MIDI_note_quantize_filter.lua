@@ -107,6 +107,13 @@ local function lighten(c, f)
     return rgba(r + (255-r)*f, g + (255-g)*f, b + (255-b)*f, a)
 end
 
+-- theme.bg or theme.text, whichever reads better on background colour c (RGBA)
+local function luma(c) return 0.299 * ((c>>24)&0xFF) + 0.587 * ((c>>16)&0xFF) + 0.114 * ((c>>8)&0xFF) end
+local theme   -- defined below
+local function readable(c)
+    return math.abs(luma(c) - luma(theme.bg)) > math.abs(luma(c) - luma(theme.text)) and theme.bg or theme.text
+end
+
 local DEFAULT_THEME = {
     bg        = rgba( 30,  30,  38, 255),
     panel     = rgba( 42,  42,  54, 255),
@@ -130,7 +137,8 @@ local THEME_ROWS = {
 -- own = this script's saved colours (Settings); theme = colours in use.
 -- With the Lyx global theme inherited, the shared roles come from it;
 -- stat_val and band (filter window) always stay the script's own.
-local own, theme = {}, {}
+local own = {}
+theme = {}
 for k, v in pairs(DEFAULT_THEME) do own[k] = v end
 local THEME_KEY = "QuantizeFilter"
 local G                                    -- _Lyx_GUI, loaded with the ImGui context
@@ -939,10 +947,10 @@ end
 -------------------------------------------------------------------------------
 local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
               view = nil, view_t = -1, view_dt = 0.1, view_take = nil }
--- Height of the ruler / marker area at the top of the piano roll (same value
--- js_Mouse editing uses). Calibration knob: if the boxes sit a constant
--- distance above/below the notes, adjust this.
-local IND_RULER_H = 62
+-- Height of the ruler / marker area at the top of the piano roll. js_Mouse editing
+-- uses 62; measured 56 on REAPER 7.82 / macOS (screenshot 2026-10-20). Per-machine
+-- fine-tune: Settings > Indicator offset.
+local IND_RULER_H = 56
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
 local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed exempt note edges (0 = steady)
 
@@ -1351,14 +1359,15 @@ local function segmented(id, labels, index, width)
     for i, lab in ipairs(labels) do
         if i > 1 then ImGui.SameLine(ctx, 0, gap) end
         local on = (index == i - 1)
-        if on then
-            ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.accent)
-            ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), theme.accent)
-            ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), theme.accent)
-            ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.bg)
-        end
+        -- selected = accent, others = panel: themes whose button and accent colours are close
+        -- (Lyx Lake: both gold) still show which one is on
+        local c = on and theme.accent or theme.panel
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), c)
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), on and c or lighten(c, 0.08))
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), on and c or lighten(c, 0.14))
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), on and readable(c) or theme.text_dim)
         if ImGui.Button(ctx, lab.."##"..id..i, bw, 0) then new = i - 1 end
-        if on then ImGui.PopStyleColor(ctx, 4) end
+        ImGui.PopStyleColor(ctx, 4)
     end
     return new ~= index, new
 end
@@ -1620,18 +1629,16 @@ local function draw_main()
     -- Filter threshold
     ImGui.Text(ctx, "Filter window")
     ImGui.SameLine(ctx)
-    if settings.link then
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.text_dim)
-    else
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.band)
-    end
+    ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.panel)
+    ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.panel, 0.08))
+    ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), settings.link and theme.text_dim or theme.band)
     if ImGui.SmallButton(ctx, (settings.link and "Linked" or "Early / Late").."##link") then
         settings.link = not settings.link
         if not settings.link then settings.threshold_late = settings.threshold end
         on_param_change()
         request_commit(param_desc(), 0)
     end
-    ImGui.PopStyleColor(ctx, 1)
+    ImGui.PopStyleColor(ctx, 3)
     tip("Linked: one window on both sides of the grid.\n"..
         "Early / Late: separate sizes, e.g. keep a laid-back feel (large late "..
         "window) while still fixing rushed notes (small early window).")
@@ -1730,12 +1737,12 @@ local function draw_main()
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.accent)
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.accent, 0.12))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.accent, 0.22))
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.bg)
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), readable(theme.accent))
     else
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.button)
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.button, 0.08))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.button, 0.14))
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.text_dim)
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), readable(theme.button))
     end
     push_font("big")
     if ImGui.Button(ctx, label.."##bypass", W, max(34 * ui, ImGui.GetFrameHeight(ctx))) then toggle_bypass() end
