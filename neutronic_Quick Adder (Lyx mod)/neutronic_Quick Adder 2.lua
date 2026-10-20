@@ -4334,10 +4334,8 @@
       end
       return
     end
-    local cur = resolveCustomColor(key)
-    local cr, cg, cb = rgbSplit(cur)
-    local init_native = reaper.ColorToNative(cr, cg, cb) | 0x1000000
-    local ok, native = reaper.GR_SelectColor(0, init_native)
+    -- Lua's GR_SelectColor takes only the parent window (no start colour)
+    local ok, native = reaper.GR_SelectColor(reaper.GetMainHwnd())
     if ok and ok ~= 0 and type(native) == "number" then
       local rr, gg, bb = reaper.ColorFromNative(native)
       cc[key] = (rr << 16) | (gg << 8) | bb
@@ -5775,7 +5773,7 @@
     gui.wnd_h = gui.Prefs.Body.Nav.h + gui.border * 2
     local padding = 8
     if page == "nav_general" then
-      gui.Prefs.Body.Section_1 = gui.Prefs.Body:setChild({id = "section_1", h = (110 + padding) * config.multi,
+      gui.Prefs.Body.Section_1 = gui.Prefs.Body:setChild({id = "section_1", h = (138 + padding) * config.multi, -- Lyx mod: +28 per added row (colors, inherit)
                                float_b = gui.Prefs.Nav}, true, true, padding, padding * 1.5, true)
   
       gui.Prefs.Body.Section_2 = gui.Prefs.Body:setChild({id = "section_2", h = (57 + padding) * config.multi,
@@ -5924,7 +5922,7 @@
           local sw = gui.Prefs.Body.Section_1:setChild({
                        id = "pickColor_" .. def.key,
                        w = sw_w, h = sw_h,
-                       on_select = true, bttn = true,
+                       bttn = true, -- no on_select: that limits clicks to the selected search result
                        color_key = def.key,
                        action = "pickColor",
                        float_r = prev,
@@ -5950,7 +5948,7 @@
           gfx.rect(gx2 - bw2, gy1, bw2, gy2 - gy1, 1)
 
           if gui.m_x >= gx1 and gui.m_x <= gx2 and gui.m_y >= gy1 and gui.m_y <= gy2 then
-            gui.hints_txt = def.full
+            gui.hints_txt = def.full .. (lyx.on() and "  (from the Lyx theme: uncheck Inherit to edit)" or "")
           end
 
           prev = sw
@@ -5959,7 +5957,7 @@
         local reset = gui.Prefs.Body.Section_1:setChild({
                         id = "resetColors_go",
                         w = reset_w, h = sw_h,
-                        on_select = true, bttn = true,
+                        bttn = true,
                         action = "resetColors",
                         float_r = prev,
                         float_b = gui.Prefs.Body.Section_1["dd_1"]}, nil, nil, padding * 2, padding)

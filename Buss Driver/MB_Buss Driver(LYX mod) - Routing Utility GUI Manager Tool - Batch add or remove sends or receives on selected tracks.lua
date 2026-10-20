@@ -121,6 +121,11 @@ local _ui = {
   marker      = "#E0A050",
   card_border = "1px #4A4A66",
   btn_text    = "#E8E8F0",
+  icon_btn    = "#555555",     -- header icon buttons / popup close button
+  icon_text   = "#CCCCCC",
+  off_btn     = "#444444",     -- colour pickers, unselected Radial / Elbow
+  on_btn      = "orange",      -- selected Radial / Elbow, scale slider
+  check_text  = "#CCCCCC",     -- bottom-bar checkboxes
   subtitle    = nil            -- settings section labels (nil = default text colour)
 }
 
@@ -149,6 +154,11 @@ if _inherit then
   _ui.btn_text    = hex(c.text)
   _ui.card_border = "1px " .. hex(c.base)
   _ui.subtitle    = hex(c.subtitle)
+  _ui.icon_btn    = hex(th.button.color)
+  _ui.icon_text   = hex(c.text)
+  _ui.off_btn     = hex(th.button.color)
+  _ui.on_btn      = hex(c.accent)
+  _ui.check_text  = hex(c.text)
   _rtk_theme = {
     accent = _colors.accent, text_faded = dim,
     button = _ui.btn, button_label = _colors.text,
@@ -221,7 +231,7 @@ local L = {
   btn_minw   = fs(84),     -- Add / Close share one width
   label_w    = fs(130),    -- left column: "Send settings…" button and "Clipboard:" label
   swatch     = fs(22),     -- colour swatch = same height as the button beside it
-  cb_h       = 17,         -- checkbox row height (same as track rows)
+  cb_h       = math.floor(fs(18)),  -- checkbox row height (same as track rows)
   fs_label   = fs(0.7),    -- muted labels, summaries, counters, checkboxes, status
   fs_btn     = fs(0.72),   -- small buttons
   fs_main    = fs(0.85),   -- mode toggles, Add / Close
@@ -235,7 +245,7 @@ local function smallBtn(label, tooltip, color)
 end
 
 local function iconBtn(label, tooltip)
-  return rtk.Button{label = label, tooltip = tooltip, w = L.icon, h = L.icon, padding = 2, fontscale = L.fs_icon, halign = "center", valign = "center", color = "#555555", textcolor = "#CCCCCC"}
+  return rtk.Button{label = label, tooltip = tooltip, w = L.icon, h = L.icon, padding = 2, fontscale = L.fs_icon, halign = "center", valign = "center", color = _ui.icon_btn, textcolor = _ui.icon_text}
 end
 
 -- Popup section heading (Scale / Colors / Tree Lines all look the same)
@@ -285,6 +295,77 @@ _rtk_theme.tooltip_font = {"Segoe UI (TrueType)", 13}
 _rtk_theme.bg = _colors.window_bg
 _rtk_theme.text = _colors.text
 rtk.set_theme_overrides(_rtk_theme)
+
+-- ==== LYX ROUNDING (inherited theme only) ====
+-- rtk draws square corners; these overrides use the theme's rounding like the Lyx ImGui GUIs:
+-- buttons = rounding.button, entries = rounding.frame, popups = rounding.window, cards = 0.75 x window.
+-- Other widgets opt in with a plain field: widget.lyx_r = radius.
+if _inherit then
+  local rr = T.get().rounding
+  local R_BTN, R_FRAME, R_WIN = rr.button * _scale, rr.frame * _scale, rr.window * _scale
+  local function fill_round(x, y, w, h, r)
+    r = math.floor(math.min(r, w / 2, h / 2))
+    if r < 1 then gfx.rect(x, y, w, h, 1) return end
+    gfx.rect(x + r, y, w - 2 * r, h, 1)
+    gfx.rect(x, y + r, r, h - 2 * r, 1)
+    gfx.rect(x + w - r, y + r, r, h - 2 * r, 1)
+    gfx.circle(x + r, y + r, r, 1, 1)
+    gfx.circle(x + w - r - 1, y + r, r, 1, 1)
+    gfx.circle(x + r, y + h - r - 1, r, 1, 1)
+    gfx.circle(x + w - r - 1, y + h - r - 1, r, 1, 1)
+  end
+  local function radius(self)
+    if self.lyx_r then return self.lyx_r end
+    if self.class == rtk.Popup then return R_WIN end
+    if self.class == rtk.Entry then return R_FRAME end
+  end
+
+  local draw_bg = rtk.Widget._draw_bg
+  function rtk.Widget:_draw_bg(offx, offy, alpha, event)
+    local r, calc = radius(self), self.calc
+    if r and calc.bg and not calc.ghost then
+      self:setcolor(calc.bg, alpha)
+      return fill_round(calc.x + offx, calc.y + offy, calc.w, calc.h, r)
+    end
+    return draw_bg(self, offx, offy, alpha, event)
+  end
+
+  local draw_borders = rtk.Widget._draw_borders
+  function rtk.Widget:_draw_borders(offx, offy, alpha, all)
+    local r, calc = radius(self), self.calc
+    local uni = all or (calc.border_uniform and calc.tborder)
+    if r and uni and not self.ghost then
+      if (self:_unpack_border(uni, alpha) or 0) > 0 then  -- also sets the border colour
+        gfx.roundrect(calc.x + offx, calc.y + offy, calc.w - 1, calc.h - 1, math.min(r, calc.h / 2), 1)
+      end
+      return
+    end
+    return draw_borders(self, offx, offy, alpha, all)
+  end
+
+  -- Buttons: flat fill (no gradient) with the theme's button rounding, 1px outline like G.button.
+  local draw_rect_btn = rtk.Button._draw_rectangular_button
+  function rtk.Button:_draw_rectangular_button(x, y, hover, clicked, gradient, brightness, cmul, bmul, alpha)
+    local calc, pre = self.calc, self._pre
+    local amul = calc.alpha * alpha
+    local over = calc.surface and (calc.flat == rtk.Button.RAISED or hover)
+    if not over or calc.tagged or pre.surw <= 0 or pre.surh <= 0 then
+      return draw_rect_btn(self, x, y, hover, clicked, gradient, brightness, cmul, bmul, alpha)
+    end
+    local sx, sy, sw, sh = x + pre.surx, y + pre.sury, pre.surw, pre.surh
+    local r, g, b, a = rtk.color.rgba(calc.color)
+    local sr, sg, sb = rtk.color.mod({r, g, b, a}, 1.0, 1.0, brightness, amul)
+    gfx.set(sr * cmul, sg * cmul, sb * cmul, (a or 1) * amul)
+    fill_round(sx, sy, sw, sh, R_BTN)
+    gfx.set(r * bmul, g * bmul, b * bmul, amul)
+    gfx.roundrect(sx, sy, sw - 1, sh - 1, math.min(R_BTN, sh / 2), 1)
+    if calc.icon then self:_draw_icon(x + pre.ix, y + pre.iy, hover, alpha) end
+    if calc.label then
+      self:setcolor(calc.textcolor, alpha)
+      self._font:draw(self._segments, x + pre.lx, y + pre.ly, pre.clipw, pre.cliph)
+    end
+  end
+end
 
 
 -- ==== DRAG-TO-CHECK STATE ====
@@ -651,11 +732,11 @@ function getRoutingOptionsObjects()
   end
 
   local function bottomCheck(label, tooltip, value, ref)
-    return rtk.CheckBox{label, tooltip = tooltip, value = value, h = L.cb_h, padding = "0 2 3 2", spacing = 3, valign = "center", fontscale = L.fs_label, color = "#CCCCCC", textcolor2 = "#CCCCCC", ref = ref}
+    return rtk.CheckBox{label, tooltip = tooltip, value = value, h = L.cb_h, padding = "0 2", spacing = 3, valign = "center", fontscale = L.fs_label, color = _ui.check_text, textcolor2 = _ui.check_text, ref = ref}
   end
 
   local function colorBtn(label)
-    return rtk.Button{label, h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, color = "#444", textcolor = "#E0E0E0", disabled = _inherit}
+    return rtk.Button{label, h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, color = _ui.off_btn, textcolor = "#E0E0E0", disabled = _inherit}
   end
 
   local function swatch(color)
@@ -740,13 +821,13 @@ function getRoutingOptionsObjects()
     settings_content = rtk.VBox{w = 1, padding = L.pad, spacing = L.row_gap},
     settings_title = rtk.Heading{"UI Settings", w = 1, fontscale = L.fs_title, halign = "center", textalign = "center"},
     settings_scale_label = sectionHeading("Scale: " .. string.format("%.0f%%", _scale * 100)),
-    settings_scale = rtk.Slider{w = 1, min = 0.8, max = 2.0, value = _scale, step = 0.05, color = "orange", fontscale = fs(0.63)},
+    settings_scale = rtk.Slider{w = 1, min = 0.8, max = 2.0, value = _scale, step = 0.05, color = _ui.on_btn, fontscale = fs(0.63)},
     settings_note = rtk.Text{"Restart script after changing scale/colors.", w = 1, wrap = true, fontscale = fs(0.63), color = "#999999"},
     -- Color picker section
     settings_color_heading = sectionHeading("Colors"),
     -- Lyx global theme (only when _Lyx_Theme.lua was found)
     theme_row = rtk.VBox{w = 1, spacing = L.gap},  -- stacked: popup is narrow
-    theme_inherit = rtk.CheckBox{"Inherit Lyx global theme", value = _inherit, tooltip = "Use the Lyx global theme colours instead of the colours below (restart script to apply)", h = L.cb_h, padding = "0 2 3 2", spacing = 3, valign = "center", fontscale = L.fs_label},
+    theme_inherit = rtk.CheckBox{"Inherit Lyx global theme", value = _inherit, tooltip = "Use the Lyx global theme colours instead of the colours below (restart script to apply)", h = L.cb_h, padding = "0 2", spacing = 3, valign = "center", fontscale = L.fs_label},
     theme_manager_btn = rtk.Button{"Lyx global theme", tooltip = "Open the Lyx global theme manager", h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, color = _ui.btn, textcolor = _ui.btn_text},
     color_window_bg_row = colorRow(),
     color_window_bg_swatch = swatch(_colors.window_bg),
@@ -768,12 +849,15 @@ function getRoutingOptionsObjects()
     settings_tree_heading = sectionHeading("Tree Lines"),
     settings_tree_mode_row = rtk.HBox{w = 1, spacing = L.gap, valign = "center"},
     settings_tree_radial = rtk.Button{"Radial", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn,
-      color = _tree_mode == "radial" and "orange" or "#444", textcolor = "#E0E0E0"},
+      color = _tree_mode == "radial" and _ui.on_btn or _ui.off_btn, textcolor = "#E0E0E0"},
     settings_tree_elbow = rtk.Button{"Elbow", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn,
-      color = _tree_mode == "elbow" and "orange" or "#444", textcolor = "#E0E0E0"},
+      color = _tree_mode == "elbow" and _ui.on_btn or _ui.off_btn, textcolor = "#E0E0E0"},
     settings_save = rtk.Button{"Save & Close", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn},
     settings_reset = rtk.Button{"Reset All", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#E0E0E0"}
   }
+
+  -- Source tracks card: rounded like an ImGui child window (inherited theme only)
+  if _inherit then _state.routing.options_objs.selected_tracks_box.lyx_r = T.get().rounding.window * 0.75 * _scale end
 
   -- Left label column: the settings button is as wide as the "Clipboard:" label
   _state.routing.options_objs.configure_btn:attr("w", L.label_w)
@@ -798,7 +882,7 @@ function getSelectedTracksList()
     this_track_color = reaper.GetTrackColor(this_track)
     this_track_color = rtk.color.convert_native(this_track_color)
 
-    selected_tracks_list:add(rtk.Text{this_track_num .. ": " .. this_track_name, padding = "1 4 3", fontscale = fs(0.67), color = "#E0E0E0", bg = this_track_color})
+    selected_tracks_list:add(rtk.Text{this_track_num .. ": " .. this_track_name, padding = "2 4", fontscale = fs(0.67), color = "#E0E0E0", bg = this_track_color})
   end
 
   return selected_tracks_list
@@ -1248,7 +1332,7 @@ function getTrackObjs(this_track, indent_px)
   this_track_num = math.tointeger(reaper.GetMediaTrackInfo_Value(this_track, _api.track.num))
   retval, this_track_name = reaper.GetSetMediaTrackInfo_String(this_track, _api.track.name, "", 0)
   this_track_color = reaper.GetTrackColor(this_track)
-  this_track_checkbox = rtk.CheckBox{this_track_num .. ": " .. this_track_name, h = 17, fontscale = fs(0.75), margin = "0 5 1 2", padding = "0 2 3 2", spacing = 3, valign = "center", ref = "target_track_" .. this_track_num, data__class = "target_track_checkbox"}
+  this_track_checkbox = rtk.CheckBox{this_track_num .. ": " .. this_track_name, h = L.cb_h, fontscale = fs(0.75), margin = "0 5 1 2", padding = "0 2", spacing = 3, valign = "center", ref = "target_track_" .. this_track_num, data__class = "target_track_checkbox"}
 
   this_track_line.data__track_is_selected = reaper.IsTrackSelected(this_track)
   this_track_line.data__track_num = reaper.GetMediaTrackInfo_Value(this_track, _api.track.num)
@@ -1613,8 +1697,8 @@ function defineRoutingOptionsEventHandlers()
 
   -- Tree mode buttons
   local function updateTreeBtns()
-    o.settings_tree_radial:attr("color", _tree_mode == "radial" and "orange" or "#444")
-    o.settings_tree_elbow:attr("color", _tree_mode == "elbow" and "orange" or "#444")
+    o.settings_tree_radial:attr("color", _tree_mode == "radial" and _ui.on_btn or _ui.off_btn)
+    o.settings_tree_elbow:attr("color", _tree_mode == "elbow" and _ui.on_btn or _ui.off_btn)
   end
   o.settings_tree_radial.onclick = function() _tree_mode = "radial"; updateTreeBtns() end
   o.settings_tree_elbow.onclick = function() _tree_mode = "elbow"; updateTreeBtns() end
@@ -1884,7 +1968,7 @@ function populateRoutingSettingsObjs()
   _state.routing.settings_objs = {
     popup = rtk.Popup{w = _state.routing.options_objs.window.w / 3, minw = 341, overlay = "#303030cc", padding = 0},
     content = rtk.VBox(),
-    close_btn = rtk.Button{"X", position = "absolute", z = 10, w = 14, h = 16, margin = "4 0 0 4", padding = 2, color = "#555555", halign = "center", fontscale = fs(0.7), textcolor = "#BBBBBB"},
+    close_btn = rtk.Button{"X", position = "absolute", z = 10, w = 14, h = 16, margin = "4 0 0 4", padding = 2, color = _ui.icon_btn, halign = "center", fontscale = fs(0.7), textcolor = "#BBBBBB"},
     title = rtk.Heading{"Settings for new sends", w = 1, halign = "center", textalign = "center", padding = 6, bg = "#3A3A52", fontscale = L.fs_title},
     footer = rtk.HBox{w = 1, spacing = L.gap, valign = "center", padding = L.pad_v .. " " .. L.pad, bg = "#00000022"},
     footer_copy = smallBtn("Copy", "Copy these settings to the route clipboard (Ctrl/Cmd+C)"),
