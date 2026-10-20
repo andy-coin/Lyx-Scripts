@@ -35,13 +35,14 @@
                  }
 
     -- How a press is decided (state is kept per project):
-    --   * the arrange view (all track heights, vertical scroll, horizontal view) is saved ONCE,
-    --     when coming from idle. While active it is never saved again, whatever is selected next.
-    --   * same items as last press (exactly the same set) -> restore: close the MIDI editor and,
-    --     if a media zoom was done since the save, put the saved arrange view back. Back to idle.
-    --     Empty selection while active does the same.
-    --   * different items -> go straight to the branch: all MIDI -> MIDI editor (arrange untouched),
-    --     any non-MIDI item -> media zoom (1 track: single_zoom, several: share screen_height).
+    --   1. the arrange view (all track heights, vertical scroll, horizontal view) is saved only from idle
+    --   2. finish = close the MIDI editor + restore the saved view -> idle. A press finishes when:
+    --        the selection is empty / the MIDI editor is open and only MIDI items are selected
+    --        (the editor already follows the selection) / zoomed and exactly the same items again
+    --   3. otherwise: only MIDI items -> restore the view, open the MIDI editor
+    --                 any other item  -> close the MIDI editor, zoom (1 track: single_zoom,
+    --                                    several: share screen_height); no save, no restore
+    --   4. MIDI editor closed by hand = idle
     local STATE_SEC = "Item Editor state"
 
     --------------
@@ -304,36 +305,27 @@
         local ME = reaper.MIDIEditor_GetActive()
         local isMidi = #itemz>0 and isAllMIDI(itemz)
 
-        -- same items as last time -> restore. A MIDI press only counts while its editor is still open
-        -- (editor closed by hand + same items -> open it again).
-        local same = st.active and not razor and SameSet(guids, st.items)
-                     and (st.branch=="media" or ME~=nil)
+        if  st.branch=="midi" and not ME then st = {} end -- editor closed by hand = idle
 
-        if  #itemz==0 or same then
-            if  st.active then
-                CloseEditor()
-                if st.zoomed then RestoreView(st.view) end
-                SaveState({})
-            elseif ME then
-                CloseEditor()
-            end
+        if  #itemz==0 or (isMidi and ME) or (st.branch=="media" and not razor and SameSet(guids, st.items)) then
+            CloseEditor()
+            if st.active then RestoreView(st.view) end
+            SaveState({})
             r.RestoreTracks(trackzzz)
             return
         end
 
         if  not st.active then
-            st = {active=true, zoomed=false, view=SaveView()}
+            st = {active=true, view=SaveView()}
         end
 
-        CloseEditor()
-
         if  isMidi then
+            RestoreView(st.view)
             st.branch = "midi"
             if OpenMidi(itemz) then api.cmd(api.name('_SN_FOCUS_MIDI_EDITOR'),0) end--focus MIDI Editor
         else
-            if st.zoomed then RestoreHeights(st.view) end -- previous zoom's tracks back first, saved view untouched
+            CloseEditor()
             st.branch = "media"
-            st.zoomed = true
             ZoomMedia(itemz)
         end
 
