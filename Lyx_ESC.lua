@@ -4,95 +4,97 @@
     local r=require("_lib._Lyx_HOME")
     
     -----CUSTOM-----
-    -- visible windows whose title contains one of these are never closed (plain text)
+    -- ESC closes every floating window (FX windows through the API, the rest like clicking X)
+    -- except visible windows whose title contains one of these (plain text, case-insensitive)
     local exclude = {'Colors','Licensed for personal/small business use','Item/track info',"Lyx_ESC",'Color palette','MIDI take:',"Video Window"}
 
-    -- REAPER dialogs closed by title (plain text). FX windows are found through the API instead,
-    -- so they close in any language.
+    -- always closed, even if the title also matches exclude (plain text, case-insensitive)
     local Kill_list = {"Actions","REAPER Preferences","Track Manager","Screensets/Layouts","Render to File",
                        "Media Item Properties","Snap/Grid","Metronome","Add FX to","Crossfade Editor",'Notes for',
                        "Virtual MIDI keyboard","Batch File/Item Converter","Finished in","Reascript console output",
                        "Theme development/tweaker","Cycle Actions","LFO tool","ReaLauncher","ReaConsole"}
 
-    local main_hwnd = reaper.GetMainHwnd()
-    local addr = reaper.JS_Window_AddressFromHandle
+    local DEBUG = false -- TEMP: print what ESC does to the console
+    local function log(...) if DEBUG then reaper.ShowConsoleMsg(table.concat({...}," ").."\n") end end
 
-    local function close(hwnd) reaper.JS_WindowMessage_Post(hwnd, "WM_CLOSE", 0, 0, 0, 0) end
+    local main_hwnd = reaper.GetMainHwnd()
+    -- ask the window to close (like clicking X); Post doesn't arrive on macOS, so Send, then force it
+    local function close(hwnd)
+        reaper.JS_WindowMessage_Send(hwnd, "WM_CLOSE", 0, 0, 0, 0)
+        if reaper.JS_Window_IsWindow(hwnd) and reaper.JS_Window_IsVisible(hwnd) then reaper.JS_Window_Destroy(hwnd) end
+    end
 
     local function has_any(title, list)
+        title = title:lower()
         for i = 1, #list do
-            if title:find(list[i], 1, true) then return true end
+            if title:find(list[i]:lower(), 1, true) then return true end
         end
     end
 
     -- Close floating FX / FX chain windows of one track (fx_base 0) or its input/monitor FX (0x1000000).
-    -- Returns true if something was closed.
-    local function close_track_fx(tr, open, fx_base, n, chain)
+    local function close_track_fx(tr, fx_base, n, chain)
         local hit
         if chain ~= -1 then reaper.TrackFX_Show(tr, fx_base, 0) hit = true end
         for i = 0, n - 1 do
-            local w = reaper.TrackFX_GetFloatingWindow(tr, fx_base + i)
-            if w then reaper.TrackFX_Show(tr, fx_base + i, 2) open[addr(w)] = nil hit = true end
+            if reaper.TrackFX_GetFloatingWindow(tr, fx_base + i) then reaper.TrackFX_Show(tr, fx_base + i, 2) hit = true end
         end
         return hit
     end
 
-    local function any(t) return next(t) ~= nil end
-
-    -- drop windows that got hidden (FX chain windows have no API handle)
-    local function prune(open)
-        for k, w in pairs(open) do
-            if not reaper.JS_Window_IsVisible(w) then open[k] = nil end
+    -- FX windows are found through the API, not the window list: on macOS they don't show up as top-level windows.
+    -- ponytail: scans every track and take on each press; fine unless a project has tens of thousands of takes.
+    local function close_all_fx()
+        local hit
+        for t = -1, reaper.CountTracks(0) - 1 do
+            local tr = t < 0 and reaper.GetMasterTrack(0) or reaper.GetTrack(0, t)
+            if close_track_fx(tr, 0, reaper.TrackFX_GetCount(tr), reaper.TrackFX_GetChainVisible(tr)) then hit = true end
+            if close_track_fx(tr, 0x1000000, reaper.TrackFX_GetRecCount(tr), reaper.TrackFX_GetRecChainVisible(tr)) then hit = true end
         end
+        for i = 0, reaper.CountMediaItems(0) - 1 do
+            local item = reaper.GetMediaItem(0, i)
+            for k = 0, reaper.CountTakes(item) - 1 do
+                local take = reaper.GetTake(item, k)
+                if take then
+                    if reaper.TakeFX_GetChainVisible(take) ~= -1 then reaper.TakeFX_Show(take, 0, 0) hit = true end
+                    for f = 0, reaper.TakeFX_GetCount(take) - 1 do
+                        if reaper.TakeFX_GetFloatingWindow(take, f) then reaper.TakeFX_Show(take, f, 2) hit = true end
+                    end
+                end
+            end
+        end
+        log("  FX closed:", tostring(hit == true))
+        return hit
     end
 
     local function WindowKiller()
+        local destroy = close_all_fx() or false
         local _, list = reaper.JS_Window_ListAllTop()
-        local open, destroy = {}, false
 
+        -- every other visible window not in exclude: close it like clicking its X
         for address in list:gmatch('[^,]+') do
             local window = reaper.JS_Window_HandleFromAddress(address)
             if window ~= main_hwnd and reaper.JS_Window_IsVisible(window)
                and reaper.MIDIEditor_GetMode(window) == -1 then
                 local title = reaper.JS_Window_GetTitle(window)
-                if has_any(title, Kill_list) then
+                log("  window:", "["..title.."]")
+                if DEBUG and title:find("console output", 1, true) then -- TEMP: keep the log readable
+                elseif has_any(title, Kill_list) or (title ~= "" and not has_any(title, exclude)) then
                     close(window) destroy = true
-                elseif not has_any(title, exclude) then
-                    open[addr(window)] = window   -- maybe an FX window, checked below
                 end
             end
         end
 
-        -- Fast path: no unknown window open -> skip the FX scan.
-        -- ponytail: otherwise scans all tracks/takes until every unknown window is accounted for;
-        -- an always-open script window (not in exclude) forces a full scan each press.
-        if any(open) then
-            local tracks = reaper.CountTracks(0)
-            for t = -1, tracks - 1 do
-                local tr = t < 0 and reaper.GetMasterTrack(0) or reaper.GetTrack(0, t)
-                local a = close_track_fx(tr, open, 0, reaper.TrackFX_GetCount(tr), reaper.TrackFX_GetChainVisible(tr))
-                local b = close_track_fx(tr, open, 0x1000000, reaper.TrackFX_GetRecCount(tr), reaper.TrackFX_GetRecChainVisible(tr))
-                if a or b then destroy = true prune(open) end
-                if not any(open) then break end
-            end
-            for i = 0, (any(open) and reaper.CountMediaItems(0) or 0) - 1 do
-                local item = reaper.GetMediaItem(0, i)
-                for k = 0, reaper.CountTakes(item) - 1 do
-                    local take = reaper.GetTake(item, k)
-                    if take then
-                        local hit
-                        if reaper.TakeFX_GetChainVisible(take) ~= -1 then reaper.TakeFX_Show(take, 0, 0) hit = true end
-                        for f = 0, reaper.TakeFX_GetCount(take) - 1 do
-                            local w = reaper.TakeFX_GetFloatingWindow(take, f)
-                            if w then reaper.TakeFX_Show(take, f, 2) open[addr(w)] = nil hit = true end
-                        end
-                        if hit then destroy = true prune(open) end
-                    end
+        if DEBUG then -- TEMP: windows hanging under the main window
+            local _, kids = reaper.JS_Window_ListAllChild(main_hwnd)
+            for address in kids:gmatch('[^,]+') do
+                local w = reaper.JS_Window_HandleFromAddress(address)
+                local t = reaper.JS_Window_GetTitle(w)
+                if t ~= "" and reaper.JS_Window_IsVisible(w) then
+                    log("  child:", "["..t.."]", " parent is main:", tostring(reaper.JS_Window_GetParent(w) == main_hwnd))
                 end
-                if not any(open) then break end
             end
         end
-
+        log("  closed something:", tostring(destroy))
         return destroy
     end
 
@@ -102,15 +104,21 @@
 
         editor = api.M()
         video = reaper.JS_Window_Find("Video Window",false)
+        log("---- ESC  focus: ["..(reaper.JS_Window_GetTitle(reaper.JS_Window_GetFocus() or main_hwnd) or "").."]",
+            " midi editor:", tostring(editor~=nil), " media explorer:", tostring(api.gtc(50124)), " video:", tostring(video~=nil))
         
         if  r.IsMidiEditorFocus(editor) then 
+            log("  branch: MIDI editor unselect")
             reaper.MIDIEditor_OnCommand(editor,40214)--midi editor unselect all
             return
         elseif api.gtc(50124)==1 then
+            log("  branch: close media explorer")
             api.cmd(50124,0)--close media exploer
         elseif video and reaper.GetToggleCommandState(50122) == 1 then
+            log("  branch: exit fullscreen")
             api.cmd(50122,0)-- exit fullscreen
         elseif not WindowKiller() then
+            log("  branch: no window closed -> unselect")
             if editor then
                api.cmd(40716,0)--close editor
             end
