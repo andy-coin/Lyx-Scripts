@@ -2,7 +2,9 @@
     _Lyx_Theme.lua  —  Lyx global theme storage (pure data, no ImGui).
 
     File: <REAPER resource>/Data/Lyx/themes.lua
-          return { current = "Lyx Lake", themes = { ["Lyx Midnight"] = {...}, ... } }
+          return { current = "Lyx Lake", ui = { scale, font_size }, themes = { ["Lyx Midnight"] = {...}, ... } }
+    ui: scale and font size shared by every theme (T.load copies them into each theme),
+    so switching themes never changes the size of things.
     Colours are 0xRRGGBB integers. The presets in T.PRESETS (Moon, Forest, Lake, City, Midnight, Plain) always exist and are read-only.
     Every T.save() bumps ExtState "Lyx_Theme"/"rev" so running GUIs reload (see T.changed).
 
@@ -61,45 +63,40 @@ local preset_data = {
                      subtitle = 0x89972E, accent = 0xC1A44B, text = 0x3C7790 },
         button   = { color = 0xD8D2C4, border = 1 },
         frame    = { color = 0xEDE8D7, border = 1 },
-        font     = { name = "", size = 15 },
         rounding = { window = 6, button = 3, frame = 3 },
-        alpha = 1, spacing = 9, scale = 0.9,
+        alpha = 1, spacing = 9,
     },
     ["Lyx Midnight"] = {   -- near-black navy, sand title, soft blue accent
         colors   = { bg = 0x020B17, bg2 = 0x071434, base = 0x2E3C5B, title = 0xD8BC8F,
                      subtitle = 0x52A751, accent = 0x6C89C7, text = 0xC1CCDD },
         button   = { color = 0x0F2A67, border = 1 },
         frame    = { color = 0x0D214D, border = 1 },
-        font     = { name = "", size = 14 },
         rounding = { window = 8, button = 6, frame = 6 },
-        alpha = 1, spacing = 8, scale = 1,
+        alpha = 1, spacing = 8,
     },
     ["Lyx City"] = {   -- denim blue, pastel peach / lilac
         colors   = { bg = 0x09254E, bg2 = 0x041731, base = 0x0F356A, title = 0xF7C797,
                      subtitle = 0xE3BEFB, accent = 0x2B6398, text = 0xC1DAFC },
         button   = { color = 0x2B6398, border = 1 },
         frame    = { color = 0x041731, border = 1 },
-        font     = { name = "", size = 15 },
         rounding = { window = 6, button = 3, frame = 3 },
-        alpha = 1, spacing = 9, scale = 0.9,
+        alpha = 1, spacing = 9,
     },
     ["Lyx Plain"] = {   -- neutral greys, burnt orange title
         colors   = { bg = 0x1E1E1E, bg2 = 0x282828, base = 0x353535, title = 0xC26C27,
                      subtitle = 0x9DA74C, accent = 0x6889B1, text = 0xD4D4D4 },
         button   = { color = 0x505050, border = 0 },
         frame    = { color = 0x303030, border = 0 },
-        font     = { name = "", size = 15 },
         rounding = { window = 6, button = 3, frame = 3 },
-        alpha = 1, spacing = 9, scale = 0.9,
+        alpha = 1, spacing = 9,
     },
     ["Lyx Lake"] = {
         colors   = { bg = 0x0C2C42, bg2 = 0x172B3A, base = 0x195172, title = 0xE1BB48,
                      subtitle = 0x1CD7D5, accent = 0xB5973C, text = 0xE6ECFF },
         button   = { color = 0xA27E11, border = 1 },
         frame    = { color = 0x414B5A, border = 1 },
-        font     = { name = "", size = 15 },
         rounding = { window = 11, button = 5, frame = 5 },
-        alpha = 0.95, spacing = 10, scale = 0.9,
+        alpha = 0.95, spacing = 10,
     },
     -- ReaLauncher (Lyx mod) colours: deep teal ground, olive fill, amber text
     ["Lyx Forest"] = {
@@ -107,9 +104,8 @@ local preset_data = {
                      subtitle = 0xB5A971, accent = 0x79714F, text = 0xE0952A },
         button   = { color = 0x0B3A44, border = 1 },
         frame    = { color = 0x03272F, border = 1 },
-        font     = { name = "", size = 15 },
         rounding = { window = 6, button = 3, frame = 3 },
-        alpha = 1, spacing = 9, scale = 0.9,
+        alpha = 1, spacing = 9,
     },
 }
 function T.preset(name) return T.fill(preset_data[name] or T.default, name) end
@@ -182,7 +178,20 @@ function T.load()
     end
     add_presets(out.themes)
     if not out.themes[out.current] then out.current = T.DEFAULT end
+    -- shared size settings; older files kept them per theme -> take the current theme's
+    local ui, cur = db and type(db.ui) == "table" and db.ui or {}, out.themes[out.current]
+    out.ui = { scale = tonumber(ui.scale) or cur.scale, font_size = tonumber(ui.font_size) or cur.font.size }
+    T.set_ui(out)
     return out
+end
+
+-- Copies db.ui (scale, font size) into every theme of db, clamped by T.fill.
+function T.set_ui(db)
+    for name, th in pairs(db.themes) do
+        th.scale, th.font.size = db.ui.scale, db.ui.font_size
+        db.themes[name] = T.fill(th, name)
+    end
+    db.ui.scale, db.ui.font_size = db.themes[db.current].scale, db.themes[db.current].font.size
 end
 
 local function is_colour_key(path) return path:find("colors%.") or path:find("%.color$") end
@@ -208,7 +217,7 @@ end
 
 -- Writes db atomically (tmp + rename) and bumps the live-reload rev. Returns true or nil, err.
 function T.save(db)
-    local out = { current = db.current, themes = {} }
+    local out = { current = db.current, ui = db.ui, themes = {} }
     for name, th in pairs(db.themes or {}) do
         if not T.is_builtin(name) then out.themes[name] = T.fill(th, name) end
     end
