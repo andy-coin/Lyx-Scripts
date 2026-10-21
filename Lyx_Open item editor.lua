@@ -40,8 +40,9 @@
     --        the selection is empty / the MIDI editor is open and only MIDI items are selected
     --        (the editor already follows the selection) / zoomed and exactly the same items again
     --   3. otherwise: only MIDI items -> restore the view, open the MIDI editor
-    --                 any other item  -> close the MIDI editor, zoom (1 track: single_zoom,
-    --                                    several: share screen_height); no save, no restore
+    --                 any other item  -> close the MIDI editor, restore the view if already zoomed
+    --                                    (other items than last time), then zoom (1 track: single_zoom,
+    --                                    several: share screen_height)
     --   4. MIDI editor closed by hand = idle
     local STATE_SEC = "Item Editor state"
 
@@ -337,6 +338,7 @@
             if OpenMidi(itemz) then api.cmd(api.name('_SN_FOCUS_MIDI_EDITOR'),0) end--focus MIDI Editor
         else
             CloseEditor()
+            if st.branch then RestoreView(st.view) end -- already zoomed on other items: start from the original view
             st.branch = "media"
             ZoomMedia(itemz)
         end
