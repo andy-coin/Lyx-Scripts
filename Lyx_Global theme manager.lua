@@ -50,6 +50,7 @@ end
 
 local function add_theme(name, th)
     work.themes[name] = T.fill(th, name)
+    T.set_ui(work)   -- shared font size / scale
     select_theme(name)
     renaming, rename_buf, rename_focus = true, name, true
     dirty = true
@@ -124,19 +125,15 @@ local function editors(th)
 
     R.ImGui_Spacing(ctx)
     G.subtitle(ctx, "Font")
-    local font_w = label_room("Name", "Size")
-    R.ImGui_SetNextItemWidth(ctx, font_w)
+    R.ImGui_SetNextItemWidth(ctx, label_room("Name"))
     deferred("font", function(v)
         return R.ImGui_InputTextWithHint(ctx, "Name", "Default (CJK system font)", v)
     end, th.font.name, function(v) th.font.name = v end)
     R.ImGui_SetItemTooltip(ctx, "Font family (e.g. Helvetica) or a font file path; empty = default")
-    R.ImGui_SetNextItemWidth(ctx, font_w)
-    deferred("size", function(v) return R.ImGui_SliderInt(ctx, "Size", v, 10, 24) end,
-        th.font.size, function(v) th.font.size = v end)
 
     R.ImGui_Spacing(ctx)
     G.subtitle(ctx, "Layout")
-    local lay_w = label_room("Window rounding", "Button rounding", "Frame rounding", "Window alpha", "Spacing", "Scale")
+    local lay_w = label_room("Window rounding", "Button rounding", "Frame rounding", "Window alpha", "Spacing")
     R.ImGui_SetNextItemWidth(ctx, lay_w)
     slider_int("Window rounding", th.rounding, "window", 0, 16)
     R.ImGui_SetNextItemWidth(ctx, lay_w)
@@ -149,9 +146,19 @@ local function editors(th)
     R.ImGui_SetNextItemWidth(ctx, lay_w)
     deferred("spacing", function(x) return R.ImGui_SliderInt(ctx, "Spacing", x, 2, 16) end,
         th.spacing, function(x) th.spacing = x end)
-    R.ImGui_SetNextItemWidth(ctx, lay_w)
+end
+
+-- Font size and scale belong to no theme: one setting for all, so switching themes keeps the size.
+local function display()
+    R.ImGui_Spacing(ctx)
+    G.subtitle(ctx, "Display (all themes)")
+    local w = label_room("Font size", "Scale")
+    R.ImGui_SetNextItemWidth(ctx, w)
+    deferred("size", function(v) return R.ImGui_SliderInt(ctx, "Font size", v, 10, 24) end,
+        work.ui.font_size, function(v) work.ui.font_size = v; T.set_ui(work) end)
+    R.ImGui_SetNextItemWidth(ctx, w)
     deferred("scale", function(x) return R.ImGui_SliderDouble(ctx, "Scale", x, 0.75, 2, "%.2f") end,
-        th.scale, function(x) th.scale = x end)
+        work.ui.scale, function(x) work.ui.scale = x; T.set_ui(work) end)
 end
 
 local function preview()
@@ -210,13 +217,12 @@ local function theme_list(h)
             if enter then commit_rename() elseif R.ImGui_IsItemDeactivated(ctx) then renaming = false end
         else
             local builtin = T.is_builtin(name)
-            if builtin then   -- built-in preset: grey row
-                local x, y = R.ImGui_GetCursorScreenPos(ctx)
-                local w = R.ImGui_GetContentRegionAvail(ctx)
-                R.ImGui_DrawList_AddRectFilled(R.ImGui_GetWindowDrawList(ctx), x, y, x + w, y + R.ImGui_GetTextLineHeight(ctx),
-                    0x8080802E, style_x(R.ImGui_StyleVar_FrameRounding()))
-            end
-            if R.ImGui_Selectable(ctx, name, sel == name) then select_theme(name) end
+            -- built-in preset: grey row, drawn as the Selectable's own "selected" background
+            -- so it is exactly as tall as the hover highlight
+            local grey = builtin and sel ~= name
+            if grey then R.ImGui_PushStyleColor(ctx, R.ImGui_Col_Header(), 0x8080802E) end
+            if R.ImGui_Selectable(ctx, name, sel == name or grey) then select_theme(name) end
+            if grey then R.ImGui_PopStyleColor(ctx) end
             if builtin then R.ImGui_SetItemTooltip(ctx, "Built-in preset (read-only): Duplicate it to make your own") end
             if R.ImGui_IsItemHovered(ctx) and R.ImGui_IsMouseDoubleClicked(ctx, 0) and not T.is_builtin(name) then
                 renaming, rename_buf, rename_focus = true, name, true
@@ -295,6 +301,7 @@ G.run(ctx, "Lyx Global Theme", function(ctx)
         R.ImGui_BeginDisabled(ctx, T.is_builtin(sel))
         editors(th)
         R.ImGui_EndDisabled(ctx)
+        display()
         R.ImGui_EndChild(ctx)
     end
 
