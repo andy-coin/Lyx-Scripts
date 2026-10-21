@@ -320,7 +320,8 @@ end
 -- opts.live == false disables theme live reload.
 function G.run(ctx, title, draw, opts)
     opts = opts or {}
-    local function loop()
+    local loop
+    local function frame()
         if opts.live ~= false then G.poll() end
         ensure_font(ctx)
         G.push(ctx, opts.font_size)
@@ -353,6 +354,11 @@ function G.run(ctx, title, draw, opts)
         elseif opts.on_close then
             opts.on_close()
         end
+    end
+    -- errors outside draw (theme reload, font, style) too: full traceback to the console, then stop
+    loop = function()
+        local ok, err = xpcall(frame, debug.traceback)
+        if not ok then R.ShowConsoleMsg("\n[" .. title .. "] " .. tostring(err) .. "\n") end
     end
     if opts.on_exit then R.atexit(opts.on_exit) end
     R.defer(loop)
