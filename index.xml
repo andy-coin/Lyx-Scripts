@@ -429,8 +429,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Global theme manager.lua" type="script" desc="Lyx_Global theme manager">
-      <version name="2026.10.21.0344" author="Lyx" time="2026-10-21T03:44:24Z">
-        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/b5b599c89f355dff8b62e6bfafb0337cddd52fbb/Lyx_Global%20theme%20manager.lua</source>
+      <version name="2026.10.21.0552" author="Lyx" time="2026-10-21T05:52:19Z">
+        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c5e4de4e62ad962940159b5ee42788b1cd9e31f7/Lyx_Global%20theme%20manager.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Glue items or join midi items.lua" type="script" desc="Lyx_Glue items or join midi items">
@@ -809,8 +809,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Select items with same name or source.lua" type="script" desc="Lyx_Select items with same name or source">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Select items with same name or source.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Lyx_Select%20items%20with%20same%20name%20or%20source.lua</source>
+      <version name="2026.10.21.0552" author="Lyx" time="2026-10-21T05:52:19Z">
+        <source main="main" file="../Lyx_Select items with same name or source.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c5e4de4e62ad962940159b5ee42788b1cd9e31f7/Lyx_Select%20items%20with%20same%20name%20or%20source.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Select only track 1.lua" type="script" desc="Lyx_Select only track 1">
