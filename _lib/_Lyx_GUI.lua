@@ -165,6 +165,13 @@ local function style(th)
         {R.ImGui_Col_CheckMark(),       col(ac)},
         {R.ImGui_Col_TextSelectedBg(),  col(m(bg, ac, 0.6))},
         {R.ImGui_Col_TableRowBgAlt(),   col(m(bg, tx, 0.04))},
+        -- tabs: same accent ramp as headers, selected one gets an accent overline
+        {R.ImGui_Col_Tab(),                   col(m(b2, ac, 0.12))},
+        {R.ImGui_Col_TabHovered(),            col(m(bg, ac, 0.35))},
+        {R.ImGui_Col_TabSelected(),           col(m(bg, ac, 0.28))},
+        {R.ImGui_Col_TabSelectedOverline(),   col(ac)},
+        {R.ImGui_Col_TabDimmed(),             col(m(b2, ac, 0.08))},
+        {R.ImGui_Col_TabDimmedSelected(),     col(m(bg, ac, 0.2))},
     }
     local r, sp = th.rounding, th.spacing
     local vars = {
