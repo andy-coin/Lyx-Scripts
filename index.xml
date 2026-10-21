@@ -1104,8 +1104,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Tap tempo.lua" type="script" desc="Lyx_Tap tempo">
-      <version name="2026.10.21.0850" author="Lyx" time="2026-10-21T08:50:36Z">
-        <source main="main" file="../Lyx_Tap tempo.lua">https://github.com/andy-coin/Lyx-Scripts/raw/94c3d063a6ce4851f4230854a2a8a403c95afbe4/Lyx_Tap%20tempo.lua</source>
+      <version name="2026.10.21.0905" author="Lyx" time="2026-10-21T09:05:11Z">
+        <source main="main" file="../Lyx_Tap tempo.lua">https://github.com/andy-coin/Lyx-Scripts/raw/af540b0b76bb8803d5d2fb414fc0765d3967ff95/Lyx_Tap%20tempo.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle All tracks record-monitor on &amp; off.lua" type="script" desc="Lyx_Toggle All tracks record-monitor on &amp; off">
