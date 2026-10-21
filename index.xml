@@ -399,8 +399,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_ESC.lua" type="script" desc="Lyx_ESC">
-      <version name="2026.10.21.0727" author="Lyx" time="2026-10-21T07:27:32Z">
-        <source main="main" file="../Lyx_ESC.lua">https://github.com/andy-coin/Lyx-Scripts/raw/db9a1ae001d6f656838899246f41473351fe7c3e/Lyx_ESC.lua</source>
+      <version name="2026.10.21.0802" author="Lyx" time="2026-10-21T08:02:19Z">
+        <source main="main" file="../Lyx_ESC.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d79f23dbdd7e0340ffad64e6b285afdc451af9e9/Lyx_ESC.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Edit- Move notes up one octave.lua" type="script" desc="Lyx_Edit- Move notes up one octave">
@@ -1497,9 +1497,9 @@
       </version>
     </reapack>
     <reapack name="Lyx_Theme Layout Modifier.lua" type="script" desc="Lyx_Theme Layout Modifier">
-      <version name="2026.10.21.0727" author="Lyx" time="2026-10-21T07:27:32Z">
-        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/db9a1ae001d6f656838899246f41473351fe7c3e/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
-        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/db9a1ae001d6f656838899246f41473351fe7c3e/Theme%20Layout%20Modifier/tlm_walter.lua</source>
+      <version name="2026.10.21.0802" author="Lyx" time="2026-10-21T08:02:19Z">
+        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d79f23dbdd7e0340ffad64e6b285afdc451af9e9/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
+        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d79f23dbdd7e0340ffad64e6b285afdc451af9e9/Theme%20Layout%20Modifier/tlm_walter.lua</source>
       </version>
     </reapack>
     <reapack name="neutronic_Quick Adder 2.lua" type="script" desc="neutronic_Quick Adder 2">
