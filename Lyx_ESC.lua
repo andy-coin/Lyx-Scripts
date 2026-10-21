@@ -4,11 +4,12 @@
     local r=require("_lib._Lyx_HOME")
     
     -----CUSTOM-----
-    -- ESC closes every floating window (FX windows through the API, the rest like clicking X)
-    -- except visible windows whose title contains one of these (plain text, case-insensitive)
-    local exclude = {'Colors','Licensed for personal/small business use','Item/track info',"Lyx_ESC",'Color palette','MIDI take:',"Video Window"}
+    -- ESC closes FX windows (through the API) and the windows in Kill_list below; nothing else,
+    -- so script GUIs (ReaImGui etc.) are never killed.
+    -- (unused since ESC only closes Kill_list; kept in case the "close everything" mode comes back)
+    -- local exclude = {'Colors','Licensed for personal/small business use','Item/track info',"Lyx_ESC",'Color palette','MIDI take:',"Video Window"}
 
-    -- always closed, even if the title also matches exclude (plain text, case-insensitive)
+    -- windows ESC closes: title contains one of these (plain text, case-insensitive)
     local Kill_list = {"Actions","REAPER Preferences","Track Manager","Screensets/Layouts","Render to File",
                        "Media Item Properties","Snap/Grid","Metronome","Add FX to","Crossfade Editor",'Notes for',
                        "Virtual MIDI keyboard","Batch File/Item Converter","Finished in","Reascript console output",
@@ -73,7 +74,7 @@
         local destroy = close_all_fx() or false
         local _, list = reaper.JS_Window_ListAllTop()
 
-        -- every other visible window not in exclude: close it like clicking its X
+        -- visible windows from Kill_list: close them like clicking their X
         for address in list:gmatch('[^,]+') do
             local window = reaper.JS_Window_HandleFromAddress(address)
             if window ~= main_hwnd and reaper.JS_Window_IsVisible(window)
@@ -81,7 +82,7 @@
                 local title = reaper.JS_Window_GetTitle(window)
                 log("  window:", "["..title.."]", "class:", reaper.JS_Window_GetClassName(window) or "")
                 if DEBUG and title:find("console output", 1, true) then -- TEMP: keep the log readable
-                elseif has_any(title, Kill_list) or (title ~= "" and not has_any(title, exclude)) then
+                elseif has_any(title, Kill_list) then
                     close(window) destroy = true
                 end
             end
