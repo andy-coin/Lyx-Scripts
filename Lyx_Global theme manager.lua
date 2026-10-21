@@ -197,6 +197,7 @@ local function theme_list(h)
         R.ImGui_PushID(ctx, name)
         if R.ImGui_RadioButton(ctx, "##use", work.current == name) and work.current ~= name then
             work.current, dirty = name, true
+            select_theme(name)   -- the manager previews the theme just picked
         end
         R.ImGui_SetItemTooltip(ctx, "Use this theme for all Lyx GUIs (after Save)")
         R.ImGui_SameLine(ctx)

@@ -72,10 +72,10 @@ local function Run(mode)
     reaper.Undo_EndBlock("Select items with same " .. mode, -1)
 end
 
--- Lyx global theme (inherited silently; ImGui defaults when Inherit is off)
+-- Lyx global theme (no Inherit option here: always follows the global theme)
 package.path = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./") .. "?.lua;" .. package.path
 local G = require("_lib._Lyx_GUI")
-G.load_theme("SelectSame")
+G.load_theme()   -- no key = always inherit
 
 local ctx = reaper.ImGui_CreateContext("Lyx select same")
 local mx, my = reaper.GetMousePosition()
