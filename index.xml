@@ -1464,8 +1464,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_GUI.lua" type="script" desc="_Lyx_GUI">
-      <version name="2026.10.21.0854" author="Lyx" time="2026-10-21T08:54:43Z">
-        <source file="../_lib/_Lyx_GUI.lua">https://github.com/andy-coin/Lyx-Scripts/raw/3e0f6f4934c054508744d9bda421ce8b915c47c7/_lib/_Lyx_GUI.lua</source>
+      <version name="2026.10.21.0859" author="Lyx" time="2026-10-21T08:59:15Z">
+        <source file="../_lib/_Lyx_GUI.lua">https://github.com/andy-coin/Lyx-Scripts/raw/71a15d5d861cf749f8830aba8d948799c089a198/_lib/_Lyx_GUI.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_HOME.lua" type="script" desc="_Lyx_HOME">
