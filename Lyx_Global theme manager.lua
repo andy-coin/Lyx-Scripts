@@ -73,7 +73,9 @@ end
 -- Editors
 ---------------------------------------------------------------------------
 local function color(label, t, k)
+    R.ImGui_PushStyleVar(ctx, R.ImGui_StyleVar_FrameBorderSize(), 2)   -- swatch outline a bit bolder
     local c, v = R.ImGui_ColorEdit3(ctx, label, t[k], R.ImGui_ColorEditFlags_NoInputs())
+    R.ImGui_PopStyleVar(ctx)
     if c then t[k] = v; dirty = true end
 end
 
@@ -124,8 +126,9 @@ local function editors(th)
     G.subtitle(ctx, "Frame")
     color("Colour##frm", th.frame, "color")
     R.ImGui_SameLine(ctx, w); R.ImGui_SetNextItemWidth(ctx, label_room("Border")); slider_int("Border##frm", th.frame, "border", 0, 2)
+end
 
-    R.ImGui_Spacing(ctx)
+local function font_editor(th)
     G.subtitle(ctx, "Font")
     R.ImGui_SetNextItemWidth(ctx, label_room("Name"))
     deferred("font", function(v)
@@ -325,27 +328,45 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
     G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
     G.pin(ctx)
 
-    local th = work.themes[sel]
-    local _, avail_h = R.ImGui_GetContentRegionAvail(ctx)
-    local body_h = avail_h - R.ImGui_GetFrameHeightWithSpacing(ctx) - G.S(8)
+    local th, builtin = work.themes[sel], T.is_builtin(sel)
+    local _, body_h = R.ImGui_GetContentRegionAvail(ctx)
+    local fh, fhs = R.ImGui_GetFrameHeight(ctx), R.ImGui_GetFrameHeightWithSpacing(ctx)
 
-    -- left: list + buttons
+    -- left: list, icon row, Save / Revert
     R.ImGui_BeginGroup(ctx)
-    theme_list(body_h - R.ImGui_GetFrameHeightWithSpacing(ctx) * (confirm_del and 3 or 1))
+    local list_w = list_width()
+    theme_list(body_h - fhs * (confirm_del and 3 or 1) - fh)
     list_buttons()
+    local bw = (list_w - style_x(R.ImGui_StyleVar_ItemSpacing())) / 2
+    R.ImGui_BeginDisabled(ctx, not dirty)
+    if G.button(ctx, "Save", bw) then save() end
+    R.ImGui_SameLine(ctx)
+    if G.button(ctx, "Revert", bw, nil, "plain") then revert() end
+    R.ImGui_EndDisabled(ctx)
     R.ImGui_EndGroup(ctx)
 
-    -- middle: editors
+    -- middle: editors in two tabs, no scrolling
     R.ImGui_SameLine(ctx)
     local avail_w = R.ImGui_GetContentRegionAvail(ctx)
-    if R.ImGui_BeginChild(ctx, "edit", avail_w * 0.58, body_h, R.ImGui_ChildFlags_Borders()) then
-        if T.is_builtin(sel) then
-            G.dim_text(ctx, "Built-in presets are read-only. Duplicate one to make your own.")
+    if R.ImGui_BeginChild(ctx, "edit", avail_w * 0.58, body_h, R.ImGui_ChildFlags_Borders(),
+                          R.ImGui_WindowFlags_NoScrollbar() | R.ImGui_WindowFlags_NoScrollWithMouse()) then
+        if R.ImGui_BeginTabBar(ctx, "edit_tabs") then
+            if R.ImGui_BeginTabItem(ctx, "Colours") then
+                if builtin then G.dim_text(ctx, "Built-in presets are read-only. Duplicate one to make your own.") end
+                R.ImGui_BeginDisabled(ctx, builtin)
+                editors(th)
+                R.ImGui_EndDisabled(ctx)
+                R.ImGui_EndTabItem(ctx)
+            end
+            if R.ImGui_BeginTabItem(ctx, "Font & Layout") then
+                R.ImGui_BeginDisabled(ctx, builtin)
+                font_editor(th)
+                R.ImGui_EndDisabled(ctx)
+                shared()
+                R.ImGui_EndTabItem(ctx)
+            end
+            R.ImGui_EndTabBar(ctx)
         end
-        R.ImGui_BeginDisabled(ctx, T.is_builtin(sel))
-        editors(th)
-        R.ImGui_EndDisabled(ctx)
-        shared()
         R.ImGui_EndChild(ctx)
     end
 
@@ -355,13 +376,6 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
         preview()
         R.ImGui_EndChild(ctx)
     end
-
-    -- footer
-    R.ImGui_BeginDisabled(ctx, not dirty)
-    if G.button(ctx, "Save", G.S(90)) then save() end
-    R.ImGui_SameLine(ctx)
-    if G.button(ctx, "Revert", G.S(90), nil, "plain") then revert() end
-    R.ImGui_EndDisabled(ctx)
 
     -- the manager wears the theme being edited (applied for the next frame)
     G.apply(work.themes[sel])
