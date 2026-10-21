@@ -1474,8 +1474,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_Theme.lua" type="script" desc="_Lyx_Theme">
-      <version name="2026.10.21.0537" author="Lyx" time="2026-10-21T05:37:42Z">
-        <source file="../_lib/_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/b3cf8155d14e376805364689246ee14ec991f062/_lib/_Lyx_Theme.lua</source>
+      <version name="2026.10.21.0545" author="Lyx" time="2026-10-21T05:45:31Z">
+        <source file="../_lib/_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/79434b74957460e0dafac8548cbb88c31ee7bb4d/_lib/_Lyx_Theme.lua</source>
       </version>
     </reapack>
     <reapack name="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua" type="script" desc="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks">
