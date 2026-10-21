@@ -649,8 +649,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Open item editor.lua" type="script" desc="Lyx_Open item editor">
-      <version name="2026.10.21.0807" author="Lyx" time="2026-10-21T08:07:17Z">
-        <source main="main" file="../Lyx_Open item editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f5ca0a147f1cc2559716bcb1f3a82f49820dffc4/Lyx_Open%20item%20editor.lua</source>
+      <version name="2026.10.21.0813" author="Lyx" time="2026-10-21T08:13:00Z">
+        <source main="main" file="../Lyx_Open item editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/32d1c1cd0f1cc307be37ec95598890f4707d6033/Lyx_Open%20item%20editor.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Open item properties, subproject, notes.lua" type="script" desc="Lyx_Open item properties, subproject, notes">
