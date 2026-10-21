@@ -5,7 +5,7 @@
     Middle: colours, button, frame, font, rounding, alpha, spacing, scale.
     Right:  live preview. The manager itself always wears the theme being edited.
     Save writes <REAPER resource>/Data/Lyx/themes.lua; open Lyx GUIs follow within a second.
-    The built-in "Lyx Dark" is read-only: Duplicate it to make your own.
+    The built-in presets (grey rows) are read-only: Duplicate one to make your own.
 ]]
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
@@ -184,7 +184,7 @@ local function list_width()
     local pad, sp = style_x(R.ImGui_StyleVar_FramePadding()), style_x(R.ImGui_StyleVar_ItemSpacing())
     local w = math.max(tw("New") + tw("Duplicate"), tw("Rename") + tw("Delete")) + 4 * pad + sp
     for _, name in ipairs(names()) do
-        local label = T.is_builtin(name) and (name .. "  (built-in)") or name
+        local label = name
         w = math.max(w, R.ImGui_GetFrameHeight(ctx) + sp + tw(label)
             + 2 * style_x(R.ImGui_StyleVar_WindowPadding()) + style_x(R.ImGui_StyleVar_ScrollbarSize()))
     end
@@ -208,8 +208,15 @@ local function theme_list(h)
             rename_buf = buf
             if enter then commit_rename() elseif R.ImGui_IsItemDeactivated(ctx) then renaming = false end
         else
-            local label = T.is_builtin(name) and (name .. "  (built-in)") or name
-            if R.ImGui_Selectable(ctx, label, sel == name) then select_theme(name) end
+            local builtin = T.is_builtin(name)
+            if builtin then   -- built-in preset: grey row
+                local x, y = R.ImGui_GetCursorScreenPos(ctx)
+                local w = R.ImGui_GetContentRegionAvail(ctx)
+                R.ImGui_DrawList_AddRectFilled(R.ImGui_GetWindowDrawList(ctx), x, y, x + w, y + R.ImGui_GetTextLineHeight(ctx),
+                    0x8080802E, style_x(R.ImGui_StyleVar_FrameRounding()))
+            end
+            if R.ImGui_Selectable(ctx, name, sel == name) then select_theme(name) end
+            if builtin then R.ImGui_SetItemTooltip(ctx, "Built-in preset (read-only): Duplicate it to make your own") end
             if R.ImGui_IsItemHovered(ctx) and R.ImGui_IsMouseDoubleClicked(ctx, 0) and not T.is_builtin(name) then
                 renaming, rename_buf, rename_focus = true, name, true
             end
