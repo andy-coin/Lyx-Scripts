@@ -1929,6 +1929,7 @@ local function main()
     pop_theme()
     if inherit then G.pop_theme(ctx) end
 
+    if G.esc() then open = false end -- Lyx_ESC
     if open then
         reaper.defer(main)
     end

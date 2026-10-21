@@ -169,6 +169,14 @@ if _inherit then
   }
 end
 
+-- Lyx_ESC (global Esc action) asks Lyx GUIs to close via this ExtState (see _lib/_Lyx_GUI.lua G.esc)
+local lyx_esc_t = reaper.time_precise()
+local function lyx_esc()
+  reaper.SetExtState("Lyx_GUI", "alive", tostring(reaper.time_precise()), false)
+  local t = tonumber(reaper.GetExtState("Lyx_GUI", "close"))
+  if t and t > lyx_esc_t then lyx_esc_t = t; return true end
+end
+
 -- ==== BEHAVIOR PREFS ====
 local _keep_open = reaper.GetExtState("MB_BussDriver_Prefs", "keep_open") == "true"
 
@@ -1576,6 +1584,7 @@ function defineRoutingOptionsEventHandlers()
   -- Per-frame: live refresh, dirty UI, drag-to-check, right-click menu
   -- We toggle on mousedown ourselves and suppress rtk's click-toggle via overridden toggle()
   o.window.onupdate = function(self)
+    if lyx_esc() then self:close() return end
     local now = reaper.time_precise()
 
     -- Live refresh: check if REAPER track selection changed

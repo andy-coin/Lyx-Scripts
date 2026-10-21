@@ -2850,6 +2850,7 @@ local function loop()
   ImGui.PopStyleColor(ctx, nc)
   ImGui.PopFont(ctx)
 
+  if G.esc() then open = false end -- Lyx_ESC: same as the window's X (asks about unsaved changes)
   if not open and T and T.dirty then
     open_popup("Unsaved changes", { after = function() want_close = true end })
     open = true

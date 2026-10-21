@@ -6672,8 +6672,17 @@
   end
   
   function a_main()end
+  -- Lyx_ESC (global Esc action) asks Lyx GUIs to close via this ExtState (see _lib/_Lyx_GUI.lua G.esc)
+  local lyx_esc_t = reaper.time_precise()
+  local function lyx_esc()
+    reaper.SetExtState("Lyx_GUI", "alive", tostring(reaper.time_precise()), false)
+    local t = tonumber(reaper.GetExtState("Lyx_GUI", "close"))
+    if t and t > lyx_esc_t then lyx_esc_t = t; return true end
+  end
+
   function main()
     if lyx.T and lyx.T.changed() then lyx.load() end -- theme saved in the theme manager
+    if lyx_esc() then gfx.quit() reaper.atexit(exit_states) return end
     lyx.inherit = lyx.flag.inherit
     wrong_list=true
     local act = reaper.GetExtState("Quick Adder", "ACT")

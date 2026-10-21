@@ -68,6 +68,17 @@ function G.poll()
     return false
 end
 
+-- Lyx_ESC (the global Esc action) closes Lyx GUIs by request instead of killing their windows
+-- (killing a ReaImGui window makes its script assert). Call every frame: marks this GUI alive
+-- and returns true once per Esc press made after the script started. Same ExtState in non-ImGui scripts.
+local ESC, handled = "Lyx_GUI", R.time_precise()
+function G.esc()
+    R.SetExtState(ESC, "alive", tostring(R.time_precise()), false)
+    local t = tonumber(R.GetExtState(ESC, "close"))
+    if t and t > handled then handled = t; return true end
+    return false
+end
+
 function G.S(v) return v * G.scale end
 
 -- Pixel font size for a design size (14 = body text), following theme font size and scale.
@@ -325,6 +336,7 @@ function G.run(ctx, title, draw, opts)
             R.ImGui_End(ctx)
         end
         G.pop(ctx)
+        if G.esc() then keep = false end
         if open and keep then
             R.defer(loop)
         elseif opts.on_close then

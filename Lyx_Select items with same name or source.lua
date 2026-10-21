@@ -108,6 +108,7 @@ local function loop()
     end
     if themed then G.pop_theme(ctx) end
     if chosen then Run(chosen) return end
+    if G.esc() then open = false end
     if open then reaper.defer(loop) end
 end
 reaper.defer(loop)
