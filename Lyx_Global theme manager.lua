@@ -165,6 +165,10 @@ local function shared()
 end
 
 local function preview()
+    G.subtitle(ctx, "Preview")
+    G.dim_text(ctx, "Sample widgets showing the theme. They do nothing.")
+    R.ImGui_Separator(ctx)
+    R.ImGui_Spacing(ctx)
     G.title(ctx, "Title")
     G.subtitle(ctx, "Subtitle")
     R.ImGui_TextWrapped(ctx, "Body text looks like this.")

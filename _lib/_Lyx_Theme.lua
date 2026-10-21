@@ -2,7 +2,7 @@
     _Lyx_Theme.lua  —  Lyx global theme storage (pure data, no ImGui).
 
     File: <REAPER resource>/Data/Lyx/themes.lua
-          return { current = "Lyx Lake", ui = { scale, font_size, rounding, alpha, spacing }, themes = { ["Lyx Midnight"] = {...}, ... } }
+          return { current = "Lake", ui = { scale, font_size, rounding, alpha, spacing }, themes = { ["Midnight"] = {...}, ... } }
     ui: size and layout (scale, font size, rounding, alpha, spacing) shared by every theme
     (T.load copies them into each theme), so switching themes only changes colours.
     Colours are 0xRRGGBB integers. The presets in T.PRESETS (Moon, Forest, Lake, City, Midnight, Plain) always exist and are read-only.
@@ -17,9 +17,10 @@ local R = reaper
 local T = {}
 local SECTION = "Lyx_Theme"
 
-T.BUILTIN = "Lyx Midnight"
-local RENAMED = { ["Lyx Dark"] = "Lyx Midnight" } -- old preset names -> new
-T.DEFAULT = "Lyx Lake"   -- theme used when none is chosen yet (or the chosen one was deleted)
+T.BUILTIN = "Midnight"
+local RENAMED = { ["Lyx Dark"] = "Midnight", ["Lyx Midnight"] = "Midnight", ["Lyx Moon"] = "Moon",  -- old preset names -> new
+                  ["Lyx Forest"] = "Forest", ["Lyx Lake"] = "Lake", ["Lyx City"] = "City", ["Lyx Plain"] = "Plain" }
+T.DEFAULT = "Lake"   -- theme used when none is chosen yet (or the chosen one was deleted)
 T.dir  = R.GetResourcePath() .. "/Data/Lyx"
 T.path = T.dir .. "/themes.lua"
 local HERE = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./"):gsub("_lib[/\\]$", "") -- scripts live one folder up
@@ -55,41 +56,41 @@ end
 T.default = T.derive(0x020B17, 0xC1CCDD, 0x6C89C7)
 
 -- Read-only presets shipped with the scripts (colours only; size / layout live in db.ui). Duplicate one to edit it.
-T.PRESETS = { "Lyx Moon", "Lyx Forest", "Lyx Lake", "Lyx City", T.BUILTIN, "Lyx Plain" }
+T.PRESETS = { "Moon", "Forest", "Lake", "City", T.BUILTIN, "Plain" }
 local preset_data = {
     -- Moon / Midnight / City / Plain: taken from Andy's VS Code screenshots
-    ["Lyx Moon"] = {   -- light: cream paper, blue / olive ink, gold accent
+    ["Moon"] = {   -- light: cream paper, blue / olive ink, gold accent
         colors   = { bg = 0xFCF6E5, bg2 = 0xEDE8D7, base = 0xD8D2C4, title = 0x448BCD,
                      subtitle = 0x89972E, accent = 0xC1A44B, text = 0x3C7790 },
         button   = { color = 0xD8D2C4, border = 1 },
         frame    = { color = 0xEDE8D7, border = 1 },
     },
-    ["Lyx Midnight"] = {   -- near-black navy, sand title, soft blue accent
+    ["Midnight"] = {   -- near-black navy, sand title, soft blue accent
         colors   = { bg = 0x020B17, bg2 = 0x071434, base = 0x2E3C5B, title = 0xD8BC8F,
                      subtitle = 0x52A751, accent = 0x6C89C7, text = 0xC1CCDD },
         button   = { color = 0x0F2A67, border = 1 },
         frame    = { color = 0x0D214D, border = 1 },
     },
-    ["Lyx City"] = {   -- denim blue, pastel peach / lilac
-        colors   = { bg = 0x09254E, bg2 = 0x041731, base = 0x0F356A, title = 0xF7C797,
-                     subtitle = 0xE3BEFB, accent = 0x2B6398, text = 0xC1DAFC },
+    ["City"] = {   -- denim blue with neon: hot pink accent, beige title, lilac subtitle
+        colors   = { bg = 0x09254E, bg2 = 0x041731, base = 0x2B6398, title = 0xF7C797,
+                     subtitle = 0xE3BEFB, accent = 0xF2A2A6, text = 0xC1DAFC },
         button   = { color = 0x2B6398, border = 1 },
         frame    = { color = 0x041731, border = 1 },
     },
-    ["Lyx Plain"] = {   -- neutral greys, burnt orange title
+    ["Plain"] = {   -- neutral greys, burnt orange title
         colors   = { bg = 0x1E1E1E, bg2 = 0x282828, base = 0x353535, title = 0xC26C27,
                      subtitle = 0x9DA74C, accent = 0x6889B1, text = 0xD4D4D4 },
         button   = { color = 0x505050, border = 0 },
         frame    = { color = 0x303030, border = 0 },
     },
-    ["Lyx Lake"] = {
+    ["Lake"] = {
         colors   = { bg = 0x0C2C42, bg2 = 0x172B3A, base = 0x195172, title = 0xE1BB48,
                      subtitle = 0x1CD7D5, accent = 0xB5973C, text = 0xE6ECFF },
         button   = { color = 0xA27E11, border = 1 },
         frame    = { color = 0x414B5A, border = 1 },
     },
     -- ReaLauncher (Lyx mod) colours: deep teal ground, olive fill, amber text
-    ["Lyx Forest"] = {
+    ["Forest"] = {
         colors   = { bg = 0x022028, bg2 = 0x03272F, base = 0x3D4A3C, title = 0xE0952A,
                      subtitle = 0xB5A971, accent = 0x79714F, text = 0xE0952A },
         button   = { color = 0x0B3A44, border = 1 },
