@@ -429,8 +429,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Global theme manager.lua" type="script" desc="Lyx_Global theme manager">
-      <version name="2026.10.21.0653" author="Lyx" time="2026-10-21T06:53:22Z">
-        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/386e6c435778a409694dedd22bc2ef81d708c4a0/Lyx_Global%20theme%20manager.lua</source>
+      <version name="2026.10.21.0705" author="Lyx" time="2026-10-21T07:05:12Z">
+        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/9986ae085e5cd784ee9ede08fb6ea0f418c19bcd/Lyx_Global%20theme%20manager.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Glue items or join midi items.lua" type="script" desc="Lyx_Glue items or join midi items">
