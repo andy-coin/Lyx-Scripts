@@ -15,6 +15,9 @@ SKIP = re.compile(r"Test|Temp|^Script-")  # ponytail: name filter, move to a lis
 PRIVATE = {"Lyx_Empty.lua", "Lyx_Add number in drum map.lua", "Lyx_New.lua",
            "Lyx_Track versions alternative-move selected item(s) to comp track.lua"}
 
+# third-party mods in the root folder that are published anyway
+EXTRA = {"Realauncher 2.5.2 (Lyx mod).lua"}
+
 def git(*a): return subprocess.check_output(["git", *a], text=True)
 
 files = [f for f in git("ls-files", "-z").split("\0") if f]
@@ -29,7 +32,7 @@ def pick(f):
     if f.startswith("_lib/") and f.count("/") == 1 and name.startswith("_Lyx_"):
         return ("Main", None)  # library: installed, no action
     if "/" in f: return None
-    if name.startswith("Lyx_"): return ("Main", "main")
+    if name.startswith("Lyx_") or name in EXTRA: return ("Main", "main")
     return None
 
 # Folder tools: one package each, every published file of the folder installed beside the main

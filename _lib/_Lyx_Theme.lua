@@ -3,7 +3,7 @@
 
     File: <REAPER resource>/Data/Lyx/themes.lua
           return { current = "Lyx Lake", themes = { ["Lyx Dark"] = {...}, ... } }
-    Colours are 0xRRGGBB integers. The presets in T.PRESETS ("Lyx Dark", "Lyx Lake") always exist and are read-only.
+    Colours are 0xRRGGBB integers. The presets in T.PRESETS ("Lyx Dark", "Lyx Lake", "Lyx Forest") always exist and are read-only.
     Every T.save() bumps ExtState "Lyx_Theme"/"rev" so running GUIs reload (see T.changed).
 
     usage:
@@ -51,7 +51,7 @@ end
 T.default = T.derive(0x1E1E2E, 0xCDD6F4, 0x89B4FA)
 
 -- Read-only presets shipped with the scripts (T.BUILTIN first). Duplicate one to edit it.
-T.PRESETS = { T.BUILTIN, "Lyx Lake" }
+T.PRESETS = { T.BUILTIN, "Lyx Lake", "Lyx Forest" }
 local preset_data = {
     ["Lyx Lake"] = {
         colors   = { bg = 0x0C2C42, bg2 = 0x172B3A, base = 0x195172, title = 0xE1BB48,
@@ -61,6 +61,16 @@ local preset_data = {
         font     = { name = "", size = 15 },
         rounding = { window = 11, button = 5, frame = 5 },
         alpha = 0.95, spacing = 10, scale = 0.9,
+    },
+    -- ReaLauncher (Lyx mod) colours: deep teal ground, olive fill, amber text
+    ["Lyx Forest"] = {
+        colors   = { bg = 0x022028, bg2 = 0x03272F, base = 0x3D4A3C, title = 0xE0952A,
+                     subtitle = 0xB5A971, accent = 0x79714F, text = 0xE0952A },
+        button   = { color = 0x0B3A44, border = 1 },
+        frame    = { color = 0x03272F, border = 1 },
+        font     = { name = "", size = 15 },
+        rounding = { window = 6, button = 3, frame = 3 },
+        alpha = 1, spacing = 9, scale = 0.9,
     },
 }
 function T.preset(name) return T.fill(preset_data[name] or T.default, name) end
