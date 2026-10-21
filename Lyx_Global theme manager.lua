@@ -1,7 +1,7 @@
 --[[
     Lyx Global theme manager — edit the theme shared by all Lyx GUIs.
 
-    Left:   theme list. Click a name to edit it; the round button picks the theme in use.
+    Left:   theme list. Click a name to use (and edit) it; Save makes it the theme of every Lyx GUI.
     Middle: colours, button, frame, font, rounding, alpha, spacing, scale.
     Right:  live preview. The manager itself always wears the theme being edited.
     Save writes <REAPER resource>/Data/Lyx/themes.lua; open Lyx GUIs follow within a second.
@@ -44,8 +44,10 @@ local function unique(base)
     return n
 end
 
+-- the selected theme is also the one in use (previewed by the manager, applied everywhere on Save)
 local function select_theme(name)
     sel, renaming, confirm_del, pend = name, false, false, {}
+    if work.current ~= name then work.current, dirty = name, true end
 end
 
 local function add_theme(name, th)
@@ -199,7 +201,7 @@ local function list_width()
     local w = math.max(tw("New") + tw("Duplicate"), tw("Rename") + tw("Delete")) + 4 * pad + sp
     for _, name in ipairs(names()) do
         local label = name
-        w = math.max(w, R.ImGui_GetFrameHeight(ctx) + sp + tw(label)
+        w = math.max(w, tw(label)
             + 2 * style_x(R.ImGui_StyleVar_WindowPadding()) + style_x(R.ImGui_StyleVar_ScrollbarSize()))
     end
     return math.max(G.S(200), w)
@@ -209,12 +211,6 @@ local function theme_list(h)
     if not R.ImGui_BeginChild(ctx, "list", list_width(), h, R.ImGui_ChildFlags_Borders()) then return end
     for _, name in ipairs(names()) do
         R.ImGui_PushID(ctx, name)
-        if R.ImGui_RadioButton(ctx, "##use", work.current == name) and work.current ~= name then
-            work.current, dirty = name, true
-            select_theme(name)   -- the manager previews the theme just picked
-        end
-        R.ImGui_SetItemTooltip(ctx, "Use this theme for all Lyx GUIs (after Save)")
-        R.ImGui_SameLine(ctx)
         if renaming and name == sel then
             if rename_focus then R.ImGui_SetKeyboardFocusHere(ctx); rename_focus = false end
             R.ImGui_SetNextItemWidth(ctx, -1)
@@ -277,11 +273,11 @@ end
 
 local function revert()
     work = T.copy(saved)
-    select_theme(work.themes[sel] and sel or work.current)
+    select_theme(work.current)
     dirty, msg = false, nil
 end
 
-G.run(ctx, "Lyx Global Theme", function(ctx)
+G.run(ctx, "Lyx Global Theme Manager", function(ctx)
     -- Esc closes (checked first: a text field cancelled with Esc is still active here)
     if not R.ImGui_IsAnyItemActive(ctx) and R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Escape())
        and R.ImGui_IsWindowFocused(ctx, R.ImGui_FocusedFlags_RootAndChildWindows()) then
