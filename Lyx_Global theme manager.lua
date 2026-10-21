@@ -239,15 +239,15 @@ local function theme_list(h)
 end
 
 -- square button with a drawn glyph: plus, copy, pencil, trash
-local function icon_button(id, tip, glyph, disabled)
+local function icon_button(id, tip, glyph, disabled, w)
     local s = R.ImGui_GetFrameHeight(ctx)
     R.ImGui_BeginDisabled(ctx, disabled)
-    local hit = G.button(ctx, "##" .. id, s, s, "plain")
+    local hit = G.button(ctx, "##" .. id, w, s, "plain")
     R.ImGui_EndDisabled(ctx)
     R.ImGui_SetItemTooltip(ctx, tip)  -- shows on disabled items too
     local x, y = R.ImGui_GetItemRectMin(ctx)
     local dl, c = R.ImGui_GetWindowDrawList(ctx), G.col(disabled and G.dim or G.fg)
-    local cx, cy, r, t = x + s / 2, y + s / 2, s * 0.26, math.max(1, s * 0.07)
+    local cx, cy, r, t = x + w / 2, y + s / 2, s * 0.26, math.max(1, s * 0.07)
     if glyph == "plus" then
         R.ImGui_DrawList_AddLine(dl, cx - r, cy, cx + r, cy, c, t)
         R.ImGui_DrawList_AddLine(dl, cx, cy - r, cx, cy + r, c, t)
@@ -268,17 +268,19 @@ local function icon_button(id, tip, glyph, disabled)
     return hit
 end
 
-local function list_buttons()
+-- four icons sharing the list width
+local function list_buttons(list_w)
     local builtin = T.is_builtin(sel)
-    if icon_button("new", "New theme", "plus") then add_theme(unique("New theme"), T.preset(T.DEFAULT)) end
+    local w = (list_w - 3 * style_x(R.ImGui_StyleVar_ItemSpacing())) / 4
+    if icon_button("new", "New theme", "plus", false, w) then add_theme(unique("New theme"), T.preset(T.DEFAULT)) end
     R.ImGui_SameLine(ctx)
-    if icon_button("dup", "Duplicate \"" .. sel .. "\"", "copy") then add_theme(unique(sel .. " copy"), work.themes[sel]) end
+    if icon_button("dup", "Duplicate \"" .. sel .. "\"", "copy", false, w) then add_theme(unique(sel .. " copy"), work.themes[sel]) end
     R.ImGui_SameLine(ctx)
-    if icon_button("ren", builtin and "Rename (not for built-in presets)" or "Rename (or double-click the name)", "pencil", builtin) then
+    if icon_button("ren", builtin and "Rename (not for built-in presets)" or "Rename (or double-click the name)", "pencil", builtin, w) then
         renaming, rename_buf, rename_focus = true, sel, true
     end
     R.ImGui_SameLine(ctx)
-    if icon_button("del", builtin and "Delete (not for built-in presets)" or "Delete \"" .. sel .. "\"", "trash", builtin) then
+    if icon_button("del", builtin and "Delete (not for built-in presets)" or "Delete \"" .. sel .. "\"", "trash", builtin, w) then
         confirm_del = true
     end
     if confirm_del and not builtin then
@@ -334,9 +336,13 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
 
     -- left: list, icon row, Save / Revert
     R.ImGui_BeginGroup(ctx)
-    local list_w = list_width()
-    theme_list(body_h - fhs * (confirm_del and 3 or 1) - fh)
-    list_buttons()
+    local list_w, y0 = list_width(), R.ImGui_GetCursorPosY(ctx)
+    local _, pad_y = R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_WindowPadding())
+    local confirm_h = confirm_del and (R.ImGui_GetTextLineHeightWithSpacing(ctx) + fhs) or 0
+    -- list + icon row + (delete confirm) + gap (= window padding, same as below Save) + Save row = body_h
+    theme_list(body_h - fhs - confirm_h - pad_y - fh)
+    list_buttons(list_w)
+    R.ImGui_SetCursorPosY(ctx, y0 + body_h - fh)   -- Save / Revert sit on the bottom edge
     local bw = (list_w - style_x(R.ImGui_StyleVar_ItemSpacing())) / 2
     R.ImGui_BeginDisabled(ctx, not dirty)
     if G.button(ctx, "Save", bw) then save() end
@@ -379,4 +385,5 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
 
     -- the manager wears the theme being edited (applied for the next frame)
     G.apply(work.themes[sel])
-end, { w = 900, h = 560, min_w = 640, min_h = 420, esc = false, live = false })
+end, { w = 900, h = 560, min_w = 640, min_h = 420, esc = false, live = false,
+        flags = R.ImGui_WindowFlags_NoCollapse() | R.ImGui_WindowFlags_NoScrollbar() | R.ImGui_WindowFlags_NoScrollWithMouse() })
