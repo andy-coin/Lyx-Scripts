@@ -80,6 +80,17 @@
         return true
     end
 
+    -- true when keyboard focus is inside a ReaImGui window: that script handles Esc itself
+    -- (closes only itself), so the global Esc must not close everything
+    local function imgui_focused()
+        local w = reaper.JS_Window_GetFocus() or reaper.JS_Window_GetForeground()
+        while w do
+            if (reaper.JS_Window_GetClassName(w) or ""):lower():find("imgui", 1, true) then return true end
+            w = reaper.JS_Window_GetParent(w)
+        end
+        return false
+    end
+
     local function WindowKiller()
         local destroy = close_all_fx() or false
         if close_lyx_guis() then destroy = true end
@@ -122,7 +133,10 @@
         log("---- ESC  focus: ["..(reaper.JS_Window_GetTitle(reaper.JS_Window_GetFocus() or main_hwnd) or "").."]",
             " midi editor:", tostring(editor~=nil), " media explorer:", tostring(api.gtc(50124)), " video:", tostring(video~=nil))
         
-        if  r.IsMidiEditorFocus(editor) then 
+        if imgui_focused() then
+            log("  branch: ReaImGui window focused -> leave Esc to that script")
+            return
+        elseif  r.IsMidiEditorFocus(editor) then 
             log("  branch: MIDI editor unselect")
             reaper.MIDIEditor_OnCommand(editor,40214)--midi editor unselect all
             return
