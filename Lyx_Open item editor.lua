@@ -189,15 +189,46 @@
         return m, M, H_scroll_50
     end
 
+    -------------------------------------MEDIA ZOOM (horizontal)-------------------------------------
+    -- New arrange view: as long as the items (bound seconds at most) + 10% each side, placed by:
+    --   1. mouse over one of the items  -> the time under the mouse stays under the mouse
+    --   2. edit cursor inside the items -> the edit cursor stays where it is on screen
+    --   3. otherwise                    -> centred on the items' middle
+    -- Razor edits: exactly the razor range.
+    local function MediaView(itemz)
+        if  razor then return razorMap.min, razorMap.max end
+        local m, M = math.huge, -math.huge
+        for i = 1, #itemz do
+            local pos = reaper.GetMediaItemInfo_Value(itemz[i], "D_POSITION")
+            m = math.min(m, pos)
+            M = math.max(M, pos + reaper.GetMediaItemInfo_Value(itemz[i], "D_LENGTH"))
+        end
+        local len = M - m
+        if  midi_editor.bound_limit and len > midi_editor.bound then len = midi_editor.bound end
+        len = math.max(2, len * 1.2)
+
+        local s0, e0 = reaper.BR_GetArrangeView(0)
+        local function frac(t) -- where t sits on screen now, 0..1 (centre when off screen)
+            local f = (t - s0) / (e0 - s0)
+            return (f >= 0 and f <= 1) and f or 0.5
+        end
+        reaper.BR_GetMouseCursorContext()
+        local mouse_item, mouse = reaper.BR_GetMouseCursorContext_Item(), reaper.BR_GetMouseCursorContext_Position()
+        local cur = reaper.GetCursorPosition()
+        local anchor, f
+        for i = 1, #itemz do if itemz[i] == mouse_item then anchor = mouse end end
+        if      anchor           then f = frac(anchor)
+        elseif  cur >= m and cur <= M then anchor, f = cur, frac(cur)
+        else    anchor, f = (m + M) / 2, 0.5 end
+        local s = anchor - f * len
+        return s, s + len
+    end
+
     -------------------------------------MEDIA ZOOM-------------------------------------
-    local function ZoomMedia(itemz)
+    -- m, M: new horizontal view from MediaView, measured on the view the user was looking at
+    local function ZoomMedia(itemz, m, M)
 
         local first_tr,last_tr,first_ip,last_ip,target_trs,target,multi_lanes
-        local m, M, H_scroll_50 = ZoomRange(itemz)
-        local zoom_offset = 1.1
-        if  not razor then
-            m, M = m - (M-m)*(zoom_offset - 1), M + (M-m)*(zoom_offset - 1)
-        end
 
         reaper.Main_OnCommand(40297,0)--unselect all tracks
 
@@ -242,14 +273,7 @@
         reaper.CSurf_OnScroll(0,1)
         reaper.CSurf_OnScroll(0,-1)
 
-        if  M-m < 2 then
-            local center = (M+m)/2
-            reaper.BR_SetArrangeView(0,center-1,center+1)
-        else
-            reaper.BR_SetArrangeView(0,m,M)
-        end
-
-        if  H_scroll_50 then api.cmd(api.name('_SWS_HSCROLL50'),0) end
+        reaper.BR_SetArrangeView(0,m,M)
     end
 
     -------------------------------------OPEN MIDI EDITOR-------------------------------------
@@ -337,10 +361,11 @@
             st.branch = "midi"
             if OpenMidi(itemz) then api.cmd(api.name('_SN_FOCUS_MIDI_EDITOR'),0) end--focus MIDI Editor
         else
+            local m, M = MediaView(itemz) -- from the view on screen now, before any restore
             CloseEditor()
             if st.branch then RestoreView(st.view) end -- already zoomed on other items: start from the original view
             st.branch = "media"
-            ZoomMedia(itemz)
+            ZoomMedia(itemz, m, M)
         end
 
         st.items = guids
