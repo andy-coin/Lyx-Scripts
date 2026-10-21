@@ -21,6 +21,7 @@ T.DEFAULT = "Lyx Lake"   -- theme used when none is chosen yet (or the chosen on
 T.dir  = R.GetResourcePath() .. "/Data/Lyx"
 T.path = T.dir .. "/themes.lua"
 local HERE = (debug.getinfo(1, "S").source:match("@?(.*[/\\])") or "./"):gsub("_lib[/\\]$", "") -- scripts live one folder up
+repeat local n; HERE, n = HERE:gsub("[^/\\]+[/\\]%.%.[/\\]", "", 1) until n == 0 -- "X/../" -> "", so the Action List sees one path
 
 function T.mix(a, b, t)
     local function ch(x, s) return (x >> s) & 0xFF end
