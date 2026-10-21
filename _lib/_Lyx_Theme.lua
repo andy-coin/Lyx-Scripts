@@ -2,8 +2,8 @@
     _Lyx_Theme.lua  —  Lyx global theme storage (pure data, no ImGui).
 
     File: <REAPER resource>/Data/Lyx/themes.lua
-          return { current = "Lyx Lake", themes = { ["Lyx Dark"] = {...}, ... } }
-    Colours are 0xRRGGBB integers. The presets in T.PRESETS ("Lyx Dark", "Lyx Lake", "Lyx Forest") always exist and are read-only.
+          return { current = "Lyx Lake", themes = { ["Lyx Midnight"] = {...}, ... } }
+    Colours are 0xRRGGBB integers. The presets in T.PRESETS (Moon, Forest, Lake, City, Midnight, Plain) always exist and are read-only.
     Every T.save() bumps ExtState "Lyx_Theme"/"rev" so running GUIs reload (see T.changed).
 
     usage:
@@ -15,7 +15,8 @@ local R = reaper
 local T = {}
 local SECTION = "Lyx_Theme"
 
-T.BUILTIN = "Lyx Dark"
+T.BUILTIN = "Lyx Midnight"
+local RENAMED = { ["Lyx Dark"] = "Lyx Midnight" } -- old preset names -> new
 T.DEFAULT = "Lyx Lake"   -- theme used when none is chosen yet (or the chosen one was deleted)
 T.dir  = R.GetResourcePath() .. "/Data/Lyx"
 T.path = T.dir .. "/themes.lua"
@@ -48,11 +49,48 @@ function T.derive(bg, fg, accent, scale)
     }
 end
 
-T.default = T.derive(0x1E1E2E, 0xCDD6F4, 0x89B4FA)
+T.default = T.derive(0x020B17, 0xC1CCDD, 0x6C89C7)
 
--- Read-only presets shipped with the scripts (T.BUILTIN first). Duplicate one to edit it.
-T.PRESETS = { T.BUILTIN, "Lyx Lake", "Lyx Forest" }
+-- Read-only presets shipped with the scripts. Duplicate one to edit it.
+T.PRESETS = { "Lyx Moon", "Lyx Forest", "Lyx Lake", "Lyx City", T.BUILTIN, "Lyx Plain" }
 local preset_data = {
+    -- Moon / Midnight / City / Plain: taken from Andy's VS Code screenshots
+    ["Lyx Moon"] = {   -- light: cream paper, blue / olive ink, gold accent
+        colors   = { bg = 0xFCF6E5, bg2 = 0xEDE8D7, base = 0xD8D2C4, title = 0x448BCD,
+                     subtitle = 0x89972E, accent = 0xC1A44B, text = 0x3C7790 },
+        button   = { color = 0xD8D2C4, border = 1 },
+        frame    = { color = 0xEDE8D7, border = 1 },
+        font     = { name = "", size = 15 },
+        rounding = { window = 6, button = 3, frame = 3 },
+        alpha = 1, spacing = 9, scale = 0.9,
+    },
+    ["Lyx Midnight"] = {   -- near-black navy, sand title, soft blue accent
+        colors   = { bg = 0x020B17, bg2 = 0x071434, base = 0x2E3C5B, title = 0xD8BC8F,
+                     subtitle = 0x52A751, accent = 0x6C89C7, text = 0xC1CCDD },
+        button   = { color = 0x0F2A67, border = 1 },
+        frame    = { color = 0x0D214D, border = 1 },
+        font     = { name = "", size = 14 },
+        rounding = { window = 8, button = 6, frame = 6 },
+        alpha = 1, spacing = 8, scale = 1,
+    },
+    ["Lyx City"] = {   -- denim blue, pastel peach / lilac
+        colors   = { bg = 0x09254E, bg2 = 0x041731, base = 0x0F356A, title = 0xF7C797,
+                     subtitle = 0xE3BEFB, accent = 0x2B6398, text = 0xC1DAFC },
+        button   = { color = 0x2B6398, border = 1 },
+        frame    = { color = 0x041731, border = 1 },
+        font     = { name = "", size = 15 },
+        rounding = { window = 6, button = 3, frame = 3 },
+        alpha = 1, spacing = 9, scale = 0.9,
+    },
+    ["Lyx Plain"] = {   -- neutral greys, burnt orange title
+        colors   = { bg = 0x1E1E1E, bg2 = 0x282828, base = 0x353535, title = 0xC26C27,
+                     subtitle = 0x9DA74C, accent = 0x6889B1, text = 0xD4D4D4 },
+        button   = { color = 0x505050, border = 0 },
+        frame    = { color = 0x303030, border = 0 },
+        font     = { name = "", size = 15 },
+        rounding = { window = 6, button = 3, frame = 3 },
+        alpha = 1, spacing = 9, scale = 0.9,
+    },
     ["Lyx Lake"] = {
         colors   = { bg = 0x0C2C42, bg2 = 0x172B3A, base = 0x195172, title = 0xE1BB48,
                      subtitle = 0x1CD7D5, accent = 0xB5973C, text = 0xE6ECFF },
@@ -137,9 +175,9 @@ function T.load()
     local out = { current = T.DEFAULT, themes = {} }
     if db and type(db.themes) == "table" then
         for name, th in pairs(db.themes) do
-            if type(name) == "string" and name ~= "" then out.themes[name] = T.fill(th, name) end
+            if type(name) == "string" and name ~= "" and not RENAMED[name] then out.themes[name] = T.fill(th, name) end
         end
-        if type(db.current) == "string" then out.current = db.current end
+        if type(db.current) == "string" then out.current = RENAMED[db.current] or db.current end
     end
     add_presets(out.themes)
     if not out.themes[out.current] then out.current = T.DEFAULT end
