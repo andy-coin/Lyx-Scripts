@@ -653,130 +653,8 @@
   ----------------------------
   -- Locate in Explorer/Finder
   ----------------------------
-  function ShowLocation_RecentProject()
-    if GetMainListSize() > 0 then
-    local vals = GetSelectionTable(GUI.Val("tab_recentProjects_listbox"))
-    if #vals == 0 then MsgStatusBar("No files selected in list")
-      else
-        for p = 1, #vals do
-          if FilterActive.RecentProjects then reaper.CF_LocateInExplorer(RecentProjects.filteredItems[vals[p]].path) 
-          else reaper.CF_LocateInExplorer(RecentProjects.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_ProjectTemplates()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_projectTemplates_listbox"))
-      if #vals == 0 then reaper.CF_LocateInExplorer(projectTemplatePath)
-      else
-       for p = 1, #vals do
-          if FilterActive.ProjectTemplates then reaper.CF_LocateInExplorer(ProjectTemplates.filteredItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(ProjectTemplates.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_TrackTemplates()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_trackTemplates_listbox"))
-      if #vals == 0 then reaper.CF_LocateInExplorer(trackTemplatePath)
-      else
-        for p = 1, #vals do
-          if FilterActive.TrackTemplates then reaper.CF_LocateInExplorer(TrackTemplates.filteredItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(TrackTemplates.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_CustomProject()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_customProjects_listbox"))
-      if #vals == 0 then
-        if GUI.Val("paths_txtCustomProjectsPath") == "" then MsgStatusBar("No files selected in list")
-        else reaper.CF_LocateInExplorer(GUI.Val("paths_txtCustomProjectsPath")) end
-      else
-        for p = 1, #vals do
-          if FilterActive.CustomProjects then reaper.CF_LocateInExplorer(CustomProjects.filteredItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(CustomProjects.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_ProjectList()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_projectLists_listboxProjects"))
-      if #vals == 0 then
-        if GUI.Val("paths_txtProjectsListsPath") == "" then MsgStatusBar("No files selected in list")
-        else reaper.CF_LocateInExplorer(GUI.Val("paths_txtProjectsListsPath")) end
-      else
-        for p = 1, #vals do
-          if FilterActive.ProjectLists then reaper.CF_LocateInExplorer(ProjectLists.filteredProjectItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(ProjectLists.projectItems[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_Backups()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_backups_listbox"))
-      if #vals == 0 then
-        if GUI.Val("paths_txtBackupsPath") == "" then MsgStatusBar("No files selected in list")
-        else reaper.CF_LocateInExplorer(GUI.Val("paths_txtBackupsPath")) end
-      else
-        for p = 1, #vals do
-          if FilterActive.Backups then reaper.CF_LocateInExplorer(Backups.filteredItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(Backups.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_Docs()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_docs_listbox"))
-      if #vals == 0 then
-        if GUI.Val("paths_txtDocsPath") == "" then MsgStatusBar("No files selected in list")
-        else reaper.CF_LocateInExplorer(GUI.Val("paths_txtDocsPath")) end
-      else
-        for p = 1, #vals do
-          if FilterActive.Docs then reaper.CF_LocateInExplorer(Docs.filteredItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(Docs.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
-  function ShowLocation_Favorites()
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_favorites_listbox"))
-      if #vals == 0 then MsgStatusBar("No files selected in list")
-      else
-        for p = 1, #vals do
-          if FilterActive.Favorites then reaper.CF_LocateInExplorer(Favorites.filteredItems[vals[p]].path)
-          else reaper.CF_LocateInExplorer(Favorites.items[vals[p]].path) end
-        end
-      end
-    end
-  end
-  
   local function Global_OpenInExplorer()
-    if SWSinstalled then
-      if GUI.elms.main_tabs.state == TabID.RecentProjects then ShowLocation_RecentProject()
-        elseif GUI.elms.main_tabs.state == TabID.ProjectTemplates then ShowLocation_ProjectTemplates()
-        elseif GUI.elms.main_tabs.state == TabID.TrackTemplates then ShowLocation_TrackTemplates()
-        elseif GUI.elms.main_tabs.state == TabID.CustomProjects then ShowLocation_CustomProject()
-        elseif GUI.elms.main_tabs.state == TabID.ProjectLists then ShowLocation_ProjectList()
-        elseif GUI.elms.main_tabs.state == TabID.Backups then ShowLocation_Backups()
-        elseif GUI.elms.main_tabs.state == TabID.Docs then ShowLocation_Docs()
-        elseif GUI.elms.main_tabs.state == TabID.Favorites then ShowLocation_Favorites()
-      end
-    end
+    if SWSinstalled then RL_ShowLocation(GUI.elms.main_tabs.state) end -- see 'Locate in Explorer/Finder' below ListTabs
   end
   
   -----------------------------
@@ -877,6 +755,32 @@
     if content == nil then return nil end
     if FilterActive[spec.filter] then return content[spec.filteredItems or "filteredItems"], content, spec end
     return content[spec.items or "items"], content, spec
+  end
+
+  -- Locate in Explorer/Finder: the selected entries, or the tab's folder when nothing is selected
+  -- (Lyx mod: replaces 8 identical per-tab copies)
+  local LocateFolder = {
+    [2] = function() return projectTemplatePath end,
+    [3] = function() return trackTemplatePath end,
+    [4] = function() return GUI.Val("paths_txtCustomProjectsPath") end,
+    [5] = function() return GUI.Val("paths_txtProjectsListsPath") end,
+    [6] = function() return GUI.Val("paths_txtBackupsPath") end,
+    [7] = function() return GUI.Val("paths_txtDocsPath") end
+  }
+
+  function RL_ShowLocation(tabIndex)
+    local spec = ListTabs[tabIndex]
+    if spec == nil or GetMainListSize() == 0 then return end
+    local items = GetTabItems(tabIndex) or {}
+    local vals = GetSelectionTable(GUI.Val(spec.listbox))
+    if #vals == 0 then
+      local folder = LocateFolder[tabIndex] and LocateFolder[tabIndex]()
+      if IsNotNullOrEmpty(folder) then reaper.CF_LocateInExplorer(folder) else MsgStatusBar("No files selected in list") end
+      return
+    end
+    for p = 1, #vals do
+      if items[vals[p]] then reaper.CF_LocateInExplorer(items[vals[p]].path) end
+    end
   end
 
   -- pinned entries first, then: [date | ] name or shortened path
@@ -1939,21 +1843,18 @@
   ----------------------------------
   -- Recent project button functions
   ----------------------------------
-  local function Load_RecentProject_Base(tabmode)
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_recentProjects_listbox"))
-      -- snapshot paths up front so the deferred load doesn't depend on GUI/listbox state
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.RecentProjects then pathsToLoad[p] = RecentProjects.filteredItems[vals[p]].path
-        else pathsToLoad[p] = RecentProjects.items[vals[p]].path end
-      end
-      GUI.Val("tab_recentProjects_listbox",{})
-      Global_CloseOrDefer(function()
-        for p = 1, #pathsToLoad do Global_Load(tabmode, pathsToLoad[p], p) end
-      end)
-    end
+  -- Lyx mod: one loader for the project lists (Recent, Projects, Project Lists, Backups).
+  -- The paths are snapshot first, so the deferred load doesn't depend on GUI/listbox state.
+  local function Load_Projects_Base(tabIndex, tabmode)
+    if GetMainListSize() == 0 then return end
+    local pathsToLoad = Pins.GetSelectedPaths(tabIndex)
+    GUI.Val(ListTabs[tabIndex].listbox, {})
+    Global_CloseOrDefer(function()
+      for p = 1, #pathsToLoad do Global_Load(tabmode, pathsToLoad[p], p) end
+    end)
   end
+
+  local function Load_RecentProject_Base(tabmode) Load_Projects_Base(TabID.RecentProjects, tabmode) end
   
   local function Load_RecentProject()
     Load_RecentProject_Base(false)
@@ -2042,20 +1943,7 @@
   ----------------------------------
   -- Custom project button functions
   ----------------------------------
-  local function Load_CustomProject_Base(tabmode)
-    if GetMainListSize()> 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_customProjects_listbox"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.CustomProjects then pathsToLoad[p] = CustomProjects.filteredItems[vals[p]].path
-        else pathsToLoad[p] = CustomProjects.items[vals[p]].path end
-      end
-      GUI.Val("tab_customProjects_listbox",{})
-      Global_CloseOrDefer(function()
-        for p = 1, #pathsToLoad do Global_Load(tabmode, pathsToLoad[p], p) end
-      end)
-    end
-  end
+  local function Load_CustomProject_Base(tabmode) Load_Projects_Base(TabID.CustomProjects, tabmode) end
   
   local function Load_CustomProject()
     Load_CustomProject_Base(false)
@@ -2070,12 +1958,7 @@
   ---------------------------
   local function Load_ProjectTemplate_Base(tabmode)
     if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_projectTemplates_listbox"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.ProjectTemplates then pathsToLoad[p] = ProjectTemplates.filteredItems[vals[p]].path
-        else pathsToLoad[p] = ProjectTemplates.items[vals[p]].path end
-      end
+      local pathsToLoad = Pins.GetSelectedPaths(TabID.ProjectTemplates)
       GUI.Val("tab_projectTemplates_listbox",{})
       Global_CloseOrDefer(function()
         for p = 1, #pathsToLoad do
@@ -2104,12 +1987,7 @@
   ----------------------------------
   local function Load_TrackTemplate_Base(tabmode)
     if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_trackTemplates_listbox"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.TrackTemplates then pathsToLoad[p] = TrackTemplates.filteredItems[vals[p]].path
-        else pathsToLoad[p] = TrackTemplates.items[vals[p]].path end
-      end
+      local pathsToLoad = Pins.GetSelectedPaths(TabID.TrackTemplates)
       Global_CloseOrDefer(function()
         for p = 1, #pathsToLoad do
           local selectedTrackTemplate = pathsToLoad[p]
@@ -2134,20 +2012,7 @@
   --------------------------------
   -- Project List button functions
   --------------------------------
-  local function Load_ProjectListProject_Base(tabmode)
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_projectLists_listboxProjects"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.ProjectLists then pathsToLoad[p] = RemoveWhiteSpaces(ProjectLists.filteredProjectItems[vals[p]].path)
-        else pathsToLoad[p] = RemoveWhiteSpaces(ProjectLists.projectItems[vals[p]].path) end
-      end
-      GUI.Val("tab_projectLists_listboxProjects",{})
-      Global_CloseOrDefer(function()
-        for p = 1, #pathsToLoad do Global_Load(tabmode, pathsToLoad[p], p) end
-      end)
-    end
-  end
+  local function Load_ProjectListProject_Base(tabmode) Load_Projects_Base(TabID.ProjectLists, tabmode) end
   
   local function Load_ProjectListProject()
     Load_ProjectListProject_Base(false)
@@ -2160,20 +2025,7 @@
   ---------------------------------
   --- Backups List button functions
   ---------------------------------
-  local function Load_BackupFile_Base(tabmode)
-    if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_backups_listbox"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.Backups then pathsToLoad[p] = RemoveWhiteSpaces(Backups.filteredItems[vals[p]].path)
-        else pathsToLoad[p] = RemoveWhiteSpaces(Backups.items[vals[p]].path) end
-      end
-      GUI.Val("tab_backups_listbox",{})
-      Global_CloseOrDefer(function()
-        for p = 1, #pathsToLoad do Global_Load(tabmode, pathsToLoad[p], p) end
-      end)
-    end
-  end
+  local function Load_BackupFile_Base(tabmode) Load_Projects_Base(TabID.Backups, tabmode) end
   
   local function Load_BackupFile()
     Load_BackupFile_Base(false)
@@ -2257,366 +2109,68 @@
     return searchTable
   end
   
-  -------------------------
-  -- Filter Recent Projects
-  -------------------------
-  function Filter_RecentProject_Apply()
-    RecentProjects.filteredItems, RecentProjects.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_recentProjects_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.RecentProjects = true
-      GUI.elms.tab_recentProjects_txtFilter.color, GUI.elms.tab_recentProjects_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-  
-      if #RecentProjects.display > 0 then searchList = RecentProjects.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(RecentProjects.items) else searchList = GetSubTableByNameKey(RecentProjects.items) end end
-  
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
+  ----------------------------
+  -- List filter (all list tabs)
+  ----------------------------
+  -- One implementation for every tab (Lyx mod: replaces 8 identical copies). Entries matching any
+  -- of the space-separated words are listed, searched in the displayed text (name or path, date).
+  function RL_Filter_Apply(tabIndex)
+    local spec = ListTabs[tabIndex]
+    local content = spec and _G[spec.content]
+    if content == nil then return end
+    local itemsKey, filteredKey = spec.items or "items", spec.filteredItems or "filteredItems"
+    local prefix = spec.listbox:match("^(tab_[^_]+)_")
+    local items, filtered = content[itemsKey] or {}, {}
+    content[filteredKey], content.filteredDisplay = filtered, {}
+
+    local searchStr = GUI.Val(prefix .. "_txtFilter") or ""
+    FilterActive[spec.filter] = #searchStr > 0
+    local col = FilterActive[spec.filter] and FilterColor.active or FilterColor.inactive
+    GUI.elms[prefix .. "_txtFilter"].color, GUI.elms[prefix .. "_btnFilterClear"].col_txt = col, col
+
+    if FilterActive[spec.filter] then
+      local searchList = content.display
+      if searchList == nil or #searchList == 0 then
+        searchList = RL.showFullPaths and GetSubTableByPathKey(items) or GetSubTableByNameKey(items)
+      end
+      local seen = {}
+      for _, term in ipairs(GetSearchTable(searchStr)) do
         for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(RecentProjects.filteredItems), RecentProjects.items[i].path) then
-              RecentProjects.filteredItems[#RecentProjects.filteredItems + 1] = {
-                name = RecentProjects.items[i].name,
-                path = RecentProjects.items[i].path,
-                date = GetLastModifiedDate(RecentProjects.items[i].path)
-              }
-            end
+          local item = items[i]
+          if item and not seen[item.path] and string.find(searchList[i], term) then
+            seen[item.path] = true
+            filtered[#filtered + 1] = { name = item.name, path = item.path, date = GetLastModifiedDate(item.path) }
           end
         end
       end
-    else
-      FilterActive.RecentProjects = false
-      GUI.elms.tab_recentProjects_txtFilter.color, GUI.elms.tab_recentProjects_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
     end
-    
+
     Global_UpdateListDisplay()
     ShowFileCount()
-    GUI.Val("tab_recentProjects_listbox",{})
+    GUI.Val(spec.listbox, {})
     ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
   end
-  
-  function Filter_RecentProject_Clear()
-    GUI.Val("tab_recentProjects_txtFilter", "")
-    Filter_RecentProject_Apply()
+
+  function RL_Filter_Clear(tabIndex)
+    local spec = ListTabs[tabIndex]
+    if spec == nil then return end
+    GUI.Val(spec.listbox:match("^(tab_[^_]+)_") .. "_txtFilter", "")
+    RL_Filter_Apply(tabIndex)
   end
-  
-  ---------------------------
-  -- Filter Project Templates
-  ---------------------------
-  function Filter_ProjectTemplate_Apply()
-    ProjectTemplates.filteredItems, ProjectTemplates.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_projectTemplates_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.ProjectTemplates = true
-      GUI.elms.tab_projectTemplates_txtFilter.color, GUI.elms.tab_projectTemplates_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-      
-      if #ProjectTemplates.display > 0 then searchList = ProjectTemplates.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(ProjectTemplates.items) else searchList = GetSubTableByNameKey(ProjectTemplates.items) end end
-      
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(ProjectTemplates.filteredItems), ProjectTemplates.items[i].path) then
-              ProjectTemplates.filteredItems[#ProjectTemplates.filteredItems + 1] = {
-                name = ProjectTemplates.items[i].name,
-                path = ProjectTemplates.items[i].path,
-                date = GetLastModifiedDate(ProjectTemplates.items[i].path)
-              }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.ProjectTemplates = false
-      GUI.elms.tab_projectTemplates_txtFilter.color, GUI.elms.tab_projectTemplates_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_projectTemplates_listbox",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
+
+  -- the original per-tab names are still used by buttons, textboxes and other functions
+  for name, tabIndex in pairs({ RecentProject = 1, ProjectTemplate = 2, TrackTemplate = 3, CustomProjects = 4,
+                                ProjectLists = 5, Backups = 6, Docs = 7, Favorites = 8 }) do
+    _G["Filter_" .. name .. "_Apply"] = function() RL_Filter_Apply(tabIndex) end
+    _G["Filter_" .. name .. "_Clear"] = function() RL_Filter_Clear(tabIndex) end
   end
-  
-  function Filter_ProjectTemplate_Clear()
-    GUI.Val("tab_projectTemplates_txtFilter", "")
-    Filter_ProjectTemplate_Apply()
-  end
-  
-  -------------------------
-  -- Filter Track Templates
-  -------------------------
-  function Filter_TrackTemplate_Apply()
-    TrackTemplates.filteredItems, TrackTemplates.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_trackTemplates_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.TrackTemplates = true
-      GUI.elms.tab_trackTemplates_txtFilter.color, GUI.elms.tab_trackTemplates_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-  
-      if #TrackTemplates.display > 0 then searchList = TrackTemplates.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(TrackTemplates.items) else searchList = GetSubTableByNameKey(TrackTemplates.items) end end
-      
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(TrackTemplates.filteredItems), TrackTemplates.items[i].path) then
-              TrackTemplates.filteredItems[#TrackTemplates.filteredItems + 1] = {
-                name = TrackTemplates.items[i].name,
-                path = TrackTemplates.items[i].path,
-                date = GetLastModifiedDate(TrackTemplates.items[i].path)
-              }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.TrackTemplates = false
-      GUI.elms.tab_trackTemplates_txtFilter.color, GUI.elms.tab_trackTemplates_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_trackTemplates_listbox",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
-  end
-  
-  function Filter_TrackTemplate_Clear()
-    GUI.Val("tab_trackTemplates_txtFilter", "")
-    Filter_TrackTemplate_Apply()
-  end
-  
-  ------------------
-  -- Filter Projects
-  ------------------
-  function Filter_CustomProjects_Apply()
-    CustomProjects.filteredItems, CustomProjects.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_customProjects_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.CustomProjects = true
-      GUI.elms.tab_customProjects_txtFilter.color, GUI.elms.tab_customProjects_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-  
-      if #CustomProjects.display > 0 then searchList = CustomProjects.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(CustomProjects.items) else searchList = GetSubTableByNameKey(CustomProjects.items) end end
-      
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(CustomProjects.filteredItems), CustomProjects.items[i].path) then
-              CustomProjects.filteredItems[#CustomProjects.filteredItems + 1] = {
-                name = CustomProjects.items[i].name,
-                path = CustomProjects.items[i].path,
-                date = GetLastModifiedDate(CustomProjects.items[i].path)
-              }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.CustomProjects = false
-      GUI.elms.tab_customProjects_txtFilter.color, GUI.elms.tab_customProjects_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_customProjects_listbox",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
-  end
-  
-  function Filter_CustomProjects_Clear()
-    GUI.Val("tab_customProjects_txtFilter", "")
-    Filter_CustomProjects_Apply()
-  end
-  
-  -----------------------
-  -- Filter Project Lists
-  -----------------------
-  function Filter_ProjectLists_Apply()
-    ProjectLists.filteredProjectItems, ProjectLists.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_projectLists_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.ProjectLists = true
-      GUI.elms.tab_projectLists_txtFilter.color, GUI.elms.tab_projectLists_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-      
-      if #ProjectLists.display > 0 then searchList = ProjectLists.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(ProjectLists.projectItems) else searchList = GetSubTableByNameKey(ProjectLists.projectItems) end end
-      
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(ProjectLists.filteredProjectItems), ProjectLists.projectItems[i].path) then
-              ProjectLists.filteredProjectItems[#ProjectLists.filteredProjectItems + 1] = {
-                name = ProjectLists.projectItems[i].name,
-                path = ProjectLists.projectItems[i].path,
-                date = GetLastModifiedDate(ProjectLists.projectItems[i].path) }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.ProjectLists = false
-      GUI.elms.tab_projectLists_txtFilter.color, GUI.elms.tab_projectLists_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_projectLists_listboxProjects",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
-  end
-  
-  function Filter_ProjectLists_Clear()
-    GUI.Val("tab_projectLists_txtFilter", "")
-    Filter_ProjectLists_Apply()
-  end
-  
-  -----------------
-  -- Filter Backups
-  -----------------
-  function Filter_Backups_Apply()
-    Backups.filteredItems, Backups.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_backups_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.Backups = true
-      GUI.elms.tab_backups_txtFilter.color, GUI.elms.tab_backups_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-  
-      if #Backups.display > 0 then searchList = Backups.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(Backups.items) else searchList = GetSubTableByNameKey(Backups.items) end end
-  
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(Backups.filteredItems), Backups.items[i].path) then
-              Backups.filteredItems[#Backups.filteredItems + 1] = {
-                name = Backups.items[i].name,
-                path = Backups.items[i].path,
-                date = GetLastModifiedDate(Backups.items[i].path)
-              }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.Backups = false
-      GUI.elms.tab_backups_txtFilter.color, GUI.elms.tab_backups_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_backups_listbox",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
-  end
-  
-  function Filter_Backups_Clear()
-    GUI.Val("tab_backups_txtFilter", "")
-    Filter_Backups_Apply()
-  end
-  
-  --------------
-  -- Filter Docs
-  --------------
-  function Filter_Docs_Apply()
-    Docs.filteredItems, Docs.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_docs_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.Docs = true
-      GUI.elms.tab_docs_txtFilter.color, GUI.elms.tab_docs_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-  
-      if #Docs.display > 0 then searchList = Docs.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(Docs.items) else searchList = GetSubTableByNameKey(Docs.items) end end
-      
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(Docs.filteredItems), Docs.items[i].path) then
-              Docs.filteredItems[#Docs.filteredItems + 1] = {
-                name = Docs.items[i].name,
-                path = Docs.items[i].path,
-                date = GetLastModifiedDate(Docs.items[i].path)
-              }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.Docs = false
-      GUI.elms.tab_docs_txtFilter.color, GUI.elms.tab_docs_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_docs_listbox",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
-  end
-  
-  function Filter_Docs_Clear()
-    GUI.Val("tab_docs_txtFilter", "")
-    Filter_Docs_Apply()
-  end
-  
-  -------------------
-  -- Filter Favorites
-  -------------------
-  function Filter_Favorites_Apply()
-    Favorites.filteredItems, Favorites.filteredDisplay = {}, {}
-    local searchList, searchStr = {}, GUI.Val("tab_favorites_txtFilter")
-    if #searchStr > 0 then
-      FilterActive.Favorites = true
-      GUI.elms.tab_favorites_txtFilter.color, GUI.elms.tab_favorites_btnFilterClear.col_txt = FilterColor.active, FilterColor.active
-      
-      if #Favorites.display > 0 then searchList = Favorites.display
-      else if RL.showFullPaths then searchList = GetSubTableByPathKey(Favorites.items) else searchList = GetSubTableByNameKey(Favorites.items) end end
-      
-      local searchterms = GetSearchTable(searchStr)
-      for t = 1, #searchterms do
-        for i = 1, #searchList do
-          if string.find(searchList[i], searchterms[t]) then
-            if not CheckForDuplicates(GetSubTableByPathKey(Favorites.filteredItems), Favorites.items[i].path) then
-              Favorites.filteredItems[#Favorites.filteredItems + 1] = {
-                name = Favorites.items[i].name,
-                path = Favorites.items[i].path,
-                date = GetLastModifiedDate(Favorites.items[i].path)
-              }
-            end
-          end
-        end
-      end
-    else
-      FilterActive.Favorites = false
-      GUI.elms.tab_favorites_txtFilter.color, GUI.elms.tab_favorites_btnFilterClear.col_txt = FilterColor.inactive, FilterColor.inactive
-    end
-    Global_UpdateListDisplay()
-    ShowFileCount()
-    GUI.Val("tab_favorites_listbox",{})
-    ScrollToTop(ListBoxElements[GUI.elms.main_tabs.state])
-  end
-  
-  function Filter_Favorites_Clear()
-    GUI.Val("tab_favorites_txtFilter", "")
-    Filter_Favorites_Apply()
-  end
-  
+
   function Global_UpdateFilter()
-    if not RL.skipOperationOnResize then 
-      if GUI.elms.main_tabs.state == TabID.RecentProjects then Filter_RecentProject_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.ProjectTemplates then Filter_ProjectTemplate_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.TrackTemplates then Filter_TrackTemplate_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.CustomProjects then Filter_CustomProjects_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.ProjectLists then Filter_ProjectLists_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.Backups then Filter_Backups_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.Docs then Filter_Docs_Apply()
-        elseif GUI.elms.main_tabs.state == TabID.Favorites then Filter_Favorites_Apply()
-      end
-    end
+    if not RL.skipOperationOnResize then RL_Filter_Apply(GUI.elms.main_tabs.state) end
   end
-  
+
   local function RL_Keys_ClearFilter()
-    if GUI.elms.main_tabs.state == TabID.RecentProjects then Filter_RecentProject_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.ProjectTemplates then Filter_ProjectTemplate_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.TrackTemplates then Filter_TrackTemplate_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.CustomProjects then Filter_CustomProjects_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.ProjectLists then Filter_ProjectLists_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.Backups then Filter_Backups_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.Docs then Filter_Docs_Clear()
-      elseif GUI.elms.main_tabs.state == TabID.Favorites then Filter_Favorites_Clear()
-    end
+    RL_Filter_Clear(GUI.elms.main_tabs.state)
   end
   
   function RebuildCache()
@@ -3124,10 +2678,14 @@
         reaper.Main_OnCommand(reaper.NamedCommandLookup("_S&M_SHOW_RESVIEW_THEME"), 0) -- SWS/S&M: Open/close Resources window (themes)
       end
   
+      -- Lyx fix: menu entry 1 is ' ---', entry n + 1 is slot n -> 'SWS/S&M: Resources - Load theme, slot n'.
+      -- (was: slots 4 and 5 both loaded the 'last slot' action)
       local function ThemeSlot_Load()
-        themeslot = GUI.Val("main_themeslot")
-        if themeslot < 5 then reaper.Main_OnCommand(reaper.NamedCommandLookup("_S&M_LOAD_THEME" .. themeslot - 1), 0) -- SWS/S&M: Resources - Load theme, slot#
-        else reaper.Main_OnCommand(reaper.NamedCommandLookup("_S&M_LOAD_THEMEl"), 0) end 
+        local slot = (GUI.Val("main_themeslot") or 1) - 1
+        if slot < 1 then return end
+        local cmd = reaper.NamedCommandLookup("_S&M_LOAD_THEME" .. slot)
+        if cmd == 0 then MsgStatusBar("SWS has no 'Load theme, slot " .. slot .. "' action (more slots: S&M.ini > TiedActionsColorThemes)") return end
+        reaper.Main_OnCommand(cmd, 0)
       end
   
       function RL_Draw_ThemeSlotSelector(alignment)
@@ -3153,7 +2711,8 @@
   
         if GUI.Val("layout_themeslot_number") == nil then ThemeSlots.maxCount = 5
         else ThemeSlots.maxCount = GUI.Val("layout_themeslot_number") end
-        for i = 1, ThemeSlots.maxCount do themeSlotNames[i] = GUI.Val("layout_themeslot_" .. i) or " " end
+        -- ',' separates the stored names: not allowed inside a name
+        for i = 1, ThemeSlots.maxCount do themeSlotNames[i] = (GUI.Val("layout_themeslot_" .. i) or ""):gsub(",", " ") end
         
         ThemeSlots.items = " ---"
         for t = 1, ThemeSlots.maxCount do ThemeSlots.items = ThemeSlots.items .. ",  " .. t .. "   " .. themeSlotNames[t] end
@@ -5047,12 +4606,7 @@
   -------------
   function Load_DocFile()
     if GetMainListSize() > 0 then
-      local vals = GetSelectionTable(GUI.Val("tab_docs_listbox"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.Docs then pathsToLoad[p] = RemoveWhiteSpaces(Docs.filteredItems[vals[p]].path)
-        else pathsToLoad[p] = RemoveWhiteSpaces(Docs.items[vals[p]].path) end
-      end
+      local pathsToLoad = Pins.GetSelectedPaths(TabID.Docs)
       Global_CloseOrDefer(function()
         for p = 1, #pathsToLoad do
           if pathsToLoad[p] ~= nil then reaper.CF_ShellExecute(pathsToLoad[p]) end
@@ -5178,12 +4732,7 @@
   function Load_Favorites_Base(tabmode)
     if GetMainListSize() > 0 then
       local category = TabParentSelectionIndex[TabID.Favorites]
-      local vals = GetSelectionTable(GUI.Val("tab_favorites_listbox"))
-      local pathsToLoad = {}
-      for p = 1, #vals do
-        if FilterActive.Favorites then pathsToLoad[p] = RemoveWhiteSpaces(Favorites.filteredItems[vals[p]].path)
-        else pathsToLoad[p] = RemoveWhiteSpaces(Favorites.items[vals[p]].path) end
-      end
+      local pathsToLoad = Pins.GetSelectedPaths(TabID.Favorites)
       Global_CloseOrDefer(function()
         for p = 1, #pathsToLoad do
           local selectedEntry = pathsToLoad[p]
@@ -5598,6 +5147,11 @@
         reaper.SetExtState(appname, "window_color_wndbg", "", 1)
         reaper.SetExtState(appname, "window_color_elmbg", "", 1)
   
+        -- Lyx fix: forget the colours picked in this session, or the swatches keep showing them
+        for _, f in ipairs({ "colors_frame_elmFill", "colors_frame_txt", "colors_frame_wndBg", "colors_frame_elmBg" }) do
+          GUI.elms[f].col_user = nil
+        end
+        GUI.redraw_z[0] = true
         GUI.elms.colors_frame_elmFill.color = GUI.colors.elm_fill
         GUI.elms.colors_frame_txt.color = GUI.colors.txt
         GUI.elms.colors_frame_wndBg.color = GUI.colors.wnd_bg
@@ -5655,10 +5209,11 @@
       end
       
       function OpenColorPicker(self, colorElement)
-        local retval, outColor = reaper.GR_SelectColor()
-        if retval ~= 0 then
+        -- Lyx fix: with a parent window the picker works on macOS; alpha 1 (see RL_InitCustomColors)
+        local retval, outColor = reaper.GR_SelectColor(reaper.GetMainHwnd())
+        if retval and retval ~= 0 and type(outColor) == "number" then
           local r, g, b = reaper.ColorFromNative(outColor)
-          self.col_user = {r / 255, g / 255, b / 255}
+          self.col_user = {r / 255, g / 255, b / 255, 1}
           local colorString = r .. "," .. g .. "," .. b
           if colorElement == "elm_fill" then
             GUI.colors.elm_fill = self.col_user
@@ -5677,7 +5232,7 @@
               reaper.SetExtState(appname, "window_color_elmbg", colorString, 1)
               RL_Init_Colors_ElementBackground()
             end
-          GUI.redraw_z[self.z] = true
+          GUI.redraw_z[0] = true -- whole window: the colour is used on every layer
         end
       end
     end
@@ -7184,21 +6739,12 @@
   
   function RL_InitCustomColors()
     if ConfigFlags.enableCustomColorOptions then 
-      local elementColors = {}
-      for match in reaper.GetExtState(appname, "window_color_elmfill"):gmatch("([^,%s]+)") do elementColors[#elementColors + 1] = tonumber(match) end
-      if #elementColors > 0 then GUI.colors.elm_fill = {elementColors[1] / 255, elementColors[2] / 255, elementColors[3] / 255} end
-  
-      elementColors = {}
-      for match in reaper.GetExtState(appname, "window_color_txt"):gmatch("([^,%s]+)") do elementColors[#elementColors + 1] = tonumber(match) end
-      if #elementColors > 0 then GUI.colors.txt = {elementColors[1] / 255, elementColors[2] / 255, elementColors[3] / 255} end
-  
-      elementColors = {}
-      for match in reaper.GetExtState(appname, "window_color_wndbg"):gmatch("([^,%s]+)") do elementColors[#elementColors + 1] = tonumber(match) end
-      if #elementColors > 0 then GUI.colors.wnd_bg = {elementColors[1] / 255, elementColors[2] / 255, elementColors[3] / 255} end
-  
-      elementColors = {}
-      for match in reaper.GetExtState(appname, "window_color_elmbg"):gmatch("([^,%s]+)") do elementColors[#elementColors + 1] = tonumber(match) end
-      if #elementColors > 0 then GUI.colors.elm_bg = {elementColors[1] / 255, elementColors[2] / 255, elementColors[3] / 255} end
+      -- stored as 'r,g,b' (0-255). Lyx fix: always with alpha 1 - Lokasenna's GUI.color() passes a named
+      -- colour to gfx.set() as is, so a 3-value colour kept whatever alpha was drawn last
+      for key, colorName in pairs({ elmfill = "elm_fill", txt = "txt", wndbg = "wnd_bg", elmbg = "elm_bg" }) do
+        local r, g, b = reaper.GetExtState(appname, "window_color_" .. key):match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
+        if r then GUI.colors[colorName] = { tonumber(r) / 255, tonumber(g) / 255, tonumber(b) / 255, 1 } end
+      end
   
       GUI.elms.colors_frame_elmFill.color = GUI.colors.elm_fill
       GUI.elms.colors_frame_txt.color = GUI.colors.txt
@@ -7464,10 +7010,14 @@
       GUI.elms.actions_txtFollowAction_LoadProjectTemplate.tooltip = GetActionName(GUI.Val("actions_txtFollowAction_LoadProjectTemplate"))
       GUI.elms.actions_txtFollowAction_InsertTrackTemplate.tooltip =GetActionName(GUI.Val("actions_txtFollowAction_InsertTrackTemplate"))
   
-      GUI.Val("themeslot_max", tonumber(reaper.GetExtState(appname, "themeslot_max")))
+      -- Lyx fix: names keep their case, and an empty name no longer shifts the following ones up a slot
+      local storedMax = tonumber(reaper.GetExtState(appname, "themeslot_max"))
+      if storedMax then GUI.Val("layout_themeslot_number", storedMax) end
       local themeSlots = {}
-      for match in string.gmatch(reaper.GetExtState(appname, "themeslot_aliases"), "[^,]+") do themeSlots[#themeSlots + 1] = string.lower(match) end
-      for i = 1, 5 do GUI.Val("layout_themeslot_" .. i, themeSlots[i]) end
+      for name in (reaper.GetExtState(appname, "themeslot_aliases") .. ","):gmatch("([^,]*),") do
+        themeSlots[#themeSlots + 1] = name:match("^%s*(.-)%s*$")
+      end
+      for i = 1, 5 do GUI.Val("layout_themeslot_" .. i, themeSlots[i] or "") end
       ThemeSlot_GetNames()
       RL_Draw_ThemeSlotSelector(0)
     end
