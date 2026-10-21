@@ -73,7 +73,7 @@ local mult = 1
 local flash_t, copied_t, copied_txt = 0, 0, ""
 -- typed BPM: replaces the tap result until the next tap / reset
 local typed = nil
-local editing, edit_buf, edit_focus, err_t = false, "", false, 0
+local editing, edit_buf, edit_focus, err_t = false, "", 0, 0 -- edit_focus: frames left for the field to take focus
 
 local function reset() taps, mult, typed = {}, 1, nil end
 
@@ -204,7 +204,7 @@ local function readout(ctx, bpm, col)
             R.ImGui_SetTooltip(ctx, "Click to type a BPM")
         end
         if R.ImGui_IsItemClicked(ctx) then
-            editing, edit_focus = true, true
+            editing, edit_focus = true, 4
             edit_buf = bpm and ("%.1f"):format(bpm) or ""
         end
         return false
@@ -217,7 +217,7 @@ local function readout(ctx, bpm, col)
     R.ImGui_PushStyleColor(ctx, R.ImGui_Col_FrameBgActive(), G.col(G.panel))
     R.ImGui_PushStyleColor(ctx, R.ImGui_Col_Text(), G.col(G.accent))
     R.ImGui_SetNextItemWidth(ctx, R.ImGui_CalcTextSize(ctx, "999.99") + G.S(8))
-    if edit_focus then R.ImGui_SetKeyboardFocusHere(ctx) end
+    if edit_focus == 4 then R.ImGui_SetKeyboardFocusHere(ctx) end -- focus lands a frame or two later
     local flags = R.ImGui_InputTextFlags_CharsDecimal() | R.ImGui_InputTextFlags_AutoSelectAll()
     local _
     _, edit_buf = R.ImGui_InputText(ctx, "##bpm_edit", edit_buf, flags)
@@ -232,10 +232,10 @@ local function readout(ctx, bpm, col)
         local v = not esc and parse_bpm(edit_buf, round_bpm)
         if v then taps, mult, typed = {}, 1, v end
         if not esc and not v then err_t = R.time_precise() end
-    elseif not active and not edit_focus then
+    elseif not active and edit_focus == 0 then
         editing = false                                    -- focus never arrived
     end
-    edit_focus = false
+    edit_focus = active and 0 or math.max(0, edit_focus - 1)
     return done and esc
 end
 
