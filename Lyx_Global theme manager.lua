@@ -288,6 +288,10 @@ G.run(ctx, "Lyx Global Theme", function(ctx)
         return false
     end
 
+    -- pin, top-right
+    G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
+    G.pin(ctx)
+
     local th = work.themes[sel]
     local _, avail_h = R.ImGui_GetContentRegionAvail(ctx)
     local body_h = avail_h - R.ImGui_GetFrameHeightWithSpacing(ctx) - G.S(8)
@@ -329,9 +333,6 @@ G.run(ctx, "Lyx Global Theme", function(ctx)
     R.ImGui_AlignTextToFramePadding(ctx)
     if dirty then G.color_text(ctx, G.warn, "● Unsaved changes")
     elseif msg then G.color_text(ctx, msg[2], msg[1]) end
-    R.ImGui_SameLine(ctx)
-    G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
-    G.pin(ctx)
 
     -- the manager wears the theme being edited (applied for the next frame)
     G.apply(work.themes[sel])
