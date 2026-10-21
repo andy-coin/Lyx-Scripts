@@ -8,7 +8,7 @@
    Tap: click the pad, or press Space / Enter / any letter.   R = reset   Esc = close
    BPM = least-squares fit over the last N taps (steadier than a plain average).
    Click any delay time to copy it.
-   Click the big BPM number to type a BPM (10–999; Enter / click away = set, Esc = cancel).
+   Double-click the big BPM number to type a BPM (10–999; Enter / click away = set, Esc = cancel).
    A typed BPM replaces the tap result until the next tap or reset.
 ]]
 local script_path = debug.getinfo(1).source:match("@?(.*/)") or "./"
@@ -199,11 +199,17 @@ end
 local function readout(ctx, bpm, col)
     if not editing then
         G.big_text(ctx, bpm and ("%.1f"):format(bpm) or "---.-", 56, col)
+        -- invisible button over the text: a click on plain text counts as empty window space,
+        -- which starts a window drag ("hold Shift to dock") and steals the input focus
+        local x0, y0 = R.ImGui_GetItemRectMin(ctx)
+        local x1, y1 = R.ImGui_GetItemRectMax(ctx)
+        R.ImGui_SetCursorScreenPos(ctx, x0, y0)
+        R.ImGui_InvisibleButton(ctx, "##bpm_readout", x1 - x0, y1 - y0)
         if R.ImGui_IsItemHovered(ctx) then
             R.ImGui_SetMouseCursor(ctx, R.ImGui_MouseCursor_TextInput())
-            R.ImGui_SetTooltip(ctx, "Click to type a BPM")
+            R.ImGui_SetTooltip(ctx, "Double-click to type a BPM")
         end
-        if R.ImGui_IsItemClicked(ctx) then
+        if R.ImGui_IsItemHovered(ctx) and R.ImGui_IsMouseDoubleClicked(ctx, 0) then
             editing, edit_focus = true, 4
             edit_buf = bpm and ("%.1f"):format(bpm) or ""
         end
@@ -279,7 +285,7 @@ G.run(ctx, "Tap tempo", function(ctx)
         R.ImGui_PopTextWrapPos(ctx)
     else
         esc_used = readout(ctx, nil, G.dim)
-        G.dim_text(ctx, (#taps == 1) and "Tap once more…" or "Tap at least twice, or click the number to type a BPM")
+        G.dim_text(ctx, (#taps == 1) and "Tap once more…" or "Tap at least twice, or double-click the number to type a BPM")
     end
 
     pad(ctx, bpm)
