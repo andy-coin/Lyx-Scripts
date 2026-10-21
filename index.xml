@@ -1444,8 +1444,8 @@
       </version>
     </reapack>
     <reapack name="Realauncher 2.5.2 (Lyx mod).lua" type="script" desc="Realauncher 2.5.2 (Lyx mod)">
-      <version name="2026.10.21.0344" author="Lyx" time="2026-10-21T03:44:24Z">
-        <source main="main" file="../Realauncher 2.5.2 (Lyx mod).lua">https://github.com/andy-coin/Lyx-Scripts/raw/b5b599c89f355dff8b62e6bfafb0337cddd52fbb/Realauncher%202.5.2%20%28Lyx%20mod%29.lua</source>
+      <version name="2026.10.21.0405" author="Lyx" time="2026-10-21T04:05:10Z">
+        <source main="main" file="../Realauncher 2.5.2 (Lyx mod).lua">https://github.com/andy-coin/Lyx-Scripts/raw/b6dd7937123c46cf355631b86eacb78ca0d525b0/Realauncher%202.5.2%20%28Lyx%20mod%29.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_FXState.lua" type="script" desc="_Lyx_FXState">
