@@ -130,35 +130,38 @@ local function editors(th)
         return R.ImGui_InputTextWithHint(ctx, "Name", "Default (CJK system font)", v)
     end, th.font.name, function(v) th.font.name = v end)
     R.ImGui_SetItemTooltip(ctx, "Font family (e.g. Helvetica) or a font file path; empty = default")
-
-    R.ImGui_Spacing(ctx)
-    G.subtitle(ctx, "Layout")
-    local lay_w = label_room("Window rounding", "Button rounding", "Frame rounding", "Window alpha", "Spacing")
-    R.ImGui_SetNextItemWidth(ctx, lay_w)
-    slider_int("Window rounding", th.rounding, "window", 0, 16)
-    R.ImGui_SetNextItemWidth(ctx, lay_w)
-    slider_int("Button rounding", th.rounding, "button", 0, 16)
-    R.ImGui_SetNextItemWidth(ctx, lay_w)
-    slider_int("Frame rounding", th.rounding, "frame", 0, 16)
-    R.ImGui_SetNextItemWidth(ctx, lay_w)
-    local c, v = R.ImGui_SliderDouble(ctx, "Window alpha", th.alpha, 0.3, 1, "%.2f")
-    if c then th.alpha = v; dirty = true end
-    R.ImGui_SetNextItemWidth(ctx, lay_w)
-    deferred("spacing", function(x) return R.ImGui_SliderInt(ctx, "Spacing", x, 2, 16) end,
-        th.spacing, function(x) th.spacing = x end)
 end
 
--- Font size and scale belong to no theme: one setting for all, so switching themes keeps the size.
-local function display()
+-- Layout and Display belong to no theme: one setting for all, so switching themes only changes colours.
+local function shared()
+    local ui, was = work.ui, dirty
+    dirty = false
+    local w = label_room("Window rounding", "Button rounding", "Frame rounding", "Window alpha", "Spacing", "Font size", "Scale")
     R.ImGui_Spacing(ctx)
-    G.subtitle(ctx, "Display (all themes)")
-    local w = label_room("Font size", "Scale")
+    G.subtitle(ctx, "Layout")
+    R.ImGui_SetNextItemWidth(ctx, w)
+    slider_int("Window rounding", ui.rounding, "window", 0, 16)
+    R.ImGui_SetNextItemWidth(ctx, w)
+    slider_int("Button rounding", ui.rounding, "button", 0, 16)
+    R.ImGui_SetNextItemWidth(ctx, w)
+    slider_int("Frame rounding", ui.rounding, "frame", 0, 16)
+    R.ImGui_SetNextItemWidth(ctx, w)
+    local c, v = R.ImGui_SliderDouble(ctx, "Window alpha", ui.alpha, 0.3, 1, "%.2f")
+    if c then ui.alpha = v; dirty = true end
+    R.ImGui_SetNextItemWidth(ctx, w)
+    deferred("spacing", function(x) return R.ImGui_SliderInt(ctx, "Spacing", x, 2, 16) end,
+        ui.spacing, function(x) ui.spacing = x end)
+
+    R.ImGui_Spacing(ctx)
+    G.subtitle(ctx, "Display")
     R.ImGui_SetNextItemWidth(ctx, w)
     deferred("size", function(v) return R.ImGui_SliderInt(ctx, "Font size", v, 10, 24) end,
-        work.ui.font_size, function(v) work.ui.font_size = v; T.set_ui(work) end)
+        ui.font_size, function(v) ui.font_size = v end)
     R.ImGui_SetNextItemWidth(ctx, w)
     deferred("scale", function(x) return R.ImGui_SliderDouble(ctx, "Scale", x, 0.75, 2, "%.2f") end,
-        work.ui.scale, function(x) work.ui.scale = x; T.set_ui(work) end)
+        ui.scale, function(x) ui.scale = x end)
+    if dirty then T.set_ui(work) end
+    dirty = dirty or was
 end
 
 local function preview()
@@ -301,7 +304,7 @@ G.run(ctx, "Lyx Global Theme", function(ctx)
         R.ImGui_BeginDisabled(ctx, T.is_builtin(sel))
         editors(th)
         R.ImGui_EndDisabled(ctx)
-        display()
+        shared()
         R.ImGui_EndChild(ctx)
     end
 
