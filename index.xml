@@ -1103,6 +1103,11 @@
         <source main="main" file="../Lyx_Switch track input between 1,2,3&amp;4,7&amp;8.lua">https://github.com/andy-coin/Lyx-Scripts/raw/84b3f5d4cd6a4903121a5857f58b8d3ab02258f4/Lyx_Switch%20track%20input%20between%201%2C2%2C3%264%2C7%268.lua</source>
       </version>
     </reapack>
+    <reapack name="Lyx_Tap tempo.lua" type="script" desc="Lyx_Tap tempo">
+      <version name="2026.10.21.0850" author="Lyx" time="2026-10-21T08:50:36Z">
+        <source main="main" file="../Lyx_Tap tempo.lua">https://github.com/andy-coin/Lyx-Scripts/raw/94c3d063a6ce4851f4230854a2a8a403c95afbe4/Lyx_Tap%20tempo.lua</source>
+      </version>
+    </reapack>
     <reapack name="Lyx_Toggle All tracks record-monitor on &amp; off.lua" type="script" desc="Lyx_Toggle All tracks record-monitor on &amp; off">
       <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
         <source main="main" file="../Lyx_Toggle All tracks record-monitor on &amp; off.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a9306c3a51f6a2b7a6405d608cd629df6c7f2316/Lyx_Toggle%20All%20tracks%20record-monitor%20on%20%26%20off.lua</source>
