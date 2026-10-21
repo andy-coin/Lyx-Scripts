@@ -4,8 +4,8 @@
     local r=require("_lib._Lyx_HOME")
     
     -----CUSTOM-----
-    -- ESC closes FX windows (through the API) and the windows in Kill_list below; nothing else,
-    -- so script GUIs (ReaImGui etc.) are never killed.
+    -- ESC closes FX windows (through the API), the windows in Kill_list below, and asks open
+    -- Lyx GUIs to close themselves; other windows (e.g. other people's ReaImGui scripts) are left alone.
     -- (unused since ESC only closes Kill_list; kept in case the "close everything" mode comes back)
     -- local exclude = {'Colors','Licensed for personal/small business use','Item/track info',"Lyx_ESC",'Color palette','MIDI take:',"Video Window"}
 
@@ -70,8 +70,19 @@
         return hit
     end
 
+    -- Lyx GUIs (ReaImGui / rtk / gfx) close themselves when asked (_lib/_Lyx_GUI.lua G.esc):
+    -- killing a ReaImGui window from outside makes its script assert. "alive" is refreshed every frame.
+    local function close_lyx_guis()
+        local alive = tonumber(reaper.GetExtState("Lyx_GUI", "alive"))
+        if not alive or reaper.time_precise() - alive > 0.5 then return false end
+        reaper.SetExtState("Lyx_GUI", "close", tostring(reaper.time_precise()), false)
+        log("  Lyx GUIs asked to close")
+        return true
+    end
+
     local function WindowKiller()
         local destroy = close_all_fx() or false
+        if close_lyx_guis() then destroy = true end
         local _, list = reaper.JS_Window_ListAllTop()
 
         -- visible windows from Kill_list: close them like clicking their X

@@ -1898,6 +1898,7 @@ local function main()
     if S.analysis_dirty then analyze() end
     if HAS_JS then ind_safe_update() end
 
+    if G.esc() then open = false end -- Lyx_ESC
     if open then reaper.defer(main) end
 end
 
