@@ -429,8 +429,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Global theme manager.lua" type="script" desc="Lyx_Global theme manager">
-      <version name="2026.10.21.0624" author="Lyx" time="2026-10-21T06:24:40Z">
-        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/db4fc2ba5cf819fb0c55773d07e966ed599e4df3/Lyx_Global%20theme%20manager.lua</source>
+      <version name="2026.10.21.0632" author="Lyx" time="2026-10-21T06:32:48Z">
+        <source main="main" file="../Lyx_Global theme manager.lua">https://github.com/andy-coin/Lyx-Scripts/raw/99d029d460f5c29e4698716e4d59dd22f629c8cc/Lyx_Global%20theme%20manager.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Glue items or join midi items.lua" type="script" desc="Lyx_Glue items or join midi items">
@@ -1474,8 +1474,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_Theme.lua" type="script" desc="_Lyx_Theme">
-      <version name="2026.10.21.0624" author="Lyx" time="2026-10-21T06:24:40Z">
-        <source file="../_lib/_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/db4fc2ba5cf819fb0c55773d07e966ed599e4df3/_lib/_Lyx_Theme.lua</source>
+      <version name="2026.10.21.0632" author="Lyx" time="2026-10-21T06:32:48Z">
+        <source file="../_lib/_Lyx_Theme.lua">https://github.com/andy-coin/Lyx-Scripts/raw/99d029d460f5c29e4698716e4d59dd22f629c8cc/_lib/_Lyx_Theme.lua</source>
       </version>
     </reapack>
     <reapack name="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua" type="script" desc="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks">
