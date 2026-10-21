@@ -195,16 +195,15 @@ end
 ---------------------------------------------------------------------------
 -- Theme list
 ---------------------------------------------------------------------------
--- list width: fits the longest name and the button rows below it
+-- list width: fits the longest name and the icon row below it
 local function list_width()
-    local pad, sp = style_x(R.ImGui_StyleVar_FramePadding()), style_x(R.ImGui_StyleVar_ItemSpacing())
-    local w = math.max(tw("New") + tw("Duplicate"), tw("Rename") + tw("Delete")) + 4 * pad + sp
+    local sp = style_x(R.ImGui_StyleVar_ItemSpacing())
+    local w = 4 * R.ImGui_GetFrameHeight(ctx) + 3 * sp
     for _, name in ipairs(names()) do
-        local label = name
-        w = math.max(w, tw(label)
+        w = math.max(w, tw(name)
             + 2 * style_x(R.ImGui_StyleVar_WindowPadding()) + style_x(R.ImGui_StyleVar_ScrollbarSize()))
     end
-    return math.max(G.S(200), w)
+    return math.max(G.S(150), w)
 end
 
 local function theme_list(h)
@@ -236,16 +235,49 @@ local function theme_list(h)
     R.ImGui_EndChild(ctx)
 end
 
+-- square button with a drawn glyph: plus, copy, pencil, trash
+local function icon_button(id, tip, glyph, disabled)
+    local s = R.ImGui_GetFrameHeight(ctx)
+    R.ImGui_BeginDisabled(ctx, disabled)
+    local hit = G.button(ctx, "##" .. id, s, s, "plain")
+    R.ImGui_EndDisabled(ctx)
+    R.ImGui_SetItemTooltip(ctx, tip)  -- shows on disabled items too
+    local x, y = R.ImGui_GetItemRectMin(ctx)
+    local dl, c = R.ImGui_GetWindowDrawList(ctx), G.col(disabled and G.dim or G.fg)
+    local cx, cy, r, t = x + s / 2, y + s / 2, s * 0.26, math.max(1, s * 0.07)
+    if glyph == "plus" then
+        R.ImGui_DrawList_AddLine(dl, cx - r, cy, cx + r, cy, c, t)
+        R.ImGui_DrawList_AddLine(dl, cx, cy - r, cx, cy + r, c, t)
+    elseif glyph == "copy" then
+        local o = r * 0.45
+        R.ImGui_DrawList_AddRect(dl, cx - r + o, cy - r, cx + r, cy + r - o, c, 1, 0, t)
+        R.ImGui_DrawList_AddRect(dl, cx - r, cy - r + o, cx + r - o, cy + r, c, 1, 0, t)
+    elseif glyph == "pencil" then
+        R.ImGui_DrawList_AddLine(dl, cx - r * 0.7, cy + r * 0.7, cx + r, cy - r, c, t * 2)
+        R.ImGui_DrawList_AddTriangleFilled(dl, cx - r, cy + r, cx - r * 0.55, cy + r * 0.95, cx - r * 0.95, cy + r * 0.55, c)
+        R.ImGui_DrawList_AddLine(dl, cx - r * 0.2, cy + r, cx + r, cy + r, c, t)
+    elseif glyph == "trash" then
+        R.ImGui_DrawList_AddLine(dl, cx - r, cy - r * 0.6, cx + r, cy - r * 0.6, c, t)
+        R.ImGui_DrawList_AddLine(dl, cx - r * 0.3, cy - r, cx + r * 0.3, cy - r, c, t)
+        R.ImGui_DrawList_AddRect(dl, cx - r * 0.7, cy - r * 0.6, cx + r * 0.7, cy + r, c, 1, 0, t)
+        R.ImGui_DrawList_AddLine(dl, cx, cy - r * 0.25, cx, cy + r * 0.7, c, t)
+    end
+    return hit
+end
+
 local function list_buttons()
     local builtin = T.is_builtin(sel)
-    if G.button(ctx, "New", nil, nil, "plain") then add_theme(unique("New theme"), T.preset(T.DEFAULT)) end
+    if icon_button("new", "New theme", "plus") then add_theme(unique("New theme"), T.preset(T.DEFAULT)) end
     R.ImGui_SameLine(ctx)
-    if G.button(ctx, "Duplicate", nil, nil, "plain") then add_theme(unique(sel .. " copy"), work.themes[sel]) end
-    R.ImGui_BeginDisabled(ctx, builtin)
-    if G.button(ctx, "Rename", nil, nil, "plain") then renaming, rename_buf, rename_focus = true, sel, true end
+    if icon_button("dup", "Duplicate \"" .. sel .. "\"", "copy") then add_theme(unique(sel .. " copy"), work.themes[sel]) end
     R.ImGui_SameLine(ctx)
-    if G.button(ctx, "Delete", nil, nil, "plain") then confirm_del = true end
-    R.ImGui_EndDisabled(ctx)
+    if icon_button("ren", builtin and "Rename (not for built-in presets)" or "Rename (or double-click the name)", "pencil", builtin) then
+        renaming, rename_buf, rename_focus = true, sel, true
+    end
+    R.ImGui_SameLine(ctx)
+    if icon_button("del", builtin and "Delete (not for built-in presets)" or "Delete \"" .. sel .. "\"", "trash", builtin) then
+        confirm_del = true
+    end
     if confirm_del and not builtin then
         G.color_text(ctx, G.warn, "Delete \"" .. sel .. "\"?")
         if G.button(ctx, "Delete", nil, nil, "bad") then
@@ -284,7 +316,12 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
         return false
     end
 
-    -- pin, top-right
+    -- top row: save state on the left, pin on the right
+    R.ImGui_AlignTextToFramePadding(ctx)
+    if dirty then G.color_text(ctx, G.warn, "● Unsaved changes")
+    elseif msg then G.color_text(ctx, msg[2], msg[1])
+    else R.ImGui_Text(ctx, "") end
+    R.ImGui_SameLine(ctx)
     G.align_right(ctx, R.ImGui_GetFrameHeight(ctx))
     G.pin(ctx)
 
@@ -294,7 +331,7 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
 
     -- left: list + buttons
     R.ImGui_BeginGroup(ctx)
-    theme_list(body_h - R.ImGui_GetFrameHeightWithSpacing(ctx) * (confirm_del and 4 or 2))
+    theme_list(body_h - R.ImGui_GetFrameHeightWithSpacing(ctx) * (confirm_del and 3 or 1))
     list_buttons()
     R.ImGui_EndGroup(ctx)
 
@@ -325,10 +362,6 @@ G.run(ctx, "Lyx Global Theme Manager", function(ctx)
     R.ImGui_SameLine(ctx)
     if G.button(ctx, "Revert", G.S(90), nil, "plain") then revert() end
     R.ImGui_EndDisabled(ctx)
-    R.ImGui_SameLine(ctx)
-    R.ImGui_AlignTextToFramePadding(ctx)
-    if dirty then G.color_text(ctx, G.warn, "● Unsaved changes")
-    elseif msg then G.color_text(ctx, msg[2], msg[1]) end
 
     -- the manager wears the theme being edited (applied for the next frame)
     G.apply(work.themes[sel])
