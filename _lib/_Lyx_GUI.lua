@@ -334,7 +334,11 @@ function G.run(ctx, title, draw, opts)
         local visible, open = R.ImGui_Begin(ctx, title, true, flags)
         local keep = true
         if visible then
-            keep = draw(ctx) ~= false
+            -- an error in draw: print it with file / line to the console and close cleanly
+            -- (instead of REAPER's bare message + ImGui "Missing End()")
+            local ok, res = xpcall(draw, debug.traceback, ctx)
+            if ok then keep = res ~= false
+            else R.ShowConsoleMsg("\n[" .. title .. "] " .. tostring(res) .. "\n"); keep = false end
             if opts.esc ~= false and R.ImGui_IsWindowFocused(ctx, R.ImGui_FocusedFlags_RootAndChildWindows())
                and not R.ImGui_IsAnyItemActive(ctx)
                and R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_Escape()) then
