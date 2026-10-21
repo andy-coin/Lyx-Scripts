@@ -2,6 +2,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_lib._Lyx_HOME")
+    if reaper.set_action_options then reaper.set_action_options(1 | 2) end -- pressing ESC again during the grace wait just restarts it
     
     -----CUSTOM-----
     -- ESC closes every floating window (FX windows through the API, the rest like clicking X)
@@ -18,10 +19,22 @@
     local function log(...) if DEBUG then reaper.ShowConsoleMsg(table.concat({...}," ").."\n") end end
 
     local main_hwnd = reaper.GetMainHwnd()
-    -- ask the window to close (like clicking X); Post doesn't arrive on macOS, so Send, then force it
+    -- ask the window to close (like clicking X); Post doesn't arrive on macOS, so Send.
+    -- Windows still open after a short grace are forced (see force_pending). ReaImGui windows close
+    -- on their next frame, and destroying one under its script crashes it, so they're never forced.
+    local pending = {}
     local function close(hwnd)
         reaper.JS_WindowMessage_Send(hwnd, "WM_CLOSE", 0, 0, 0, 0)
-        if reaper.JS_Window_IsWindow(hwnd) and reaper.JS_Window_IsVisible(hwnd) then reaper.JS_Window_Destroy(hwnd) end
+        if not (reaper.JS_Window_GetClassName(hwnd) or ""):lower():find("imgui", 1, true) then
+            pending[#pending + 1] = hwnd
+        end
+    end
+    local GRACE, t0 = 0.3, reaper.time_precise()
+    local function force_pending()
+        if reaper.time_precise() - t0 < GRACE then return reaper.defer(force_pending) end
+        for _, hwnd in ipairs(pending) do
+            if reaper.JS_Window_IsWindow(hwnd) and reaper.JS_Window_IsVisible(hwnd) then reaper.JS_Window_Destroy(hwnd) end
+        end
     end
 
     local function has_any(title, list)
@@ -145,5 +158,5 @@
     end
     
     main()
-    reaper.defer(function() end)
+    reaper.defer(force_pending)
 
