@@ -226,11 +226,11 @@ local L = {
   row_gap    = 8,          -- between rows / sections
   seg_gap    = 2,          -- between the two halves of a segmented toggle
   icon       = fs(24),     -- square header icon buttons (settings / help / pin)
-  h_small    = fs(22),     -- small buttons, filter entry, popup buttons
-  h_main     = fs(26),     -- mode toggles and Add / Close
+  h_small    = fs(19),     -- small buttons, filter entry, popup buttons
+  h_main     = fs(22),     -- mode toggles and Add / Close
   btn_minw   = fs(84),     -- Add / Close share one width
   label_w    = fs(130),    -- left column: "Send settings…" button and "Clipboard:" label
-  swatch     = fs(22),     -- colour swatch = same height as the button beside it
+  swatch     = fs(19),     -- colour swatch = same height as the button beside it
   cb_h       = math.floor(fs(18)),  -- checkbox row height (same as track rows)
   fs_label   = fs(0.7),    -- muted labels, summaries, counters, checkboxes, status
   fs_btn     = fs(0.72),   -- small buttons
@@ -241,7 +241,7 @@ local L = {
 }
 
 local function smallBtn(label, tooltip, color)
-  return rtk.Button{label = label, tooltip = tooltip, h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, halign = "center", color = color or _ui.btn, textcolor = _ui.btn_text}
+  return rtk.Button{label = label, tooltip = tooltip, h = L.h_small, padding = "0 8", fontscale = L.fs_btn, halign = "center", color = color or _ui.btn, textcolor = _ui.btn_text}
 end
 
 local function iconBtn(label, tooltip)
@@ -303,16 +303,42 @@ rtk.set_theme_overrides(_rtk_theme)
 if _inherit then
   local rr = T.get().rounding
   local R_BTN, R_FRAME, R_WIN = rr.button * _scale, rr.frame * _scale, rr.window * _scale
+  -- Drawn row by row so no pixel is painted twice: overlapping shapes show through
+  -- as darker dots when the colour is translucent (disabled buttons).
+  -- inset of row j (0 = top) of a w x h rect with corner radius r
+  local function inset(h, r, j)
+    local i = math.min(j, h - 1 - j)
+    if i >= r then return 0 end
+    local d = r - i - 0.5
+    return math.floor(r - math.sqrt(math.max(0, r * r - d * d)) + 0.5)
+  end
+  local function clamp_r(w, h, r) return math.floor(math.min(r, w / 2, h / 2)) end
   local function fill_round(x, y, w, h, r)
-    r = math.floor(math.min(r, w / 2, h / 2))
+    x, y, w, h = math.floor(x), math.floor(y), math.floor(w), math.floor(h)
+    r = clamp_r(w, h, r)
     if r < 1 then gfx.rect(x, y, w, h, 1) return end
-    gfx.rect(x + r, y, w - 2 * r, h, 1)
-    gfx.rect(x, y + r, r, h - 2 * r, 1)
-    gfx.rect(x + w - r, y + r, r, h - 2 * r, 1)
-    gfx.circle(x + r, y + r, r, 1, 1)
-    gfx.circle(x + w - r - 1, y + r, r, 1, 1)
-    gfx.circle(x + r, y + h - r - 1, r, 1, 1)
-    gfx.circle(x + w - r - 1, y + h - r - 1, r, 1, 1)
+    for j = 0, r - 1 do
+      local dx = inset(h, r, j)
+      gfx.rect(x + dx, y + j, w - 2 * dx, 1, 1)
+      gfx.rect(x + dx, y + h - 1 - j, w - 2 * dx, 1, 1)
+    end
+    gfx.rect(x, y + r, w, h - 2 * r, 1)
+  end
+  -- 1px outline = the shape minus the same shape inset by 1px, row by row
+  local function stroke_round(x, y, w, h, r)
+    x, y, w, h = math.floor(x), math.floor(y), math.floor(w), math.floor(h)
+    r = clamp_r(w, h, r)
+    local ri = math.max(0, r - 1)
+    for j = 0, h - 1 do
+      local o = r > 0 and inset(h, r, j) or 0
+      if j == 0 or j == h - 1 then
+        gfx.rect(x + o, y + j, w - 2 * o, 1, 1)
+      else
+        local i = 1 + (ri > 0 and inset(h - 2, ri, j - 1) or 0)
+        gfx.rect(x + o, y + j, math.max(1, i - o), 1, 1)
+        gfx.rect(x + w - math.max(i, o + 1), y + j, math.max(1, i - o), 1, 1)
+      end
+    end
   end
   local function radius(self)
     if self.lyx_r then return self.lyx_r end
@@ -336,7 +362,7 @@ if _inherit then
     local uni = all or (calc.border_uniform and calc.tborder)
     if r and uni and not self.ghost then
       if (self:_unpack_border(uni, alpha) or 0) > 0 then  -- also sets the border colour
-        gfx.roundrect(calc.x + offx, calc.y + offy, calc.w - 1, calc.h - 1, math.min(r, calc.h / 2), 1)
+        stroke_round(calc.x + offx, calc.y + offy, calc.w, calc.h, r)
       end
       return
     end
@@ -358,7 +384,7 @@ if _inherit then
     gfx.set(sr * cmul, sg * cmul, sb * cmul, (a or 1) * amul)
     fill_round(sx, sy, sw, sh, R_BTN)
     gfx.set(r * bmul, g * bmul, b * bmul, amul)
-    gfx.roundrect(sx, sy, sw - 1, sh - 1, math.min(R_BTN, sh / 2), 1)
+    stroke_round(sx, sy, sw, sh, R_BTN)
     if calc.icon then self:_draw_icon(x + pre.ix, y + pre.iy, hover, alpha) end
     if calc.label then
       self:setcolor(calc.textcolor, alpha)
@@ -728,7 +754,7 @@ local _shortcuts_help = table.concat({
 
 function getRoutingOptionsObjects()
   local function segBtn(label, tooltip)
-    return rtk.Button{label = label, tooltip = tooltip, h = L.h_main, padding = "2 12 3", fontscale = L.fs_main, halign = "center", color = _ui.seg_off, textcolor = _ui.seg_text}
+    return rtk.Button{label = label, tooltip = tooltip, h = L.h_main, padding = "0 12", fontscale = L.fs_main, halign = "center", color = _ui.seg_off, textcolor = _ui.seg_text}
   end
 
   local function bottomCheck(label, tooltip, value, ref)
@@ -736,7 +762,7 @@ function getRoutingOptionsObjects()
   end
 
   local function colorBtn(label)
-    return rtk.Button{label, h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, color = _ui.off_btn, textcolor = "#E0E0E0", disabled = _inherit}
+    return rtk.Button{label, h = L.h_small, halign = "center", padding = "0 8", fontscale = L.fs_btn, color = _ui.off_btn, textcolor = "#E0E0E0", disabled = _inherit}
   end
 
   local function swatch(color)
@@ -811,8 +837,8 @@ function getRoutingOptionsObjects()
     save_options = bottomCheck("Remember choices", "Remember mode, checked tracks and send settings for this project", nil, "save_options_checkbox"),
     keep_open = bottomCheck("Keep window open", "Don't close after applying, so you can keep routing", _keep_open),
     form_buttons = rtk.HBox{spacing = L.row_gap, valign = "center"},
-    form_submit = rtk.Button{"Add", disabled = true, tooltip = "Apply (Enter)", h = L.h_main, minw = L.btn_minw, halign = "center", padding = "2 16 3", fontscale = L.fs_main, color = _colors.accent, textcolor = "#FFFFFF"},
-    form_cancel = rtk.Button{"Close", tooltip = "Close (Esc)", h = L.h_main, minw = L.btn_minw, halign = "center", padding = "2 16 3", fontscale = L.fs_main},
+    form_submit = rtk.Button{"Add", disabled = true, tooltip = "Apply (Enter)", h = L.h_main, minw = L.btn_minw, halign = "center", padding = "0 16", fontscale = L.fs_main, color = _colors.accent, textcolor = "#FFFFFF"},
+    form_cancel = rtk.Button{"Close", tooltip = "Close (Esc)", h = L.h_main, minw = L.btn_minw, halign = "center", padding = "0 16", fontscale = L.fs_main},
     reset_btn = smallBtn("Reset", "Uncheck all tracks, clear the filter and reset send settings to defaults"),
     status_text = rtk.Text{"", w = 1, textalign = "center", fontscale = L.fs_label, color = _ui.ok},
 
@@ -828,7 +854,7 @@ function getRoutingOptionsObjects()
     -- Lyx global theme (only when _Lyx_Theme.lua was found)
     theme_row = rtk.VBox{w = 1, spacing = L.gap},  -- stacked: popup is narrow
     theme_inherit = rtk.CheckBox{"Inherit Lyx global theme", value = _inherit, tooltip = "Use the Lyx global theme colours instead of the colours below (restart script to apply)", h = L.cb_h, padding = "0 2", spacing = 3, valign = "center", fontscale = L.fs_label},
-    theme_manager_btn = rtk.Button{"Lyx global theme", tooltip = "Open the Lyx global theme manager", h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, color = _ui.btn, textcolor = _ui.btn_text},
+    theme_manager_btn = rtk.Button{"Lyx global theme", halign = "center", tooltip = "Open the Lyx global theme manager", h = L.h_small, padding = "0 8", fontscale = L.fs_btn, color = _ui.btn, textcolor = _ui.btn_text},
     color_window_bg_row = colorRow(),
     color_window_bg_swatch = swatch(_colors.window_bg),
     color_window_bg_btn = colorBtn("Window Background"),
@@ -844,16 +870,16 @@ function getRoutingOptionsObjects()
     color_text_row = colorRow(),
     color_text_swatch = swatch(_colors.text),
     color_text_btn = colorBtn("Text"),
-    settings_color_reset = rtk.Button{"Reset Colors", h = L.h_small, padding = "2 8 3", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#E0E0E0", disabled = _inherit},
+    settings_color_reset = rtk.Button{"Reset Colors", halign = "center", h = L.h_small, padding = "0 8", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#E0E0E0", disabled = _inherit},
     -- Tree line mode
     settings_tree_heading = sectionHeading("Tree Lines"),
     settings_tree_mode_row = rtk.HBox{w = 1, spacing = L.gap, valign = "center"},
-    settings_tree_radial = rtk.Button{"Radial", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn,
+    settings_tree_radial = rtk.Button{"Radial", h = L.h_small, halign = "center", padding = "0 8", fontscale = L.fs_btn,
       color = _tree_mode == "radial" and _ui.on_btn or _ui.off_btn, textcolor = "#E0E0E0"},
-    settings_tree_elbow = rtk.Button{"Elbow", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn,
+    settings_tree_elbow = rtk.Button{"Elbow", h = L.h_small, halign = "center", padding = "0 8", fontscale = L.fs_btn,
       color = _tree_mode == "elbow" and _ui.on_btn or _ui.off_btn, textcolor = "#E0E0E0"},
-    settings_save = rtk.Button{"Save & Close", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn},
-    settings_reset = rtk.Button{"Reset All", h = L.h_small, halign = "center", padding = "2 8 3", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#E0E0E0"}
+    settings_save = rtk.Button{"Save & Close", h = L.h_small, halign = "center", padding = "0 8", fontscale = L.fs_btn},
+    settings_reset = rtk.Button{"Reset All", h = L.h_small, halign = "center", padding = "0 8", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#E0E0E0"}
   }
 
   -- Source tracks card: rounded like an ImGui child window (inherited theme only)
@@ -1974,7 +2000,7 @@ function populateRoutingSettingsObjs()
     footer_copy = smallBtn("Copy", "Copy these settings to the route clipboard (Ctrl/Cmd+C)"),
     footer_paste = smallBtn("Paste", "Load the route clipboard into these settings (Ctrl/Cmd+V)"),
     footer_defaults = smallBtn("Defaults", "Reset these settings to defaults"),
-    footer_done = rtk.Button{"Done", tooltip = "Close (Esc)", h = L.h_small, padding = "2 14 3", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#FFFFFF"},
+    footer_done = rtk.Button{"Done", halign = "center", tooltip = "Close (Esc)", h = L.h_small, padding = "0 14", fontscale = L.fs_btn, color = _colors.accent, textcolor = "#FFFFFF"},
     form = rtk.VBox{padding = (L.pad + 4) .. " " .. L.pad .. " " .. L.pad_v},
     row1 = rtk.HBox{spacing = 5, valign = "center"},  -- controls share one 20 px line
     volume_val = rtk.Text{"+0.00", w = 45, h = 20, valign = "center", halign = "center", padding = 3, border = "1px #777888", fontscale = fs(0.63)},
