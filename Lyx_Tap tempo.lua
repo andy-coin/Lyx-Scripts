@@ -8,6 +8,8 @@
    Tap: click the pad, or press Space / Enter / any letter.   R = reset   Esc = close
    BPM = least-squares fit over the last N taps (steadier than a plain average).
    Click any delay time to copy it.
+   Metronome keeps running at the detected / typed tempo: dots (one per beat of the project time
+   signature, downbeat green) or a pendulum (Settings) that flashes the pad at each wall hit.
    Double-click the big BPM number to type a BPM (10–999; Enter / click away = set, Esc = cancel).
    A typed BPM replaces the tap result until the next tap or reset.
 ]]
@@ -67,12 +69,14 @@ local EXT = "Lyx_TapTempo"
 local window = tonumber(R.GetExtState(EXT, "window")) or 8      -- taps used
 local reset_s = tonumber(R.GetExtState(EXT, "reset")) or 2.0     -- idle reset
 local round_bpm = R.GetExtState(EXT, "round") ~= "0"
+local pendulum = R.GetExtState(EXT, "display") == "pendulum"   -- metronome display: dots / pendulum
 
 local taps = {}
 local mult = 1
 local flash_t, copied_t, copied_txt = 0, 0, ""
 -- typed BPM: replaces the tap result until the next tap / reset
 local typed = nil
+local beat_t0 = 0   -- time of beat 1: first tap of the series, or when a BPM was typed
 local editing, edit_buf, edit_focus, err_t = false, "", 0, 0 -- edit_focus: frames left for the field to take focus
 
 local function reset() taps, mult, typed = {}, 1, nil end
@@ -81,6 +85,7 @@ local function tap()
     typed = nil
     local now = R.time_precise()
     if #taps > 0 and now - taps[#taps] > reset_s then taps, mult = {}, 1 end
+    if #taps == 0 then beat_t0 = now end
     taps[#taps + 1] = now
     while #taps > window + 1 do table.remove(taps, 1) end
     flash_t = now
@@ -102,6 +107,16 @@ end
 local ctx = G.new("Tap tempo", "TapTempo")
 if not ctx then return end
 
+-- Beat position at time now: beats since beat 1 (float), counted from the last tap so it stays
+-- in step with the taps. nil without a tempo.
+local function beat_pos(bpm, now)
+    if not bpm then return end
+    local beat = 60 / bpm
+    local last = taps[#taps] or beat_t0
+    local k = math.floor((last - beat_t0) / beat + 0.5)   -- whole beats from beat 1 to the last tap
+    return k + (now - last) / beat
+end
+
 local function pad(ctx, bpm)
     local dl = R.ImGui_GetWindowDrawList(ctx)
     local w = R.ImGui_GetContentRegionAvail(ctx)
@@ -110,21 +125,41 @@ local function pad(ctx, bpm)
     R.ImGui_InvisibleButton(ctx, "##pad", w, h)
     if R.ImGui_IsItemActivated(ctx) then tap() end
     local now = R.time_precise()
+    local num = math.max(1, (R.TimeMap_GetTimeSigAtTime(0, R.GetCursorPosition())))   -- beats per bar
+    local p = beat_pos(bpm, now)
+    local bar_beat = p and math.floor(p) % num                                         -- 0 = downbeat
+
+    -- pad flash: on a tap, and in pendulum mode on every wall hit (downbeat green)
     local f = math.max(0, 1 - (now - flash_t) / 0.18)
-    R.ImGui_DrawList_AddRectFilled(dl, x0, y0, x0 + w, y0 + h, G.col(G.mix(G.panel, G.accent, 0.15 + 0.5 * f)), G.S(10))
+    local flash_col = G.accent
+    if pendulum and p then
+        local hit = math.max(0, 1 - (p - math.floor(p)) * 60 / bpm / 0.15)
+        if hit > f then f, flash_col = hit, (bar_beat == 0 and G.good or G.accent) end
+    end
+    R.ImGui_DrawList_AddRectFilled(dl, x0, y0, x0 + w, y0 + h, G.col(G.mix(G.panel, flash_col, 0.15 + 0.5 * f)), G.S(10))
     local label = (#taps == 0 and not typed) and "Click here or press any key to start tapping" or "TAP"
     local tw, th = R.ImGui_CalcTextSize(ctx, label)
     if tw > w - G.S(16) then label = "Tap"; tw, th = R.ImGui_CalcTextSize(ctx, label) end -- narrow window
     R.ImGui_DrawList_AddText(dl, x0 + (w - tw) / 2, y0 + (h - th) / 2, G.col(G.fg, 0xC0), label)
-    -- metronome dots continuing at the detected tempo
-    if bpm and #taps > 0 and now - taps[#taps] < reset_s then
-        local beat = 60 / bpm
-        local ph = ((now - taps[#taps]) / beat) % 4
-        for i = 0, 3 do
-            local on = math.floor(ph) == i
-            local cx = x0 + w / 2 + (i - 1.5) * G.S(22)
-            R.ImGui_DrawList_AddCircleFilled(dl, cx, y0 + h - G.S(16), G.S(on and 6 or 4),
-                G.col(on and G.accent or G.dim, on and 0xFF or 0x80))
+    if not p then return end
+
+    local cy = y0 + h - G.S(16)
+    if pendulum then
+        -- handle bouncing between the walls at constant speed: one wall per beat
+        local m = G.S(14)
+        local frac = p - math.floor(p)
+        local t = (math.floor(p) % 2 == 0) and frac or 1 - frac
+        R.ImGui_DrawList_AddLine(dl, x0 + m, cy, x0 + w - m, cy, G.col(G.dim, 0x80), G.S(2))
+        R.ImGui_DrawList_AddCircleFilled(dl, x0 + m + t * (w - 2 * m), cy, G.S(6), G.col(G.fg))
+    else
+        -- one dot per beat of the bar, first (downbeat) green, always running
+        local gap = math.min(G.S(22), (w - G.S(24)) / num)
+        for i = 0, num - 1 do
+            local on = bar_beat == i
+            local base = i == 0 and G.good or G.accent
+            local cx = x0 + w / 2 + (i - (num - 1) / 2) * gap
+            R.ImGui_DrawList_AddCircleFilled(dl, cx, cy, G.S(on and 6 or 4),
+                G.col(on and base or (i == 0 and G.good or G.dim), on and 0xFF or 0x80))
         end
     end
 end
@@ -193,6 +228,7 @@ local function save()
     R.SetExtState(EXT, "window", tostring(window), true)
     R.SetExtState(EXT, "reset", tostring(reset_s), true)
     R.SetExtState(EXT, "round", round_bpm and "1" or "0", true)
+    R.SetExtState(EXT, "display", pendulum and "pendulum" or "dots", true)
 end
 
 -- Big BPM readout; click it to type a BPM. Returns true when Esc cancelled the edit this frame.
@@ -236,7 +272,7 @@ local function readout(ctx, bpm, col)
     if done then
         editing = false
         local v = not esc and parse_bpm(edit_buf, round_bpm)
-        if v then taps, mult, typed = {}, 1, v end
+        if v then taps, mult, typed, beat_t0 = {}, 1, v, R.time_precise() end
         if not esc and not v then err_t = R.time_precise() end
     elseif not active and edit_focus == 0 then
         editing = false                                    -- focus never arrived
@@ -328,6 +364,13 @@ G.run(ctx, "Tap tempo", function(ctx)
         R.ImGui_SetNextItemWidth(ctx, -lw)
         local c2, v2 = R.ImGui_SliderDouble(ctx, "Restart after pause", reset_s, 1, 6, "%.1f s")
         if c2 then reset_s = v2 end
+        R.ImGui_AlignTextToFramePadding(ctx)
+        R.ImGui_Text(ctx, "Metronome")
+        R.ImGui_SameLine(ctx)
+        if R.ImGui_RadioButton(ctx, "Dots", not pendulum) then pendulum = false end
+        R.ImGui_SameLine(ctx)
+        if R.ImGui_RadioButton(ctx, "Pendulum", pendulum) then pendulum = true end
+        R.ImGui_SetItemTooltip(ctx, "A handle swings between the walls; the pad flashes on each beat (green = downbeat)")
         G.theme_row(ctx, "TapTempo")
     end
 
