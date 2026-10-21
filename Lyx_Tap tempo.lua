@@ -2,6 +2,8 @@
  * ReaScript Name: Tap Tempo (Lyx mod, ReaImGui rewrite)
  * Based on: X-Raym Tap Tempo v1.1.2 — https://github.com/X-Raym/REAPER-ReaScripts (GPL v3)
  * Licence: GPL v3
+ * Special thanks to X-Raym for the original Tap Tempo script and for sharing so many
+   great REAPER scripts with the community: https://www.extremraym.com
 
    Tap: click the pad, or press Space / Enter / any letter.   R = reset   Esc = close
    BPM = least-squares fit over the last N taps (steadier than a plain average).
@@ -43,7 +45,7 @@ local function parse_bpm(s, round)
     return v
 end
 
-if not reaper then -- self-check: lua "X-Raym_Tap tempo (Lyx mod).lua"
+if not reaper then -- self-check: lua "Lyx_Tap tempo.lua"
     local bpm, st = analyze({ 0, 0.5, 1.0, 1.5, 2.0 })
     assert(math.abs(bpm - 120) < 1e-9 and st == 1)
     bpm, st = analyze({ 0, 0.52, 0.98, 1.51, 2.0 })
