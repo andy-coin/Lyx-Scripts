@@ -399,8 +399,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_ESC.lua" type="script" desc="Lyx_ESC">
-      <version name="2026.10.21.0315" author="Lyx" time="2026-10-21T03:15:39Z">
-        <source main="main" file="../Lyx_ESC.lua">https://github.com/andy-coin/Lyx-Scripts/raw/217b1271c266f8121f9d617eade7707dfcb33fee/Lyx_ESC.lua</source>
+      <version name="2026.10.21.0625" author="Lyx" time="2026-10-21T06:25:30Z">
+        <source main="main" file="../Lyx_ESC.lua">https://github.com/andy-coin/Lyx-Scripts/raw/675efde886f510840de7ad9ff9d6d824ecdd4890/Lyx_ESC.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Edit- Move notes up one octave.lua" type="script" desc="Lyx_Edit- Move notes up one octave">
