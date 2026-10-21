@@ -2841,6 +2841,11 @@ local function loop()
     end
     if status_visible then draw_status() end
     draw_title_status()
+    -- Esc closes the window (like its X) when it has focus and no popup / text field is using Esc
+    if ImGui.IsWindowFocused(ctx, ImGui.FocusedFlags_RootAndChildWindows) and not ImGui.IsAnyItemActive(ctx)
+       and not ImGui.IsPopupOpen(ctx, "", ImGui.PopupFlags_AnyPopupId) and ImGui.IsKeyPressed(ctx, ImGui.Key_Escape, false) then
+      open = false
+    end
     draw_popups()
     ImGui.End(ctx)
   end
