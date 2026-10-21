@@ -314,7 +314,7 @@ G.run(ctx, "Tap tempo", function(ctx)
 
     if R.ImGui_CollapsingHeader(ctx, "Settings") then
         -- sliders fill the row, leaving room for their labels on the right
-        local lw = math.max(R.ImGui_CalcTextSize(ctx, "Average last N taps"), R.ImGui_CalcTextSize(ctx, "Restart after pause"))
+        local lw = math.max((R.ImGui_CalcTextSize(ctx, "Average last N taps")), (R.ImGui_CalcTextSize(ctx, "Restart after pause"))) -- ( ) = width only
             + R.ImGui_GetStyleVar(ctx, R.ImGui_StyleVar_ItemInnerSpacing())
         R.ImGui_SetNextItemWidth(ctx, -lw)
         local c1, v1 = R.ImGui_SliderInt(ctx, "Average last N taps", window, 3, 24)
