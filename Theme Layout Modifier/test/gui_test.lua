@@ -129,3 +129,17 @@ print("SNAP OK")
 ext.Lyx_GUI = { ["pin:ThemeLayoutModifier"] = "1" }; frame(2)
 for k, v in pairs(SIM.bal) do assert(v == 0, "unbalanced " .. k .. " " .. v) end
 print("PIN OK")
+-- transport: tab, main page, edit page, element list, width presets, state rules row gone
+local switch_section = up(deferred, "switch_section") or up(up(deferred, "draw_main"), "switch_section")
+S.page = "main"; switch_section("trans"); frame(2)
+print("trans size", P.W, P.H, "layouts", #(T.C.layouts.trans or {}))
+assert(P.W >= 1000 and P.H > 0, "transport size not read")
+S.page, S.sel_layout = "edit", T.C.layouts.trans[1]; frame(2)
+local out = render_panel({}, S.sel_layout, 0, 0, 1, { 0, 0, 3000, 3000 })
+local got = {}
+for _, o in ipairs(out) do got[o.e] = true end
+for _, e in ipairs({ "trans.play", "trans.stop", "trans.rec", "trans.status", "trans.bpm.edit" }) do assert(got[e], e .. " not drawn") end
+S.sel_elem = "trans.play"; frame(2)
+P.tflags = 0; T.dirty_eval = true; frame(1); P.tflags = 6; T.dirty_eval = true; frame(1)
+for k, v in pairs(SIM.bal) do assert(v == 0, "unbalanced " .. k .. " " .. v) end
+print("TRANS OK")

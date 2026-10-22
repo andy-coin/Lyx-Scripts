@@ -288,7 +288,8 @@ if S.dir == "" then S.dir = reaper.GetResourcePath() .. "/ColorThemes" end
 if S.sec == "" then S.sec = "tcp" end
 
 local P = { W = 500, H = 80, zoom = tonumber(reaper.GetExtState(EXT, "zoom")) or 2, recarm = false,
-  selected = false, folder = false, panmode = 3, params = {}, org_x = PAD, org_y = PAD }
+  selected = false, folder = false, panmode = 3, params = {}, org_x = PAD, org_y = PAD,
+  tflags = 6, tcenter = false } -- transport: trans_flags (2 = play rate, 4 = time signature), centered
 
 local T -- the loaded theme
 
@@ -408,6 +409,7 @@ local function make_ctx()
     track_selected = P.selected and 1 or 0, trackidx = 1, ntracks = 8, mixer_visible = 1,
     tcp_sends_enabled = 0, tcp_fxlist_enabled = 0, send_cnt = 0, fx_parm_cnt = 0, fx_cnt = 0, recfx_cnt = 0,
     trackfixedlanes = 0, trackpinned = 0, tcp_hidden_overridden = 0,
+    trans_flags = P.tflags, trans_center = P.tcenter and 1 or 0, trans_docked = 0,
   }
   for name, p in pairs(T.C.params) do c[name] = P.params[name] or p.def end
   return c
@@ -501,6 +503,7 @@ local function reset_view()
   if not (L.vars[key] and L.vars[key][1] > 0) and first then L = T.R.layouts[first] end
   local s0 = L and L.vars[key]
   if s0 and s0[1] > 0 then P.W, P.H = math.floor(s0[1]), math.floor(s0[2])
+  elseif S.sec == "trans" then P.W, P.H = 1000, 40
   else P.W, P.H = S.sec:find("mcp") and 80 or 400, S.sec:find("mcp") and 300 or 80 end
   T.dirty_eval = true
 end
@@ -666,6 +669,7 @@ local SECTIONS = {
   { id = "mcp", label = "MCP", btn = { "mcp", "track" }, panel = { "mcp" }, meter = { "meter_bg_mcp" } },
   { id = "master.mcp", label = "Master MCP", btn = { "master_mcp", "mcp_master", "mcp", "track" },
     panel = { "mcp_master", "master_mcp", "mcp" }, meter = { "meter_bg_mcp_master", "meter_bg_mcp" } },
+  { id = "trans", label = "Transport", btn = { "transport" }, panel = { "transport" }, meter = {} },
 }
 local SEC = {}
 for _, sc in ipairs(SECTIONS) do SEC[sc.id] = sc end
@@ -673,6 +677,7 @@ local TABS = {
   { label = "TCP", ids = { "tcp" } },
   { label = "MCP", ids = { "mcp" } },
   { label = "Master", ids = { "master.tcp", "master.mcp" }, sub = { "Track panel", "Mixer strip" } },
+  { label = "Transport", ids = { "trans" } },
 }
 
 local SEC_ELEMS = { -- draw order (back to front)
@@ -685,6 +690,8 @@ local SEC_ELEMS = { -- draw order (back to front)
     "width.label", "recarm", "recmon", "recmode", "fxin", "mute", "solo", "phase", "fx", "fxbyp", "io", "env", "folder" },
   ["master.mcp"] = { "meter", "extmixer.position", "label", "volume", "pan", "width", "volume.label", "pan.label", "width.label",
     "mono", "mute", "solo", "fx", "fxbyp", "io", "env", "menubutton" },
+  trans = { "status", "sel", "rate.fader", "rate", "curtimesig", "bpm.edit", "bpm.tap", "automode", "rew", "fwd", "rec",
+    "play", "repeat", "stop", "pause" },
 }
 local NICE_SUF = {
   meter = "Meter", fxparm = "FX parameters", fxlist = "FX insert list", sendlist = "Send list", fxembed = "FX embed",
@@ -693,26 +700,38 @@ local NICE_SUF = {
   recarm = "Record arm", recmon = "Record monitor", recmode = "Record mode", fxin = "Input FX", mute = "Mute", solo = "Solo",
   phase = "Phase", fx = "FX", fxbyp = "FX bypass", io = "Routing (I/O)", env = "Envelope", folder = "Folder",
   foldercomp = "Folder collapse", mono = "Mono / stereo", ["extmixer.position"] = "Extended mixer area", menubutton = "Mixer menu",
+  rew = "Go to start", fwd = "Go to end", rec = "Record", play = "Play", ["repeat"] = "Repeat", stop = "Stop", pause = "Pause",
+  status = "Status", sel = "Time selection", rate = "Play rate", ["rate.fader"] = "Play rate fader", curtimesig = "Time signature",
+  ["bpm.edit"] = "Tempo (BPM)", ["bpm.tap"] = "Tap tempo", automode = "Automation mode",
 }
 local BTN_SUF = { -- "%s" = section button prefix (track / mcp / master_mcp ...)
   mute = { "%s_mute_off" }, solo = { "%s_solo_off" }, recarm = { "%s_recarm_off" }, recmon = { "%s_monitor_on", "%s_monitor_off" },
   phase = { "%s_phase_norm" }, fx = { "%s_fx_norm", "%s_fx_empty" }, io = { "%s_io" }, env = { "%s_env" },
   recmode = { "%s_recmode_in" }, fxin = { "%s_fx_in_norm", "%s_fx_in_empty" }, foldercomp = { "%s_fcomp_off" },
   folder = { "%s_folder_off", "%s_folder_on" }, mono = { "%s_mono", "%s_stereo" },
+  rew = { "%s_home", "%s_previous" }, fwd = { "%s_end", "%s_next" }, rec = { "%s_record" }, play = { "%s_play" },
+  ["repeat"] = { "%s_repeat_off" }, stop = { "%s_stop" }, pause = { "%s_pause" }, ["bpm.tap"] = { "%s_bpm" },
 }
 local KNOB_SUF = { -- "%s" = section panel prefix (tcp / mcp / mcp_master ...)
   volume = { stack = { "%s_vol_knob_stack" }, knob = { "%s_vol_knob_small", "%s_vol_knob_large" }, bg = { "%s_volbg" }, thumb = { "%s_volthumb" }, pos = 0.72 },
   pan = { stack = { "%s_pan_knob_stack" }, knob = { "%s_pan_knob_small", "%s_pan_knob_large" }, bg = { "%s_panbg" }, thumb = { "%s_panthumb" }, pos = 0.5 },
   width = { stack = { "%s_wid_knob_stack" }, knob = { "%s_width_knob_small", "%s_wid_knob_small" }, bg = { "%s_widthbg" }, thumb = { "%s_widththumb" }, pos = 1 },
+  ["rate.fader"] = { stack = {}, knob = { "%s_knob_bg_small" }, bg = { "%s_playspeedbg", "%s_playspeedbg_vert" },
+    thumb = { "%s_playspeedthumb", "%s_playspeedthumb_vert" }, pos = 0.5 },
 }
 local TEXT_SUF = {
   label = { "Track 1", "%s_namebg" }, trackidx = { "1", "%s_idxbg" }, recinput = { "Input 1", "%s_recinput" },
   ["volume.label"] = { "0.00dB" }, ["pan.label"] = { "center" }, ["width.label"] = { "100%" }, infoblock = { "info" },
+  status = { "[Stopped]", { "%s_status_bg" } }, sel = { "1.1.00 / 3.1.00 / 2.0.00", { "%s_sel_bg" } }, rate = { "1.0" },
+  curtimesig = { "4/4" }, ["bpm.edit"] = { "120", { "%s_edit_bg", "%s_bpm_bg" } }, ["bpm.tap"] = { "BPM", { "%s_bpm_bg" } },
+  automode = { "Trim/Read" },
 }
 local DEF_SIZE = { -- size for elements a layout doesn't place yet (buttons use their image size)
   label = { 120, 20 }, trackidx = { 20, 14 }, recinput = { 120, 16 }, ["volume.label"] = { 45, 10 }, ["pan.label"] = { 31, 10 },
   ["width.label"] = { 31, 10 }, meter = { 12, 60 }, fxparm = { 200, 40 }, fxlist = { 120, 40 }, sendlist = { 120, 40 },
   fxembed = { 120, 40 }, infoblock = { 60, 14 }, ["extmixer.position"] = { 60, 120 }, menubutton = { 22, 22 }, mono = { 22, 16 },
+  status = { 300, 30 }, sel = { 200, 30 }, rate = { 60, 24 }, ["rate.fader"] = { 120, 20 }, curtimesig = { 40, 24 },
+  ["bpm.edit"] = { 40, 24 }, ["bpm.tap"] = { 40, 24 }, automode = { 110, 17 },
 }
 
 local function SC() return SEC[S.sec] end
@@ -726,11 +745,13 @@ end
 
 local function elem_list()
   local t = {}
-  for _, x in ipairs(SEC_ELEMS[S.sec]) do t[#t + 1] = S.sec .. "." .. x end
   local cust = {}
   for k in pairs(T.C.customs) do if in_sec(k) then cust[#cust + 1] = k end end
   table.sort(cust)
-  for _, k in ipairs(cust) do t[#t + 1] = k end
+  -- transport customs are mostly backgrounds / section boxes (Default 7): draw them behind the controls
+  if S.sec == "trans" then for _, k in ipairs(cust) do t[#t + 1] = k end end
+  for _, x in ipairs(SEC_ELEMS[S.sec]) do t[#t + 1] = S.sec .. "." .. x end
+  if S.sec ~= "trans" then for _, k in ipairs(cust) do t[#t + 1] = k end end
   return t
 end
 
@@ -827,7 +848,7 @@ local function draw_element(dl, L, e, imgdir, x1, y1, x2, y2, z)
   local tx = TEXT_SUF[sx]
   if tx then
     if tx[2] then
-      local bg = find_img(expand({ tx[2] }, sc.panel), imgdir)
+      local bg = find_img(expand(type(tx[2]) == "table" and tx[2] or { tx[2] }, sc.panel), imgdir)
       if bg then draw_img(dl, bg, x1, y1, x2, y2, z) end
     end
     local m = v[e .. ".margin"] or { 0, 0, 0, 0, (sx == "trackidx" or S.sec:find("mcp")) and 0.5 or 0 }
@@ -1945,7 +1966,9 @@ local function draw_preview_controls()
   ImGui.TextColored(ctx, C_.accent, "PREVIEW")
   flow(btn_w("Reset size"), 12)
   if ImGui.SmallButton(ctx, "Reset size") then reset_view() end
-  tip("Back to the theme's base size (" .. S.sec .. ".size).\n" .. (S.sec:find("mcp")
+  tip("Back to the theme's base size (" .. S.sec .. ".size).\n" .. (S.sec == "trans"
+    and "Resize the preview by dragging the panel's top, right or bottom edge.\nMany themes rearrange the transport by width: try the width buttons."
+    or S.sec:find("mcp")
     and "Resize the preview by dragging the strip's top or bottom edge\n(REAPER fixes the mixer strip width)."
     or "Resize the preview by dragging the panel's top, right or bottom edge\n(or the top-right / bottom-left corner)."))
   local hs = S.sec == "tcp" and T.C.cfg.tcp_heights
@@ -1959,6 +1982,23 @@ local function draw_preview_controls()
       end
     end
   end
+  if S.sec == "trans" then
+    for i, wv in ipairs({ 800, 1000, 1280, 1600 }) do
+      flow(btn_w("W " .. wv), i == 1 and 12 or 4)
+      if ImGui.SmallButton(ctx, "W " .. wv) then P.W = wv; T.dirty_eval = true end
+      tip(("Preview the transport %d px wide"):format(wv))
+    end
+    for _, f in ipairs({ { "Play rate", 2, "the play rate" }, { "Time signature", 4, "the time signature" } }) do
+      flow(check_w(f[1]), 16)
+      local c, on = ImGui.Checkbox(ctx, f[1], P.tflags & f[2] ~= 0)
+      if c then P.tflags = on and (P.tflags | f[2]) or (P.tflags & ~f[2]); T.dirty_eval = true end
+      tip("REAPER's transport right-click option 'Show " .. f[3] .. "'.\nThemes usually hide those readouts when it's off.")
+    end
+    flow(check_w("Centered"), 16)
+    local c, on = ImGui.Checkbox(ctx, "Centered", P.tcenter)
+    if c then P.tcenter = on; T.dirty_eval = true end
+    tip("REAPER's transport right-click option 'Center transport controls'.")
+  else
   flow(check_w("Rec-armed"), 16)
   local ch, v = ImGui.Checkbox(ctx, "Rec-armed", P.recarm)
   if ch then P.recarm = v; T.dirty_eval = true end
@@ -1982,6 +2022,7 @@ local function draw_preview_controls()
     ImGui.EndCombo(ctx)
   end
   tip("Some themes show a width knob or two pan knobs depending on the track's pan mode.")
+  end
 
   if #T.C.param_order > 0 then
     if ImGui.TreeNode(ctx, ("Theme parameters (%d)"):format(#T.C.param_order)) then
@@ -2098,7 +2139,7 @@ local function drag_frame(d, mx, my, z)
   if m:find("l") then Wn = d.W0 - dx end
   if m:find("b") then Hn = d.H0 + dy end
   if m:find("t") then Hn = d.H0 - dy end
-  Wn = math.max(40, math.min(2000, math.floor(Wn + 0.5)))
+  Wn = math.max(40, math.min(4000, math.floor(Wn + 0.5)))
   Hn = math.max(8, math.min(2000, math.floor(Hn + 0.5))) -- MCP strips can be ~900 px tall
   if m:find("l") then P.org_x = math.max(8, d.ox0 + (d.W0 - Wn) * z) end
   if m:find("t") then P.org_y = math.max(8, d.oy0 + (d.H0 - Hn) * z) end
@@ -2461,6 +2502,8 @@ local ELEM_CATS = {
   { "Record", { "recarm", "recmon", "recmode", "fxin" } },
   { "Buttons", { "mute", "solo", "phase", "fx", "fxbyp", "io", "env", "folder", "foldercomp", "mono", "menubutton" } },
   { "FX / Sends", { "fxparm", "fxlist", "sendlist", "fxembed" } },
+  { "Transport", { "rew", "fwd", "rec", "play", "repeat", "stop", "pause" } },
+  { "Tempo / Status", { "status", "sel", "rate", "rate.fader", "curtimesig", "bpm.edit", "bpm.tap", "automode" } },
   { "Custom", {} },
 }
 
@@ -2670,23 +2713,25 @@ local function draw_inspector(name, L)
     snap_once("rule" .. key, c and on)
     if c and on then ensure_rec(name, e)[key] = v; changed() end
   end
-  local on = toggle("Height <", "hh", P.H, "Hidden whenever the track is shorter than this.\nTest it by dragging the panel's bottom edge.")
+  local on = toggle("Height <", "hh", P.H, "Hidden whenever the panel is shorter than this.\nTest it by dragging the panel's bottom edge.")
   num("hh", 1000, on, P.H)
   ImGui.SameLine(ctx, 0, 16)
   local fixed_w = S.sec:find("mcp") ~= nil and not cur().hw -- keep it usable to switch off an old rule
   ImGui.BeginGroup(ctx) -- one hover area for the disabled-reason tooltip
   ImGui.BeginDisabled(ctx, fixed_w)
-  on = toggle("Width <", "hw", P.W, "Hidden whenever the track panel is narrower than this.\nTest it by dragging the panel's right edge.")
+  on = toggle("Width <", "hw", P.W, "Hidden whenever the panel is narrower than this.\nTest it by dragging the panel's right edge.")
   num("hw", 3000, on, P.W)
   ImGui.EndDisabled(ctx)
   ImGui.EndGroup(ctx)
   if fixed_w and ImGui.IsItemHovered(ctx, ImGui.HoveredFlags_AllowWhenDisabled) then
     ImGui.SetTooltip(ctx, "Not available for mixer strips:\nREAPER fixes the strip width per layout, so a width rule would never change.")
   end
-  row_label("")
-  toggle("Rec-armed only", "arm", true, "Shown only while the track is record-armed.\nPreview with the 'Rec-armed' checkbox above.")
-  ImGui.SameLine(ctx, 0, 16)
-  toggle("Selected only", "sel", true, "Shown only while the track is selected.\nPreview with the 'Selected' checkbox above.")
+  if S.sec ~= "trans" then -- the transport has no rec-arm / selection state
+    row_label("")
+    toggle("Rec-armed only", "arm", true, "Shown only while the track is record-armed.\nPreview with the 'Rec-armed' checkbox above.")
+    ImGui.SameLine(ctx, 0, 16)
+    toggle("Selected only", "sel", true, "Shown only while the track is selected.\nPreview with the 'Selected' checkbox above.")
+  end
   ImGui.EndDisabled(ctx)
   ImGui.EndChild(ctx)
 end
@@ -2731,7 +2776,8 @@ local function draw_edit()
   local editable = name == "" or W.can_edit_blocks(T.C, name, S.sec)
   if not editable then ImGui.TextColored(ctx, C_.danger, "This layout is generated by a macro; edits can't be saved for it.") end
   draw_preview_controls()
-  local insp_h = 4 * fh + 3 * 7 + 24 + 12 -- 4 rows + padding + room for a horizontal scrollbar
+  local rows = S.sec == "trans" and 3 or 4
+  local insp_h = rows * fh + (rows - 1) * 7 + 24 + 12 -- rows + padding + room for a horizontal scrollbar
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding, 0, 0)
   ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg, 0x00000000)
   local ok = ImGui.BeginChild(ctx, "work", -308, -status_h())
