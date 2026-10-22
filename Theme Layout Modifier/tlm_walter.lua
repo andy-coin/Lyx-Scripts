@@ -270,10 +270,12 @@ local function is_cond(tok)
   return tok:find("^[%?!]") or tok:find("[<>=&]")
 end
 
-local function cond(tok, E)
+local cond
+cond = function(tok, E)
   local c1 = tok:sub(1, 1)
-  if c1 == "?" then return scalar(tok:sub(2), E) ~= 0 end
-  if c1 == "!" and not tok:find("=", 2, true) then return scalar(tok:sub(2), E) == 0 end
+  -- the rest may itself be a comparison: ?trans_flags&2, !trans_flags&4
+  if c1 == "?" then return cond(tok:sub(2), E) end
+  if c1 == "!" and not tok:find("=", 2, true) then return not cond(tok:sub(2), E) end
   local p = tok:find("[<>=!&]", 2)
   if not p then return scalar(tok, E) ~= 0 end
   local op, q = tok:sub(p, p), p + 1

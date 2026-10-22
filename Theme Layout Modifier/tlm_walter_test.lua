@@ -25,6 +25,14 @@ if mlay then
   edits[mlay]["mcp.mute"] = { mode = "offset", dx = -3, dy = 7, dw = 0, dh = 0 }
 end
 
+edits[""]["trans.play"] = { mode = "offset", dx = 3, dy = 1, dw = 0, dh = 0 }
+local tlay = C.layouts.trans and C.layouts.trans[1]
+if tlay then
+  edits[tlay] = edits[tlay] or {}
+  edits[tlay]["trans.stop"] = { mode = "abs", x = 200, y = 4, w = 30, h = 30, att = { 0, 0, 0, 0 }, hw = 600 }
+end
+ctx.trans_flags = 6
+
 local R1 = W.run(C, ctx, W.compile_overrides(edits))
 local composed = W.compose(plain, C, edits)
 local plain2, edits2 = W.extract_managed(composed)
