@@ -1502,9 +1502,9 @@
       </version>
     </reapack>
     <reapack name="Lyx_Theme Layout Modifier.lua" type="script" desc="Lyx_Theme Layout Modifier">
-      <version name="2026.10.21.0802" author="Lyx" time="2026-10-21T08:02:19Z">
-        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d79f23dbdd7e0340ffad64e6b285afdc451af9e9/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
-        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/d79f23dbdd7e0340ffad64e6b285afdc451af9e9/Theme%20Layout%20Modifier/tlm_walter.lua</source>
+      <version name="2026.10.22.1840" author="Lyx" time="2026-10-22T18:40:43Z">
+        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/4c2dc414de2f20da877dbcb7513450187cf109ad/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
+        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/4c2dc414de2f20da877dbcb7513450187cf109ad/Theme%20Layout%20Modifier/tlm_walter.lua</source>
       </version>
     </reapack>
     <reapack name="neutronic_Quick Adder 2.lua" type="script" desc="neutronic_Quick Adder 2">
