@@ -282,6 +282,9 @@ local function readout(ctx, bpm, col)
 end
 
 G.run(ctx, "Tap tempo", function(ctx)
+    -- keep the keys for this window: without this ReaImGui passes them on to REAPER's shortcuts
+    -- (nothing here wants text input), so no key ever reached the tap. gfx.getchar did this by itself.
+    R.ImGui_SetNextFrameWantCaptureKeyboard(ctx, true)
     -- keys (ignored while a widget like a slider is being edited)
     if not R.ImGui_IsAnyItemActive(ctx) and not editing then
         local hit = false
