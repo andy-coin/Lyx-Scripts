@@ -207,7 +207,7 @@ local function tip(text)
 end
 
 ----------------------------------------------------------------------------------------------------
--- Files / shell (macOS)
+-- Files / shell (macOS: /usr/bin/unzip · Linux: unzip · Windows 10+: the built-in tar.exe, run hidden)
 ----------------------------------------------------------------------------------------------------
 local function read_file(p)
   local f = io.open(p, "rb")
@@ -225,8 +225,34 @@ local function write_file(p, s)
   return true
 end
 
-local function exists(p) return os.rename(p, p) and true or false end
-local function q(s) return "'" .. (s:gsub("'", "'\\''")) .. "'" end
+local OS = reaper.GetOS() or ""
+local WIN = OS:find("^Win") ~= nil
+local UNZIP = (OS:find("^OSX") or OS:find("^macOS")) and "/usr/bin/unzip" or "unzip"
+
+local function exists(p)
+  if not WIN then return os.rename(p, p) and true or false end
+  if reaper.file_exists(p) then return true end -- os.rename(p, p) fails on Windows even when p exists
+  reaper.EnumerateFiles(p, -1); reaper.EnumerateSubdirectories(p, -1)
+  return (reaper.EnumerateFiles(p, 0) or reaper.EnumerateSubdirectories(p, 0)) ~= nil
+end
+local function q(s)
+  if WIN then return '"' .. s .. '"' end -- Windows paths can't contain "
+  return "'" .. (s:gsub("'", "'\\''")) .. "'"
+end
+-- Windows: ExecProcess runs without flashing a console window (os.execute would)
+local function win_run(cmd) return reaper.ExecProcess(cmd, 0) or "" end
+local function remove_dir(p)
+  if WIN then win_run('cmd.exe /C rmdir /s /q ' .. q(p)) else os.execute("rm -rf " .. q(p)) end
+end
+-- unpack a zip into dir (created if needed), skipping macOS resource forks; keep = never overwrite
+local function unzip_to(zip, dir, keep)
+  if WIN then
+    reaper.RecursiveCreateDirectory(dir, 0)
+    win_run("tar.exe -x" .. (keep and "k" or "") .. "f " .. q(zip) .. " --exclude __MACOSX -C " .. q(dir))
+  else
+    os.execute(UNZIP .. (keep and " -n" or "") .. " -qq " .. q(zip) .. " -x '__MACOSX/*' -d " .. q(dir))
+  end
+end
 
 local function split_lines(s)
   s = s:gsub("\r\n", "\n"):gsub("\r", "\n")
@@ -238,8 +264,13 @@ end
 
 -- via a temp file, not io.popen: reading a pipe can fail with "Interrupted system call"
 local function zip_list(path)
+  if WIN then -- output = exit code line, then the entries
+    local t = split_lines(win_run("tar.exe -tf " .. q(path)))
+    table.remove(t, 1)
+    return t
+  end
   local tmp = os.tmpname()
-  os.execute("/usr/bin/unzip -Z1 " .. q(path) .. " > " .. q(tmp) .. " 2>/dev/null")
+  os.execute(UNZIP .. " -Z1 " .. q(path) .. " > " .. q(tmp) .. " 2>/dev/null")
   local s = read_file(tmp) or ""
   os.remove(tmp)
   return split_lines(s)
@@ -356,7 +387,7 @@ local function unpack_zip(t, newname)
 
   if not newname then
     -- unpack in place, never overwriting existing files
-    os.execute("/usr/bin/unzip -n -qq " .. q(t.file) .. " -x '__MACOSX/*' -d " .. q(dir))
+    unzip_to(t.file, dir, true)
     for _, tf in ipairs(tfiles) do
       local p = dir .. "/" .. tf
       local s = read_file(p)
@@ -373,8 +404,8 @@ local function unpack_zip(t, newname)
     return nil, "\"" .. newname .. "\" already exists in this folder."
   end
   local tmp = dir .. "/.tlm_unpack_tmp"
-  os.execute("rm -rf " .. q(tmp))
-  os.execute("/usr/bin/unzip -qq " .. q(t.file) .. " -x '__MACOSX/*' -d " .. q(tmp))
+  remove_dir(tmp)
+  unzip_to(t.file, tmp)
   local ok = os.rename(tmp .. "/" .. resdir, dir .. "/" .. newname)
   local first
   if ok then
@@ -387,8 +418,8 @@ local function unpack_zip(t, newname)
       end
     end
   end
-  os.execute("rm -rf " .. q(tmp))
-  if not first then return nil, "Unpacking failed." end
+  remove_dir(tmp)
+  if not first then return nil, "Unpacking failed." .. (WIN and " (needs Windows 10 or newer)" or OS:find("^Other") and " (needs the 'unzip' command)" or "") end
   return first
 end
 
