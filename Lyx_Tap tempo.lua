@@ -284,9 +284,19 @@ end
 G.run(ctx, "Tap tempo", function(ctx)
     -- keys (ignored while a widget like a slider is being edited)
     if not R.ImGui_IsAnyItemActive(ctx) and not editing then
+        local hit = false
         for _, k in ipairs(TAP_KEYS) do
-            if R.ImGui_IsKeyPressed(ctx, k, false) then tap(); break end
+            if R.ImGui_IsKeyPressed(ctx, k, false) then hit = true; break end
         end
+        -- any typed character too (digits, symbols, other layouts); r/R is Reset
+        local i = 0
+        while not hit do
+            local ok, c = R.ImGui_GetInputQueueCharacter(ctx, i)
+            if not ok then break end
+            if c ~= 82 and c ~= 114 then hit = true end
+            i = i + 1
+        end
+        if hit then tap() end
         if R.ImGui_IsKeyPressed(ctx, R.ImGui_Key_R(), false) then reset() end
     end
 
