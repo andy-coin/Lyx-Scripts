@@ -2,6 +2,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_lib._Lyx_HOME")
+    local L=require("_lib._Lyx_LaneName")
 
     local function main()
 
@@ -21,10 +22,7 @@
             for abi=1,lane_n do
                 if  api.gtv(track,"C_LANEPLAYS:"..(abi-1))==1 then 
                     --change name
-                    _,tr_name=api.ts(track,"P_NAME","",false)
-                    _,lane_name=api.ts(track,"P_LANENAME:"..(abi-1),"",false)
-                    new_name=tr_name:gsub("(   %[ .* %])","").."   [ "..lane_name..' ]'
-                    api.ts(track,"P_NAME",new_name,true)
+                    L.show(track,abi-1)
                     break
                 end
             end

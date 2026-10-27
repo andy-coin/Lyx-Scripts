@@ -2,6 +2,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_lib._Lyx_HOME")
+    local L=require("_lib._Lyx_LaneName")
     
     -----CUSTOM-----
     
@@ -28,10 +29,7 @@
             
                 if  api.gtv(tr,"C_LANEPLAYS:"..(abi-1))==1 then 
                     --change name
-                    _,tr_name=api.ts(tr,"P_NAME","",false)
-                    _,lane_name=api.ts(tr,"P_LANENAME:"..(abi-1),"",false)
-                    new_name=tr_name:gsub("(   %[ .* %])","").."   [ "..lane_name..' ]'
-                    api.ts(tr,"P_NAME",new_name,true)
+                    L.show(tr,abi-1)
                     break
                 end
             
@@ -203,7 +201,7 @@
             local rec_point = api.load("Record - Again point",pro_name,rec_point)
             SelectRecMIDIitem(midi_tr,P,rec_point)
             SetItemSnapOffset()
-            r.ShowHideTrackLaneNames('Show')
+            L.all(true)
             --UpdateRecTracksLaneName()
             --api.cmd(api.name('_RS94529c0d6874ab92020a5639fa8e92c13c7bc76b'),0)--rename selected items to track name
             --SelectRecMIDIitem(midi_tr,P,rec_point)

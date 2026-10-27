@@ -2,6 +2,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_lib._Lyx_HOME")
+    local L=require("_lib._Lyx_LaneName")
     
     -----CUSTOM-----
     
@@ -264,7 +265,7 @@
                 api.save("Record - Again point",pro_name,rec_point,false)
                 
                 api.cmd(41186,0) -- New recording trims existing items (tape mode)
-                r.ShowHideTrackLaneNames('Hide')
+                L.all(false)
                 reaper.Main_OnCommand(1013,0) --record
                 WaitRecordEnd()
                 api.cmd(40527,0)--Clear all peak indicators
@@ -294,7 +295,7 @@
 
             SelectRecMIDIitem(midi_tr,P,rec_point)
             SetItemSnapOffset()
-            r.ShowHideTrackLaneNames('Show')
+            L.all(true)
         end
         
     end
