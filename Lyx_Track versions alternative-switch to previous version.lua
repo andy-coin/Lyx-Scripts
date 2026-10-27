@@ -2,6 +2,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_lib._Lyx_HOME")
+    local L=require("_lib._Lyx_LaneName")
     
     ---CUSTOM---
         --return to last or stay in first 
@@ -49,10 +50,7 @@
                     api.stv(tr,"C_LANEPLAYS:"..(new_lane),1)
 
                     --change name
-                    _,tr_name=api.ts(tr,"P_NAME","",false)
-                    _,lane_name=api.ts(tr,"P_LANENAME:"..(new_lane),"",false)
-                    new_name=tr_name:gsub("(   %[ .* %])","").."   [ "..lane_name..' ]'
-                    api.ts(tr,"P_NAME",new_name,true)
+                    L.show(tr,new_lane)
 
                     --select items in same position
                     if  FallBack  or ( not FallBack and current_lane ~= 0 ) then
@@ -98,10 +96,7 @@
                 api.stv(tr,"C_LANEPLAYS:"..new_lane,1)
 
                 --change name
-                _,tr_name=api.ts(tr,"P_NAME","",false)
-                _,lane_name=api.ts(tr,"P_LANENAME:"..(new_lane),"",false)
-                new_name=tr_name:gsub("(   %[ .* %])","").."   [ "..lane_name..' ]'
-                api.ts(tr,"P_NAME",new_name,true)
+                L.show(tr,new_lane)
             end
             ::Next::   
         end

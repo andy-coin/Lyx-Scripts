@@ -1,6 +1,7 @@
     local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
     package.path = package.path .. ";" .. script_path .. "?.lua"
     local r=require("_lib._Lyx_HOME")
+    local L=require("_lib._Lyx_LaneName")
 
     -- Track versions on REAPER 7 fixed lanes: play the lane under the mouse
     -- and show its lane name in the track name ("Vox   [ Take 3 ]").
@@ -14,9 +15,7 @@
         api.cmd(42478,0)--play lanes under mouse
         for abi=1,lane_n do
             if  api.gtv(track,"C_LANEPLAYS:"..(abi-1))==1 then
-                local _,tr_name=api.ts(track,"P_NAME","",false)
-                local _,lane_name=api.ts(track,"P_LANENAME:"..(abi-1),"",false)
-                api.ts(track,"P_NAME",tr_name:gsub("(   %[ .* %])","").."   [ "..lane_name..' ]',true)
+                L.show(track,abi-1)
                 break
             end
         end

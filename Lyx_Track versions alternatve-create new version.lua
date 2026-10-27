@@ -8,9 +8,16 @@
       "Verse"  (not a number)     -> "Verse*", "Verse**", ...
       new empty lane at bottom    -> highest number + 1
 ]]
+
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
 local r = reaper and require("_lib._Lyx_HOME")
+
+-----CUSTOM-----
+lane_name_position = 0
+    -- lane name in the track name: -1 = hidden, 0 = at the start, 1 = at the end
+    -- (saved for all Lyx scripts: switch version, Play-Stop, Record, Render ...)
+
 
 ---------------------------------------------------------------------------
 -- Naming (pure)
@@ -45,8 +52,8 @@ end
 
 local function next_number(names)
     local mx = 0
-    for _, n in ipairs(names) do
-        local v = tonumber(n:match("^%s*(%d+)"))
+    for i, n in ipairs(names) do -- unnamed lanes count as their number (same as lane_label)
+        local v = tonumber(n:match("^%s*(%d+)")) or (n == "" and i)
         if v and v > mx then mx = v end
     end
     return tostring(mx + 1)
@@ -62,12 +69,16 @@ if not reaper then -- self-check: lua "Lyx_Track versions alternatve-create new 
     assert(next_name("Verse", { "Verse", "Verse*" }) == "Verse**")
     assert(next_number({ "1", "2 - a", "Verse", "4" }) == "5")
     assert(next_number({}) == "1")
+    assert(next_number({ "" }) == "2")
+    assert(next_number({ "", "" }) == "3")
     return print("Track versions self-check OK")
 end
 
 ---------------------------------------------------------------------------
 local R = reaper
 if not r.Need("SWS") then return end
+local L = require("_lib._Lyx_LaneName")
+R.SetExtState("Lyx", "lane_name_position", tostring(lane_name_position), true)
 
 local function lane_names(tr)
     local t = {}
@@ -84,20 +95,11 @@ local function lane_label(names, i) -- 0-based; unnamed lanes count as their num
 end
 
 local function playing_lane(tr)
-    for i = 0, R.GetMediaTrackInfo_Value(tr, "I_NUMFIXEDLANES") - 1 do
-        if R.GetMediaTrackInfo_Value(tr, "C_LANEPLAYS:" .. i) > 0 then return i end
-    end
-    return 0
+    return L.playing(tr) or 0
 end
 
 local function set_lane_name(tr, i, name)
     R.GetSetMediaTrackInfo_String(tr, "P_LANENAME:" .. i, name, true)
-end
-
-local function show_in_track_name(tr, lane_name)
-    local _, n = R.GetSetMediaTrackInfo_String(tr, "P_NAME", "", false)
-    n = n:gsub("\30?   %[ .* %]", "") .. "\30   [ " .. lane_name .. " ]"
-    R.GetSetMediaTrackInfo_String(tr, "P_NAME", n, true)
 end
 
 -- duplicate the lane under the mouse (new lane appears right below it)
@@ -106,14 +108,15 @@ local function duplicate_lane(tr)
     local src = playing_lane(tr)
     local before = lane_names(tr)
     R.Main_OnCommand(42505, 0) -- duplicate items to new lane
+    -- nothing duplicated (e.g. empty lane): don't rename the lane that is already below
+    if R.GetMediaTrackInfo_Value(tr, "I_NUMFIXEDLANES") <= #before then return end
     R.Main_OnCommand(40421, 0) -- select all items on track
     R.Main_OnCommand(41613, 0) -- unpool
     R.Main_OnCommand(42469, 0) -- select item under mouse
     local new = src + 1
-    local name = next_name(lane_label(before, src), before)
-    set_lane_name(tr, new, name)
+    set_lane_name(tr, new, next_name(lane_label(before, src), before))
     R.SetMediaTrackInfo_Value(tr, "C_LANEPLAYS:" .. new, 1)
-    return name
+    return new
 end
 
 local function add_empty_lane(tr)
@@ -142,15 +145,15 @@ local function main()
             if R.GetToggleCommandState(40435) == 1 then R.Main_OnCommand(40435, 0) end
             return
         end
-        show_in_track_name(tr, duplicate_lane(tr))
+        L.show(tr, duplicate_lane(tr) or playing_lane(tr))
         return
     end
 
     if collapsed and not is_audio_input then
-        show_in_track_name(tr, duplicate_lane(tr))
+        L.show(tr, duplicate_lane(tr) or playing_lane(tr))
     else
         add_empty_lane(tr)
-        show_in_track_name(tr, lane_label(lane_names(tr), playing_lane(tr)))
+        L.show(tr, playing_lane(tr))
     end
 end
 
