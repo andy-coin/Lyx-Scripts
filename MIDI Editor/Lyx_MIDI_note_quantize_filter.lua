@@ -1,7 +1,13 @@
 -- @description Lyx MIDI Note Quantize Filter
--- @version 1.1.0
+-- @version 1.2.0
 -- @author Lyx
 -- @changelog
+--   1.2.0  MIDI editor overlay reworked: only quantized notes are marked (light
+--          orange outline at their original position + a line to the new one),
+--          kept notes stay clean; filter window shown at the notes' grid lines
+--          only while dragging; hover the counts to outline kept / quantized
+--          notes; overlay follows scrolling at once; row offset fixed;
+--          Bypass button; Enter = apply and close, Esc = cancel and close
 --   1.1.0  Early / Late window (separate sizes), drag the window in the
 --          timing view, live-preview throttle for very large selections,
 --          fewer API calls per preview, indicator fixes (time timebase,
@@ -51,7 +57,7 @@ local function K(v)
 end
 
 local SCRIPT_NAME = "Lyx MIDI Note Quantize Filter"
-local VERSION     = "1.1.0"
+local VERSION     = "1.2.0"
 local EXT_SECTION = "Lyx_MIDI_QuantizeFilter"
 local UNDO_LABEL  = "Lyx: MIDI quantize filter"
 
@@ -251,6 +257,9 @@ local S = {
     drag_side      = nil,   -- timing-view drag: -1 early, 1 late, 0 both
     plot           = { pts = {}, total = 0, moved = 0, max_ticks = 0, max_ms = 0 },
     snap_n         = 0,     -- bumped on every new baseline (indicator cache key)
+    plan_n         = 0,     -- bumped on every analyze() (indicator cache key)
+    band_until     = 0,     -- indicator: show the filter-window band until this time
+    hl             = nil,   -- indicator: "kept" / "moved" while hovering the counts
     undo_proj      = nil,   -- project the uncommitted MIDI was written in
 }
 
@@ -872,6 +881,14 @@ local function do_apply()
     status("Applied: the result is the new baseline", 4)
 end
 
+-- Esc: drop the preview (back to the last baseline); the caller closes the window
+local function do_cancel()
+    if not any_written() then return end
+    S.bypassed, S.dirty = true, false
+    run_apply()
+    commit(UNDO_LABEL.." (cancel)")
+end
+
 -- restore the originals and the default parameters
 local function do_reset()
     settings.strength  = DEFAULTS.strength
@@ -895,6 +912,7 @@ local MAX_PLOT_PTS = 700
 
 local function analyze()
     S.analysis_dirty = false
+    S.plan_n = S.plan_n + 1
     grid_flush()
     local A = { pts = {}, total = 0, moved = 0, max_ticks = 0, max_ms = 0 }
     S.plot = A
@@ -952,7 +970,7 @@ local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
 -- when that fails (measured on REAPER 7.82 / macOS). Fine-tune: Settings > Indicator offset.
 local IND_RULER_H = 56
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
-local IND_BLINK = 0.8    -- seconds per on+off cycle of the dashed outline on moving notes (0 = steady)
+local IND_BAND_FADE = 0.4  -- seconds the filter-window band takes to fade out
 
 -- Vertical fine-tune in pixels (Settings > Indicator offset), stored per machine:
 -- the ruler height differs between REAPER versions, themes and OS scaling, and no API
@@ -1044,7 +1062,13 @@ local function ind_update()
     if not okc or not w or w < 8 or h < 8 then return end
 
     local now = reaper.time_precise()
-    if IND.view_take ~= take or now - IND.view_t > IND.view_dt then
+    -- scroll / zoom (hand scroll, scrollbars, wheel) changes the scrollbars:
+    -- re-read the view at once instead of waiting for the timer
+    local _, hp, hpage = reaper.JS_Window_GetScrollInfo(mv, "h")
+    local _, vp, vpage = reaper.JS_Window_GetScrollInfo(mv, "v")
+    local sc = tostring(hp)..","..tostring(hpage)..","..tostring(vp)..","..tostring(vpage)
+    if IND.view_take ~= take or sc ~= IND.scroll or now - IND.view_t > IND.view_dt then
+        IND.scroll = sc
         IND.view, IND.view_take = read_view(take), take
         -- the item chunk can be MBs: re-read every 0.1 s when it is cheap,
         -- backing off to 0.5 s for heavy items
@@ -1060,7 +1084,8 @@ local function ind_update()
         reaper.ShowConsoleMsg(string.format("[IND] ruler %d (%s) h=%d lanes=%d rh=%s\n",
             ruler_raw, measured and "measured" or "fallback", h, v.lanes, v.rh))
     end
-    local blink_on = IND_BLINK <= 0 or (reaper.time_precise() % IND_BLINK) < IND_BLINK / 2
+    -- the band shows while the window is being adjusted, then fades out
+    local band_a = clamp((S.band_until - reaper.time_precise()) / IND_BAND_FADE, 0, 1)
 
     local g, sw = reaper.MIDI_GetGrid(take)
     g, sw = g or 0, sw or 0
@@ -1068,7 +1093,8 @@ local function ind_update()
     local te, tl = pe * 0.01 * g * 0.5, pl * 0.01 * g * 0.5
     local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d|%.4f|%.4f|%d|%d|%d",
         tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band,
-        v.top, v.rh, v.lanes, settings.mode, S.snap_n) .. "|" .. ruler .. (blink_on and "|on" or "|off")
+        v.top, v.rh, v.lanes, settings.mode, S.snap_n) .. "|" .. ruler
+        .. "|" .. toint(band_a * 10) .. "|" .. tostring(S.hl) .. "|" .. tostring(S.bypassed) .. "|" .. S.plan_n
     if key == IND.key and IND.hwnd == mv then return end
 
     if IND.hwnd ~= mv or IND.w ~= w or IND.h ~= h or not IND.bmp then
@@ -1096,79 +1122,91 @@ local function ind_update()
         end
         grid_flush()
         grid_use(g, sw)
-        -- Only around the selected notes: one box per note boundary and
-        -- grid line, 1.2 note rows tall, centred on the note's row.
-        -- No density limit: boxes follow the notes, not every grid line.
-        -- Every selected note boundary gets a faint box = its filter window, 1.2 note rows
-        -- tall around the note's row. Notes Quantize will move (a boundary outside the
-        -- window) also get a blinking dashed outline around the whole note.
-        local fill = lice_color(theme.band, 0.20)
-        local dash = lice_color(theme.band, 1)
+        -- Only what changes gets ink; untouched (kept) notes stay clean:
+        --   moved notes: a light orange rounded outline where the note was (position
+--     and length) + a line to where it is now
+        --     (while bypassed the roles swap: the ghost is where it would go)
+        --   filter window: a band at the grid lines the notes use, only while it is being dragged
+        --   hovering the counts in the GUI outlines the kept / moved notes
         local ny0, ny1 = ruler, h - v.lanes              -- notes area
         local rh = v.rh
-        local half = rh * 0.6
-        local function dashed(x, y0, y1)
-            if x < 0 or x >= w then return end
-            for y = y0, y1 - 1, 6 do
-                reaper.JS_LICE_FillRect(bmp, max(0, x - 1), y, 2, min(4, y1 - y), dash, 1, "COPY")
+        local function px(q) return floor(x_of(q) + 0.5) end
+        local function rect(x0, y0, x1, y1, c)
+            x0, x1, y0, y1 = max(0, x0), min(w, x1), max(ny0, y0), min(ny1, y1)
+            if x1 > x0 and y1 > y0 then
+                reaper.JS_LICE_FillRect(bmp, x0, y0, x1 - x0, y1 - y0, c, 1, "COPY")
             end
         end
-        local function dashed_h(y, x0, x1)
-            for x = max(0, x0), min(w, x1) - 1, 6 do
-                reaper.JS_LICE_FillRect(bmp, x, y, min(4, x1 - x), 2, dash, 1, "COPY")
-            end
+        local function frame(x0, y0, x1, y1, c, t)
+            rect(x0, y0, x1, y0 + t, c); rect(x0, y1 - t, x1, y1, c)
+            rect(x0, y0, x0 + t, y1, c); rect(x1 - t, y0, x1, y1, c)
         end
-        local qlo, qhi = ql - tl - g, qr + te + g
-        local seen, count = {}, 0
-        -- blinking dashed outline around the whole note (its own row, start to end)
-        local function outline(qs, qe, yc)
-            local y0 = max(ny0, floor(yc - rh / 2 + 0.5))
-            local y1 = min(ny1, floor(yc + rh / 2 + 0.5))
-            if y1 - y0 < 2 then return end
-            local xl = floor(x_of(qs) + 0.5)
-            local xr = max(xl + 3, floor(x_of(qe) + 0.5))
-            if xr < 0 or xl >= w then return end
-            dashed(xl + 1, y0, y1); dashed(xr - 1, y0, y1)
-            dashed_h(y0, xl, xr); dashed_h(y1 - 2, xl, xr)
-        end
-        local function box(q, pitch, yc)
-            if q < qlo or q > qhi then return end
-            local y0 = max(ny0, floor(yc - half + 0.5))
-            local y1 = min(ny1, floor(yc + half + 0.5))
-            if y1 - y0 < 1 then return end
-            local X = nearest(q)
-            local il = floor(x_of(X - te) + 0.5)
-            local ir = max(il + 2, floor(x_of(X + tl) + 0.5))   -- 0 % window: still a thin box to outline
-            local k = X * 128 + pitch
-            if not seen[k] then
-                seen[k] = true
-                reaper.JS_LICE_FillRect(bmp, il, y0, ir - il, y1 - y0, fill, 1, "COPY")
-            end
-                count = count + 1
-        end
-        -- Moves = Quantize pulls this boundary (outside the window). A full-strength plain
-        -- pull moves exactly those, so it tells them apart whatever Strength is set to.
-        local P1 = make_params(g)
-        P1.str, P1.weighted, P1.edge = 1, false, false
-        local function moves(q, nq) return abs(nq - q) > EPS end
+
+        local line_c  = lice_color(theme.accent, 1)
+        local ghost_e = lice_color(theme.band, 0.75)   -- light orange rounded outline
+        local hl_c    = lice_color(S.hl == "kept" and theme.band or theme.accent, 1)
         local length_mode = settings.mode == 1
-        local n_ex = 0
+        local count, n_ex = 0, 0
+        -- pass 1: plan the visible notes, collect the grid lines they use
+        local items, lines = {}, {}
         for _, t in ipairs(S.takes) do
             local sess = S.sessions[t]
-            if sess then
+            if sess and sess.g > EPS then
+                grid_use(sess.g, sess.swing)
+                local P = make_params(sess.g)
                 for _, nt in ipairs(sess.notes) do
-                    if count >= 4096 then break end   -- ponytail: hard cap, raise if huge visible selections get cut off
-                    local yc = ny0 + (v.top - nt.pitch + 0.5) * rh
-                    if yc + half > ny0 and yc - half < ny1 then
-                        local nqs, nqe = plan_note(nt.qs, nt.qe, P1)
-                        local mv_s = moves(nt.qs, nqs)
-                        local mv_e = length_mode and moves(nt.qe, nqe)
-                        if mv_s or mv_e then n_ex = n_ex + 1 end
-                        box(nt.qs, nt.pitch, yc)
-                        if length_mode then box(nt.qe, nt.pitch, yc) end
-                        if (mv_s or mv_e) and blink_on then outline(nt.qs, nt.qe, yc) end
+                    if #items >= 4096 then break end   -- ponytail: hard cap, raise if huge visible selections get cut off
+                    -- the first visible row is CFGEDITVIEW's top - 1 (js_Mouse editing: pitch = top - ceil(dy / rh))
+                    local yc = ny0 + (v.top - nt.pitch - 0.5) * rh
+                    local y0, y1 = floor(yc - rh / 2 + 0.5), floor(yc + rh / 2 + 0.5)
+                    if y1 > ny0 and y0 < ny1 then
+                        local nqs, nqe = nt.qs, nt.qe
+                        if P.str > 0 then nqs, nqe = plan_note(nt.qs, nt.qe, P) end
+                        -- same "moved" test as analyze(), so the counts match the picture
+                        local moved = max(abs(nqs - nt.qs), abs(nqe - nt.qe)) * sess.ppq_qn >= 0.5
+                        items[#items + 1] = { nt = nt, nqs = nqs, nqe = nqe, moved = moved, yc = yc, y0 = y0, y1 = y1 }
+                        lines[nearest(nt.qs)] = true
+                        if length_mode then lines[nearest(nt.qe)] = true end
                     end
                 end
+            end
+        end
+
+        -- filter window: only at the grid lines the selected notes start / end on
+        if band_a > 0 and (te > 0 or tl > 0) then
+            local fill = lice_color(theme.band, 0.14 * band_a)
+            local edge = lice_color(theme.band, 0.6 * band_a)
+            for X in pairs(lines) do
+                local il, ir = px(X - te), px(X + tl)
+                rect(il, ny0, ir, ny1, fill)
+                rect(il, ny0, il + 1, ny1, edge); rect(ir - 1, ny0, ir, ny1, edge)
+            end
+        end
+
+        -- pass 2: ghosts + links (moved notes), outlines (hovered count)
+        for _, it in ipairs(items) do
+            local nt, y0, y1 = it.nt, it.y0, it.y1
+            -- s = where the note sits now, g = the other position
+            local ss, se, gs, ge = it.nqs, it.nqe, nt.qs, nt.qe
+            if S.bypassed then ss, se, gs, ge = gs, ge, ss, se end
+            if it.moved then
+                count, n_ex = count + 1, n_ex + 1
+                local gl = px(gs)
+                local gr = max(gl + 3, px(ge))
+                if y0 >= ny0 and y1 <= ny1 then
+                    reaper.JS_LICE_RoundRect(bmp, gl, y0, gr - gl - 1, y1 - y0 - 1, 3, ghost_e, 1, "COPY", false)
+                else   -- cut by the ruler / CC lanes: square, clipped
+                    frame(gl, y0, gr, y1, ghost_e, 1)
+                end
+                local yl = floor(it.yc + 0.5)
+                local function link(a, b) rect(min(a, b), yl - 1, max(a, b) + 1, yl + 1, line_c) end
+                link(gl, px(ss))
+                if length_mode then link(px(ge), px(se)) end
+            end
+            if S.hl and (S.hl == "moved") == it.moved then
+                count = count + 1
+                local xl = px(ss)
+                frame(xl - 2, y0 - 2, max(xl + 3, px(se)) + 2, y1 + 2, hl_c, 2)
             end
         end
         if IND_DEBUG then
@@ -1176,7 +1214,7 @@ local function ind_update()
             for _, t in ipairs(S.takes) do local ss = S.sessions[t] if ss and ss.notes[1] then n = n + #ss.notes p, qs = ss.notes[1].pitch, ss.notes[1].qs end end
             reaper.ShowConsoleMsg(string.format("[IND] ruler %d view w=%s h=%s top=%s rh=%s lanes=%s notes area y=%s..%s | grid=%.4g win L/R=%.4g/%.4g QN | visible QN %.3f..%.3f | sel notes=%d first pitch=%s qs=%s -> y=%s | boxes=%d moving=%d\n",
                 ruler, w, h, v.top, v.rh, v.lanes, ny0, ny1, g, te, tl, ql, qr, n, p, qs,
-                p ~= "-" and string.format("%.0f", ny0 + (v.top - p + 0.5) * rh) or "-", count, n_ex))
+                p ~= "-" and string.format("%.0f", ny0 + (v.top - p - 0.5) * rh) or "-", count, n_ex))
         end
     elseif IND_DEBUG then
         reaper.ShowConsoleMsg(string.format("[IND] nothing to draw: grid=%.4g window L/R=%.4g/%.4g QN\n", g, te, tl))
@@ -1406,6 +1444,13 @@ local function segmented(id, labels, index, width)
     return new ~= index, new
 end
 
+-- show the filter-window band in the MIDI editor while the last item is dragged
+local function band_if_dragged()
+    if ImGui.IsItemActive(ctx) then
+        S.band_until = reaper.time_precise() + 1.0
+    end
+end
+
 local function grid_label(g)
     if not g or g <= EPS then return "-" end
     local inv = 4 / g                                  -- 1 / (fraction of a whole note)
@@ -1438,6 +1483,7 @@ local function draw_timing_view(W, H)
     local x0, y0 = ImGui.GetCursorScreenPos(ctx)
     ImGui.InvisibleButton(ctx, "##timing", W, H)
     local hovered = ImGui.IsItemHovered(ctx)
+    band_if_dragged()
     local x1, y1 = x0 + W, y0 + H
     ImGui.DrawList_AddRectFilled(dl, x0, y0, x1, y1, theme.panel, 4 * ui)
 
@@ -1696,16 +1742,19 @@ local function draw_main()
     if settings.link then
         ch, v = param_slider("##threshold", settings.threshold, 0, 100, DEFAULTS.threshold, "±%d%%", W)
         if ch then settings.threshold = v; on_param_change() end
+        band_if_dragged()
         tip(win_tip)
     else
         local hw = (W - 6 * ui) * 0.5
         ch, v = param_slider("##threshold", settings.threshold, 0, 100, DEFAULTS.threshold, "early -%d%%", hw)
         if ch then settings.threshold = v; on_param_change() end
+        band_if_dragged()
         tip(win_tip)
         ImGui.SameLine(ctx, 0, 6 * ui)
         ch, v = param_slider("##threshold_late", settings.threshold_late, 0, 100,
             DEFAULTS.threshold_late, "late +%d%%", hw)
         if ch then settings.threshold_late = v; on_param_change() end
+        band_if_dragged()
         tip(win_tip)
     end
     ImGui.Dummy(ctx, 0, 4 * ui)
@@ -1736,7 +1785,9 @@ local function draw_main()
     if ci then settings.indicator = iv; save_settings() end
     if not HAS_JS then ImGui.EndDisabled(ctx) end
     if HAS_JS then
-        tip("Draw the filter window around the selected notes inside the MIDI editor.")
+        tip("MIDI editor overlay: quantized notes show a ghost of their other position "..
+            "and a line to it; kept notes stay clean. The filter window shows at the grid "..
+            "lines while you adjust it.")
     elseif ImGui.IsItemHovered(ctx, K(ImGui.HoveredFlags_AllowWhenDisabled) or 0) then
         ImGui.SetTooltip(ctx, "Needs js_ReaScriptAPI (ReaPack).")
     end
@@ -1746,13 +1797,24 @@ local function draw_main()
     draw_timing_view(W, 92 * ui)
     local A = S.plot
     push_font("small")
+    S.hl = nil
     if A.total > 0 then
-        local kept = A.total - A.moved
-        local txt = string.format("%d to move · %d kept", A.moved, kept)
+        -- colours match the MIDI editor overlay; hover one to outline those notes there
+        local hl_tip = HAS_JS and settings.indicator and "Hover: outline these notes in the MIDI editor." or nil
+        ImGui.TextColored(ctx, theme.accent, string.format("%d to quantize", A.moved))
+        if ImGui.IsItemHovered(ctx) then S.hl = "moved" end
+        if hl_tip then tip(hl_tip) end
+        ImGui.SameLine(ctx, 0, 0)
+        ImGui.TextColored(ctx, theme.text_dim, " · ")
+        ImGui.SameLine(ctx, 0, 0)
+        ImGui.TextColored(ctx, theme.band, string.format("%d kept", A.total - A.moved))
+        if ImGui.IsItemHovered(ctx) then S.hl = "kept" end
+        if hl_tip then tip(hl_tip) end
         if A.moved > 0 then
-            txt = txt..string.format(" · max %d ticks (%.1f ms)", toint(A.max_ticks), A.max_ms)
+            ImGui.SameLine(ctx, 0, 0)
+            ImGui.TextColored(ctx, theme.stat_val,
+                string.format(" · max %d ticks (%.1f ms)", toint(A.max_ticks), A.max_ms))
         end
-        ImGui.TextColored(ctx, theme.stat_val, txt)
     else
         ImGui.TextColored(ctx, theme.text_dim, " ")
     end
@@ -1762,12 +1824,8 @@ local function draw_main()
     -- Bypass
     local has_notes = n_notes > 0
     if not has_notes then ImGui.BeginDisabled(ctx) end
-    local live = not S.bypassed
-    local label
-    if live then label = "ACTIVE"
-    elseif S.armed then label = "BYPASSED"
-    else label = "OFF · click or touch a control" end
-    if live then
+    local label = "BYPASS"
+    if S.bypassed then
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.accent)
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.accent, 0.12))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.accent, 0.22))
@@ -1782,15 +1840,16 @@ local function draw_main()
     if ImGui.Button(ctx, label.."##bypass", W, max(34 * ui, ImGui.GetFrameHeight(ctx))) then toggle_bypass() end
     ImGui.PopFont(ctx)
     ImGui.PopStyleColor(ctx, 4)
-    tip("Bypass (B): A/B the result against the original notes.")
+    tip("Bypass (B): A/B the result against the original notes.\n"..
+        "Lit = bypassed: you hear the original notes. Touching any control turns it off.")
 
     local hw = (W - 6 * ui) * 0.5
     local bh = max(26 * ui, ImGui.GetFrameHeight(ctx))   -- never shorter than text + frame padding
     if S.bypassed then ImGui.BeginDisabled(ctx) end
     if ImGui.Button(ctx, "Apply", hw, bh) then do_apply() end
     if S.bypassed then ImGui.EndDisabled(ctx) end
-    tip("Apply (Enter): keep the result and make it the new original, "..
-        "so another pass works on top of it (iterative quantize).")
+    tip("Apply: keep the result and make it the new original, "..
+        "so another pass works on top of it (iterative quantize).\nEnter: apply and close.")
     ImGui.SameLine(ctx, 0, 6 * ui)
     if ImGui.Button(ctx, "Reset", hw, bh) then do_reset() end
     tip("Restore the original notes and the default parameters.")
@@ -1805,7 +1864,7 @@ local function draw_main()
         ImGui.TextColored(ctx, theme.text_dim, " ")
     end
     ImGui.TextColored(ctx, with_alpha(theme.text_dim, 170),
-        string.format("v%s · B bypass · Enter apply · Space play", VERSION))
+        string.format("v%s · B bypass · Enter apply & close · Esc cancel · Space play", VERSION))
     ImGui.PopFont(ctx)
 
     ImGui.PopFont(ctx)
@@ -1822,7 +1881,7 @@ local function handle_keys(open)
     local mods = ImGui.GetKeyMods(ctx)
     local cmd = (mods & MOD_CMD) ~= 0
     local shift = (mods & MOD_SHIFT) ~= 0
-    if pressed("Key_Escape") then return false end
+    if pressed("Key_Escape") then do_cancel(); return false end
     -- flush a pending (debounced) preview into its own undo point first, so
     -- undo removes it instead of the poll adding a bogus point afterwards
     if cmd and pressed("Key_Z") then
@@ -1834,7 +1893,7 @@ local function handle_keys(open)
     elseif not cmd then
         if pressed("Key_Space") then reaper.Main_OnCommand(40044, 0) end  -- play/stop
         if pressed("Key_B") then toggle_bypass() end
-        if pressed("Key_Enter") or pressed("Key_KeypadEnter") then do_apply() end
+        if pressed("Key_Enter") or pressed("Key_KeypadEnter") then do_apply(); return false end
     end
     return open
 end
