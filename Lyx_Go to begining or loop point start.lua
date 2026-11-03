@@ -35,6 +35,7 @@
               break
           end
       end
+      
       if not m then
          m = GetFirstItemPos()
       end

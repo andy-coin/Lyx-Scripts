@@ -59,11 +59,4 @@
     
     reaper.defer(main) 
     
-    local function TunerApp()
-        
-        os.execute('if pgrep -fq "Universal Tuner"; then pkill -f "Universal Tuner"; else open -a "Universal Tuner" && if pgrep -fq "Universal Tuner; then open -a "Reaper"; fi; fi')
-    
-    end
-    
-    --TunerApp()
     

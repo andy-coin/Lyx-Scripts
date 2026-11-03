@@ -9,7 +9,7 @@
         ---buffer size-
         auto_change_buffersize = true
         small = 128
-        large = 2048
+        large = 1024
         auto_group = true
         auto_color = false
     

@@ -964,13 +964,24 @@ end
 -- the piano roll itself.
 -------------------------------------------------------------------------------
 local IND = { hwnd = nil, bmp = nil, w = 0, h = 0, key = "",
-              view = nil, view_t = -1, view_dt = 0.1, view_take = nil }
+              view = nil, view_t = -1, view_take = nil }
 -- Height of the ruler / marker area at the top of the piano roll. Normally derived
 -- from the piano roll's vertical scrollbar (see ind_ruler); this is only the fallback
 -- when that fails (measured on REAPER 7.82 / macOS). Fine-tune: Settings > Indicator offset.
 local IND_RULER_H = 56
 local IND_DEBUG = false  -- print the indicator's numbers to the console on every redraw
 local IND_BAND_FADE = 0.4  -- seconds the filter-window band takes to fade out
+local IND_BLINK = 0.8      -- seconds per on+off cycle of the dashed outline (0 = steady)
+-- How often (seconds) the overlay re-reads the piano roll's scroll / zoom while you
+-- scroll. Lower = follows more tightly, but each read parses the item chunk (costly on
+-- big items). 0 = every frame (~30 per second). Try 0 / 0.03 / 0.1.
+local IND_REFRESH = 0.03
+
+-- Vertical auto-calibration: clicking in the piano roll sets REAPER's active note row,
+-- and the mouse y of that click lies inside that row. Each click bounds the vertical
+-- error of the measured ruler; the bounds of several clicks are intersected (a
+-- contradiction = the layout changed: start over). Kept for this session only.
+local CAL = { lo = nil, hi = nil, key = "", down_y = nil, down_t = 0, row0 = nil, was_down = false }
 
 -- Vertical fine-tune in pixels (Settings > Indicator offset), stored per machine:
 -- the ruler height differs between REAPER versions, themes and OS scaling, and no API
@@ -1041,11 +1052,36 @@ end
 local function ind_ruler(mv, h, v)
     local ok, _, page, smin, smax = reaper.JS_Window_GetScrollInfo(mv, "v")
     if ok and page and smax and smax > smin then
-        local notes_h = page * 128 * v.rh / (smax - smin)
+        local notes_h = page * 128 * v.rh / (smax - smin + 1)
         local r = floor(h - v.lanes - notes_h + 0.5)
         if r >= 0 and r < h * 0.5 then return r, true end
     end
     return IND_RULER_H, false
+end
+
+local function ind_calibrate(me, mv, w, h, v, ruler_raw, now)
+    local key = h.."|"..v.rh.."|"..v.lanes.."|"..ruler_raw
+    if key ~= CAL.key then CAL.key, CAL.lo, CAL.hi = key, nil, nil end
+    local down = (reaper.JS_Mouse_GetState(1) & 1) == 1
+    if down and not CAL.was_down then
+        local cx, cy = reaper.JS_Window_ScreenToClient(mv, reaper.GetMousePosition())
+        if cx and cx >= 0 and cx < w and cy >= 0 and cy < h - v.lanes then
+            CAL.down_y, CAL.down_t = cy, now
+            CAL.row0 = reaper.MIDIEditor_GetSetting_int(me, "active_note_row")
+        end
+    end
+    CAL.was_down = down
+    if not CAL.down_y then return end
+    if now - CAL.down_t > 0.5 then CAL.down_y = nil; return end
+    local row = reaper.MIDIEditor_GetSetting_int(me, "active_note_row")
+    if row == CAL.row0 or row < 0 then return end
+    -- row spans [base + off, base + off + rh): off in [y - rh - base, y - base]
+    local base = ruler_raw + (v.top - row - 1) * v.rh
+    local lo, hi = CAL.down_y - v.rh - base, CAL.down_y - base
+    CAL.down_y = nil
+    if hi < -2 * v.rh or lo > 2 * v.rh then return end   -- implausible: ignore
+    if not CAL.lo or lo > CAL.hi or hi < CAL.lo then CAL.lo, CAL.hi = lo, hi
+    else CAL.lo, CAL.hi = max(CAL.lo, lo), min(CAL.hi, hi) end
 end
 
 local function ind_update()
@@ -1067,18 +1103,20 @@ local function ind_update()
     local _, hp, hpage = reaper.JS_Window_GetScrollInfo(mv, "h")
     local _, vp, vpage = reaper.JS_Window_GetScrollInfo(mv, "v")
     local sc = tostring(hp)..","..tostring(hpage)..","..tostring(vp)..","..tostring(vpage)
-    if IND.view_take ~= take or sc ~= IND.scroll or now - IND.view_t > IND.view_dt then
-        IND.scroll = sc
-        IND.view, IND.view_take = read_view(take), take
-        -- the item chunk can be MBs: re-read every 0.1 s when it is cheap,
-        -- backing off to 0.5 s for heavy items
-        local t1 = reaper.time_precise()
-        IND.view_t, IND.view_dt = t1, clamp((t1 - now) * 25, 0.1, 0.5)
+    if sc ~= IND.scroll then IND.scroll, IND.scroll_t = sc, now end
+    -- the chunk can trail the scrollbar, so keep reading for 0.3 s after it moved;
+    -- otherwise every 0.5 s (catches changes that don't touch the scrollbars)
+    local scrolling = now - (IND.scroll_t or 0) < 0.3
+    if IND.view_take ~= take or (now - IND.view_t >= IND_REFRESH and (scrolling or now - IND.view_t > 0.5)) then
+        IND.view, IND.view_take, IND.view_t = read_view(take), take, now
     end
     local v = IND.view
     if not v then ind_detach(); return end
     local ruler_raw, measured = ind_ruler(mv, h, v)
-    local ruler = ruler_raw + ind_offset
+    ind_calibrate(me, mv, w, h, v, ruler_raw, now)
+    -- learned offset once a click calibrated it, else the manual Settings offset
+    local ruler = floor(ruler_raw + (CAL.lo and (CAL.lo + CAL.hi) * 0.5 or ind_offset) + 0.5)
+    local blink_on = IND_BLINK <= 0 or (now % IND_BLINK) < IND_BLINK / 2
     if IND.calib_shown ~= ruler_raw then   -- ponytail: temporary one-line report while the measurement is verified on several machines
         IND.calib_shown = ruler_raw
         reaper.ShowConsoleMsg(string.format("[IND] ruler %d (%s) h=%d lanes=%d rh=%s\n",
@@ -1094,7 +1132,7 @@ local function ind_update()
     local key = string.format("%s|%d|%d|%.6f|%.9g|%s|%.9g|%.4f|%.9g|%.9g|%d|%.4f|%.4f|%d|%d|%d",
         tostring(take), w, h, v.left, v.zoom, v.beats and "b" or "t", g, sw, te, tl, theme.band,
         v.top, v.rh, v.lanes, settings.mode, S.snap_n) .. "|" .. ruler
-        .. "|" .. toint(band_a * 10) .. "|" .. tostring(S.hl) .. "|" .. tostring(S.bypassed) .. "|" .. S.plan_n
+        .. "|" .. toint(band_a * 10) .. (blink_on and "|on" or "|off") .. "|" .. tostring(S.hl) .. "|" .. tostring(S.bypassed) .. "|" .. S.plan_n
     if key == IND.key and IND.hwnd == mv then return end
 
     if IND.hwnd ~= mv or IND.w ~= w or IND.h ~= h or not IND.bmp then
@@ -1123,10 +1161,9 @@ local function ind_update()
         grid_flush()
         grid_use(g, sw)
         -- Only what changes gets ink; untouched (kept) notes stay clean:
-        --   moved notes: a light orange rounded outline where the note was (position
+        --   moved notes: a blinking light orange dashed outline where the note was (position
 --     and length) + a line to where it is now
-        --     (while bypassed the roles swap: the ghost is where it would go)
-        --   filter window: a band at the grid lines the notes use, only while it is being dragged
+                --   filter window: a band at the grid lines the notes use, only while it is being dragged
         --   hovering the counts in the GUI outlines the kept / moved notes
         local ny0, ny1 = ruler, h - v.lanes              -- notes area
         local rh = v.rh
@@ -1137,13 +1174,21 @@ local function ind_update()
                 reaper.JS_LICE_FillRect(bmp, x0, y0, x1 - x0, y1 - y0, c, 1, "COPY")
             end
         end
+        local function dashed_frame(x0, y0, x1, y1, c)
+            for x = x0, x1 - 1, 6 do
+                rect(x, y0, min(x + 4, x1), y0 + 1, c); rect(x, y1 - 1, min(x + 4, x1), y1, c)
+            end
+            for y = y0, y1 - 1, 6 do
+                rect(x0, y, x0 + 1, min(y + 4, y1), c); rect(x1 - 1, y, x1, min(y + 4, y1), c)
+            end
+        end
         local function frame(x0, y0, x1, y1, c, t)
             rect(x0, y0, x1, y0 + t, c); rect(x0, y1 - t, x1, y1, c)
             rect(x0, y0, x0 + t, y1, c); rect(x1 - t, y0, x1, y1, c)
         end
 
         local line_c  = lice_color(theme.accent, 1)
-        local ghost_e = lice_color(theme.band, 0.75)   -- light orange rounded outline
+        local ghost_e = lice_color(theme.band, 0.85)   -- light orange blinking dashed outline
         local hl_c    = lice_color(S.hl == "kept" and theme.band or theme.accent, 1)
         local length_mode = settings.mode == 1
         local count, n_ex = 0, 0
@@ -1186,18 +1231,16 @@ local function ind_update()
         -- pass 2: ghosts + links (moved notes), outlines (hovered count)
         for _, it in ipairs(items) do
             local nt, y0, y1 = it.nt, it.y0, it.y1
-            -- s = where the note sits now, g = the other position
-            local ss, se, gs, ge = it.nqs, it.nqe, nt.qs, nt.qe
-            if S.bypassed then ss, se, gs, ge = gs, ge, ss, se end
+            -- g = original position (the outline never moves), s = where the note sits now:
+            -- bypassed, the notes fall back into their outlines
+            local gs, ge = nt.qs, nt.qe
+            local ss, se = it.nqs, it.nqe
+            if S.bypassed then ss, se = gs, ge end
             if it.moved then
                 count, n_ex = count + 1, n_ex + 1
                 local gl = px(gs)
                 local gr = max(gl + 3, px(ge))
-                if y0 >= ny0 and y1 <= ny1 then
-                    reaper.JS_LICE_RoundRect(bmp, gl, y0, gr - gl - 1, y1 - y0 - 1, 3, ghost_e, 1, "COPY", false)
-                else   -- cut by the ruler / CC lanes: square, clipped
-                    frame(gl, y0, gr, y1, ghost_e, 1)
-                end
+                if blink_on then dashed_frame(gl, y0, gr, y1, ghost_e) end
                 local yl = floor(it.yc + 0.5)
                 local function link(a, b) rect(min(a, b), yl - 1, max(a, b) + 1, yl + 1, line_c) end
                 link(gl, px(ss))
@@ -1625,7 +1668,7 @@ local function draw_settings()
             reaper.SetExtState("Lyx_MIDI_QuantizeFilter", IND_OFFSET_KEY, tostring(v), true)
         end
         if ImGui.IsItemHovered(ctx) then
-            ImGui.SetTooltip(ctx, "Moves the MIDI editor boxes up (-) or down (+) until their middle\nlines up with the notes. Saved for this computer.")
+            ImGui.SetTooltip(ctx, "Fallback only: clicking any note in the MIDI editor calibrates the\noverlay automatically and overrides this. Moves the overlay up (-) or\ndown (+). Saved for this computer.")
         end
     end
 
@@ -1830,16 +1873,19 @@ local function draw_main()
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.accent, 0.12))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.accent, 0.22))
         ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), readable(theme.accent))
-    else
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.button)
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.button, 0.08))
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.button, 0.14))
-        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), readable(theme.button))
+    else   -- inverse: dark fill, accent text + border
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Button), theme.bg)
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonHovered), lighten(theme.bg, 0.06))
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_ButtonActive), lighten(theme.bg, 0.12))
+        ImGui.PushStyleColor(ctx, K(ImGui.Col_Text), theme.accent)
     end
+    ImGui.PushStyleColor(ctx, K(ImGui.Col_Border), theme.accent)
+    ImGui.PushStyleVar(ctx, K(ImGui.StyleVar_FrameBorderSize), 1.5 * ui)
     push_font("big")
     if ImGui.Button(ctx, label.."##bypass", W, max(34 * ui, ImGui.GetFrameHeight(ctx))) then toggle_bypass() end
     ImGui.PopFont(ctx)
-    ImGui.PopStyleColor(ctx, 4)
+    ImGui.PopStyleVar(ctx)
+    ImGui.PopStyleColor(ctx, 5)
     tip("Bypass (B): A/B the result against the original notes.\n"..
         "Lit = bypassed: you hear the original notes. Touching any control turns it off.")
 

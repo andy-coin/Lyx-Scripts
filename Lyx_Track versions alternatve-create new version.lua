@@ -17,6 +17,8 @@ local r = reaper and require("_lib._Lyx_HOME")
 lane_name_position = 0
     -- lane name in the track name: -1 = hidden, 0 = at the start, 1 = at the end
     -- (saved for all Lyx scripts: switch version, Play-Stop, Record, Render ...)
+lane_name_style = "｜"
+    -- "｜" = "Vox ｜ 2",  "()" = "Vox   ( 2 )",  "[]" = "Vox   [ 2 ]"
 
 
 ---------------------------------------------------------------------------
@@ -78,7 +80,13 @@ end
 local R = reaper
 if not r.Need("SWS") then return end
 local L = require("_lib._Lyx_LaneName")
-R.SetExtState("Lyx", "lane_name_position", tostring(lane_name_position), true)
+local new_p, new_s = tostring(lane_name_position), lane_name_style
+if R.GetExtState("Lyx", "lane_name_position") ~= new_p or R.GetExtState("Lyx", "lane_name_style") ~= new_s then
+    L.all(false) -- custom changed: remove tags in the old format first
+    R.SetExtState("Lyx", "lane_name_position", new_p, true)
+    R.SetExtState("Lyx", "lane_name_style", new_s, true)
+    L.all(true)
+end
 
 local function lane_names(tr)
     local t = {}

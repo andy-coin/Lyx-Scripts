@@ -1,7 +1,8 @@
 -- Track versions: show the playing lane's name in the track name.
--- Position is set only by "Lyx_Track versions alternatve-create new version.lua"
--- (ExtState "Lyx" / "lane_name_position"); every other script just reads it.
---   -1 = hidden, 0 = "[ 2 ]   Vox", 1 = "Vox   [ 2 ]" (default)
+-- Position / style are set only by "Lyx_Track versions alternatve-create new version.lua"
+-- (ExtState "Lyx" / "lane_name_position", "lane_name_style"); every other script just reads them.
+--   position: -1 = hidden, 0 = at the start, 1 = at the end (default)
+--   style:    "｜" = "Vox ｜ 2" (default), "()" = "Vox   ( 2 )", "[]" = "Vox   [ 2 ]"
 local L = {}
 
 function L.position()
@@ -9,8 +10,26 @@ function L.position()
     return (p == -1 or p == 0) and p or 1
 end
 
-function L.strip(name) -- remove a lane tag at either end (\30 = left by an older version)
-    name = name:gsub("^%[ .- %]   ", ""):gsub("\30?   %[ .* %]$", "")
+function L.style()
+    local s = reaper.GetExtState("Lyx", "lane_name_style")
+    return (s == "()" or s == "[]") and s or "｜"
+end
+
+local function tag(ln, p, s)
+    if s == "｜" then return (p == 0) and (ln .. " ｜ ") or (" ｜ " .. ln) end
+    local o, c = s:sub(1, 1), s:sub(2, 2)
+    return (p == 0) and (o .. " " .. ln .. " " .. c .. "   ") or ("   " .. o .. " " .. ln .. " " .. c)
+end
+
+-- remove a lane tag: () / [] at either end (\30 = left by an older version);
+-- "｜" only on the current position's side (a bar alone can't tell start from end)
+function L.strip(name)
+    name = name:gsub("^[%[%(] .- [%]%)]   ", ""):gsub("\30?   [%[%(] .* [%]%)]$", "")
+    if L.position() == 0 then
+        name = name:gsub("^.- ｜ ", "", 1)
+    else
+        name = name:match("^(.*) ｜ ") or name
+    end
     return name
 end
 
@@ -28,7 +47,8 @@ function L.show(tr, lane)
     if lane and p ~= -1 then
         local _, ln = reaper.GetSetMediaTrackInfo_String(tr, "P_LANENAME:" .. lane, "", false)
         if ln == "" then ln = tostring(lane + 1) end -- unnamed lane counts as its number
-        name = (p == 0) and ("[ " .. ln .. " ]   " .. name) or (name .. "   [ " .. ln .. " ]")
+        local t = tag(ln, p, L.style())
+        name = (p == 0) and (t .. name) or (name .. t)
     end
     reaper.GetSetMediaTrackInfo_String(tr, "P_NAME", name, true)
 end
