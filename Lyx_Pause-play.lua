@@ -104,15 +104,11 @@
 
     -----
     reaper.ClearConsole()
-    if  api.load('practice mode','snapshot') == '1' then
-        api.cmd(40044,0)--next snapshot
+    Play=reaper.GetPlayState()
+    if  Play==5 then
+        main()
     else
-        Play=reaper.GetPlayState()
-        if  Play==5 then
-            main()
-        else
-            reaper.defer(function()main()end)
-        end
+        reaper.defer(function()main()end)
     end
     
     

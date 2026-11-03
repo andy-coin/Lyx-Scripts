@@ -55,10 +55,3 @@
   
   reaper.defer(main)
   
-  if  api.load('practice mode','snapshot') == '1' then
-      api.cmd(api.name('_SWSSNAPSHOT_GET1'),0)
-      snapshot_window = api.name('_SWSSNAPSHOT_OPEN')
-      if  reaper.GetToggleCommandState(snapshot_window)==0 then
-          api.cmd(snapshot_window,0)
-      end
-  end

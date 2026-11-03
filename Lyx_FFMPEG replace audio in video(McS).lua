@@ -81,15 +81,6 @@ local codec = R.GetExtState(EXT, "codec") ~= "" and R.GetExtState(EXT, "codec") 
 local BITRATES = { "256k", "320k", "512k" }
 local br_idx = tonumber(R.GetExtState(EXT, "br")) or 2
 
--- Permute prompt
-do
-    local app = "/Applications/Permute 3.app"
-    if not WIN and R.file_exists(app .. "/Contents/Info.plist")
-       and R.MB("Also open the converter app Permute 3?", "FFMPEG replace audio", 4) == 6 then
-        os.execute('open -a "Permute 3"')
-    end
-end
-
 ---------------------------------------------------------------------------
 -- Jobs
 ---------------------------------------------------------------------------

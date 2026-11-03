@@ -12,13 +12,22 @@ from xml.sax.saxutils import escape, quoteattr
 REPO = "andy-coin/Lyx-Scripts"
 SKIP = re.compile(r"Test|Temp|^Script-")  # ponytail: name filter, move to a list file if it grows
 # personal drafts / unfinished: stay in the local folder, not published
-PRIVATE = {"Lyx_Empty.lua", "Lyx_Add number in drum map.lua", "Lyx_New.lua",
+PRIVATE = {"Lyx_Add number in drum map.lua",
            "Lyx_Track versions alternative-move selected item(s) to comp track.lua"}
 
-# third-party mods in the root folder that are published anyway
-EXTRA = {"Realauncher 2.5.2 (Lyx mod).lua"}
+DONATE = ""  # PayPal.Me link: shows a Donate button in ReaPack's About dialog once filled in
+WEBSITE = f"https://github.com/{REPO}"
+ABOUT = (r"{\rtf1 {\fonttbl {\f0 Helvetica;}} \f0\fs24 "
+         r"Lyx Scripts: fast everyday editing and MIDI tools for REAPER, with a shared GUI theme.\par\par "
+         r"Install every _Lyx_ library package too: the scripts need them.\par "
+         r"Read the README on the website link for requirements and highlights.}")
 
 def git(*a): return subprocess.check_output(["git", *a], text=True)
+
+# Private code lives between LYX_PRIVATE markers; the git clean filter strips it on add.
+# ponytail: the filter is per-clone config (git config filter.lyxprivate.clean ...), this catches a clone without it.
+if subprocess.run(["git", "grep", "--cached", "-q", "LYX_PRIVATE_" + "BEGIN", "--", "*.lua"]).returncode == 0:
+    sys.exit("Private code reached the index: set up filter.lyxprivate, then git add --renormalize .")
 
 files = [f for f in git("ls-files", "-z").split("\0") if f]
 modes = {l.split("\t", 1)[1]: l.split()[0] for l in git("ls-files", "-s", "-z").split("\0") if l}
@@ -32,7 +41,7 @@ def pick(f):
     if f.startswith("_lib/") and f.count("/") == 1 and name.startswith("_Lyx_"):
         return ("Main", None)  # library: installed, no action
     if "/" in f: return None
-    if name.startswith("Lyx_") or name in EXTRA: return ("Main", "main")
+    if name.startswith("Lyx_"): return ("Main", "main")
     return None
 
 # Folder tools: one package each, every published file of the folder installed beside the main
@@ -63,7 +72,10 @@ for f in files:
     ts = datetime.fromisoformat(t).astimezone(timezone.utc)
     cats.setdefault(cat, []).append((f, main, h, ts))
 
-out = ['<?xml version="1.0" encoding="utf-8"?>', '<index version="1" name="Lyx Scripts">']
+out = ['<?xml version="1.0" encoding="utf-8"?>', '<index version="1" name="Lyx Scripts">', "  <metadata>",
+       f'    <link rel="website">{WEBSITE}</link>', f"    <description><![CDATA[{ABOUT}]]></description>"]
+if DONATE: out.insert(4, f'    <link rel="donation" href="{escape(DONATE)}">Donate</link>')
+out.append("  </metadata>")
 for cat in sorted(cats):
     out.append(f"  <category name={quoteattr(cat)}>")
     for f, main, h, ts in sorted(cats[cat]):

@@ -6,9 +6,6 @@
 
     -----CUSTOM-----
     open_when_done = true
-    -- *.render_stats.html are moved here after rendering ("" = leave them next to the render)
-    stats_folder = "/Users/shared/Reaper Projects/render_stats"
-    dropbox = os.getenv("HOME")..'/Dropbox'
 
     if not r.Need("JS") then return end
 
@@ -78,28 +75,6 @@
         end
     end
 
-    local function move_stats(dirs)
-        if stats_folder == "" then return end
-        reaper.RecursiveCreateDirectory(stats_folder, 0)
-        for _, d in ipairs(dirs) do
-            reaper.EnumerateFiles(d, -1) -- re-read, REAPER caches folder listings
-            local files, i = {}, 0
-            repeat
-                local f = reaper.EnumerateFiles(d, i)
-                if f and f:match("%.render_stats%.html$") then files[#files + 1] = f end
-                i = i + 1
-            until not f
-            for _, f in ipairs(files) do
-                local src, dst = d .. "/" .. f, stats_folder .. "/" .. f
-                if not os.rename(src, dst) then -- other drive: copy, then delete
-                    local a, b = io.open(src, "rb"), io.open(dst, "wb")
-                    if a and b then b:write(a:read("a")) end
-                    if a then a:close() end
-                    if b then b:close(); os.remove(src) end
-                end
-            end
-        end
-    end
 
     -- render progress window: "Rendering to file..." while busy, then "Finished in ..."
     -- It just closes on Cancel, and also on success when "automatically close" is on:
@@ -119,7 +94,6 @@
             local stats = render_stats()
             if  finished or stats ~= stats_before then -- else: cancelled
                 local dirs = render_dirs()
-                move_stats(dirs)
                 if open_when_done then open_dir(dirs) end
             end
             stats_before = stats

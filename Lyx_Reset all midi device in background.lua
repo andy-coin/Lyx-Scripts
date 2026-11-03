@@ -5,12 +5,14 @@
 
     ---setting---
 
-    NAMES={"Nuances Fader",
-           "Numa X",
-           "Stream Deck",
-           }
+    NAMES={ }
 
     --type part of your MIDI device names above (as shown in Preferences > MIDI Inputs), separate with ","
+
+    if #NAMES == 0 then
+        reaper.MB('Open this script and add your MIDI device names to NAMES.', 'Lyx Scripts', 0)
+        return
+    end
 
 
     --------------

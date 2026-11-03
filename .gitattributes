@@ -1,0 +1,3 @@
+Lyx_Render.lua filter=lyxprivate
+"Lyx_Toggle record arm for selected tracks.lua" filter=lyxprivate
+"Lyx_Reset all midi device in background.lua" filter=lyxprivate

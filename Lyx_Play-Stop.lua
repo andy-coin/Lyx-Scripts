@@ -242,16 +242,7 @@
     midi = reaper.ColorToNative(28,108,52)|0x1000000
 
     reaper.Undo_BeginBlock() 
-    if  api.load('practice mode','snapshot') == '1' then
-        api.cmd(api.name('_SWSSNAPSHOT_GET_NEXT'),0)--next snapshot
-    else
-        --if  r.IsMidiEditorFocus() then
-        --    main()
-        --    api.cmd(api.name('_SN_FOCUS_MIDI_EDITOR'),0)
-        --else
-        main()
-        --end
-    end
+    main()
 
     reaper.Undo_EndBlock("Play/Stop",-1)
 
