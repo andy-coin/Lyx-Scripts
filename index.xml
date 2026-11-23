@@ -388,8 +388,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_ESC.lua" type="script" desc="Lyx_ESC">
-      <version name="2026.10.21.0802" author="Lyx" time="2026-10-21T08:02:19Z">
-        <source main="main" file="../Lyx_ESC.lua">https://github.com/andy-coin/Lyx-Scripts/raw/37022fe52a955942874479e4db89c1e78f211172/Lyx_ESC.lua</source>
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Lyx_ESC.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_ESC.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Edit- Move notes up one octave.lua" type="script" desc="Lyx_Edit- Move notes up one octave">
@@ -667,6 +667,16 @@
         <source main="main" file="../Lyx_Play-Stop.lua">https://github.com/andy-coin/Lyx-Scripts/raw/3fe00bb13b7eb7a6ee36fd1612148e6d06454121/Lyx_Play-Stop.lua</source>
       </version>
     </reapack>
+    <reapack name="Lyx_Project Launcher (themed).lua" type="script" desc="Lyx_Project Launcher (themed)">
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Lyx_Project Launcher (themed).lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Project%20Launcher%20%28themed%29.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Lyx_Project Launcher MOD generator.lua" type="script" desc="Lyx_Project Launcher MOD generator">
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Lyx_Project Launcher MOD generator.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Project%20Launcher%20MOD%20generator.lua</source>
+      </version>
+    </reapack>
     <reapack name="Lyx_Randomize....lua" type="script" desc="Lyx_Randomize...">
       <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
         <source main="main" file="../Lyx_Randomize....lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Randomize....lua</source>
@@ -858,8 +868,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Set time selection start point.lua" type="script" desc="Lyx_Set time selection start point">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Set time selection start point.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Set%20time%20selection%20start%20point.lua</source>
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Lyx_Set time selection start point.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Set%20time%20selection%20start%20point.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Set time selection to items or razor area.lua" type="script" desc="Lyx_Set time selection to items or razor area">
@@ -1343,8 +1353,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Track versions alternatve-create new version.lua" type="script" desc="Lyx_Track versions alternatve-create new version">
-      <version name="2026.11.03.1513" author="Lyx" time="2026-11-03T15:13:10Z">
-        <source main="main" file="../Lyx_Track versions alternatve-create new version.lua">https://github.com/andy-coin/Lyx-Scripts/raw/b870494fcf53ba5ce395b30eb2e44f9013929416/Lyx_Track%20versions%20alternatve-create%20new%20version.lua</source>
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Lyx_Track versions alternatve-create new version.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Track%20versions%20alternatve-create%20new%20version.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Trigger next preset for focused FX.lua" type="script" desc="Lyx_Trigger next preset for focused FX">
@@ -1363,8 +1373,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Zoom horizontally, change grid relatively (mouse wheel).lua" type="script" desc="Lyx_Zoom horizontally, change grid relatively (mouse wheel)">
-      <version name="2026.11.03.1513" author="Lyx" time="2026-11-03T15:13:10Z">
-        <source main="main" file="../Lyx_Zoom horizontally, change grid relatively (mouse wheel).lua">https://github.com/andy-coin/Lyx-Scripts/raw/b870494fcf53ba5ce395b30eb2e44f9013929416/Lyx_Zoom%20horizontally%2C%20change%20grid%20relatively%20%28mouse%20wheel%29.lua</source>
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Lyx_Zoom horizontally, change grid relatively (mouse wheel).lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Zoom%20horizontally%2C%20change%20grid%20relatively%20%28mouse%20wheel%29.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Zoom in at edit cursor.lua" type="script" desc="Lyx_Zoom in at edit cursor">
@@ -1385,6 +1395,11 @@
     <reapack name="Lyx_split items and select right.lua" type="script" desc="Lyx_split items and select right">
       <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
         <source main="main" file="../Lyx_split items and select right.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_split%20items%20and%20select%20right.lua</source>
+      </version>
+    </reapack>
+    <reapack name="_Lyx_DragToggle.lua" type="script" desc="_Lyx_DragToggle">
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source file="../_lib/_Lyx_DragToggle.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/_lib/_Lyx_DragToggle.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_FXState.lua" type="script" desc="_Lyx_FXState">
@@ -1423,21 +1438,58 @@
       </version>
     </reapack>
     <reapack name="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua" type="script" desc="MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks">
-      <version name="2026.10.21.0727" author="Lyx" time="2026-10-21T07:27:32Z">
-        <source main="main" file="../Buss Driver/MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/MB_Buss%20Driver%28LYX%20mod%29%20-%20Routing%20Utility%20GUI%20Manager%20Tool%20-%20Batch%20add%20or%20remove%20sends%20or%20receives%20on%20selected%20tracks.lua</source>
-        <source file="../Buss Driver/bussdriver_logo_nobg.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/bussdriver_logo_nobg.png</source>
-        <source file="../Buss Driver/gen_midi_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gen_midi_off.png</source>
-        <source file="../Buss Driver/gen_midi_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gen_midi_on.png</source>
-        <source file="../Buss Driver/gen_mono_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gen_mono_off.png</source>
-        <source file="../Buss Driver/gen_mono_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gen_mono_on.png</source>
-        <source file="../Buss Driver/gen_phase_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gen_phase_off.png</source>
-        <source file="../Buss Driver/gen_phase_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gen_phase_on.png</source>
-        <source file="../Buss Driver/gnu_license_v3.txt">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/gnu_license_v3.txt</source>
-        <source file="../Buss Driver/mb-dev-functions.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/mb-dev-functions.lua</source>
-        <source file="../Buss Driver/rtk.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/rtk.lua</source>
-        <source file="../Buss Driver/serpent.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/serpent.lua</source>
-        <source file="../Buss Driver/table_mute_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/table_mute_off.png</source>
-        <source file="../Buss Driver/table_mute_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/table_mute_on.png</source>
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source main="main" file="../Buss Driver/MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/MB_Buss%20Driver%28LYX%20mod%29%20-%20Routing%20Utility%20GUI%20Manager%20Tool%20-%20Batch%20add%20or%20remove%20sends%20or%20receives%20on%20selected%20tracks.lua</source>
+        <source file="../Buss Driver/bussdriver_logo_nobg.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/bussdriver_logo_nobg.png</source>
+        <source file="../Buss Driver/gen_midi_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gen_midi_off.png</source>
+        <source file="../Buss Driver/gen_midi_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gen_midi_on.png</source>
+        <source file="../Buss Driver/gen_mono_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gen_mono_off.png</source>
+        <source file="../Buss Driver/gen_mono_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gen_mono_on.png</source>
+        <source file="../Buss Driver/gen_phase_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gen_phase_off.png</source>
+        <source file="../Buss Driver/gen_phase_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gen_phase_on.png</source>
+        <source file="../Buss Driver/gnu_license_v3.txt">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/gnu_license_v3.txt</source>
+        <source file="../Buss Driver/mb-dev-functions.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/mb-dev-functions.lua</source>
+        <source file="../Buss Driver/rtk.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/rtk.lua</source>
+        <source file="../Buss Driver/serpent.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/serpent.lua</source>
+        <source file="../Buss Driver/table_mute_off.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/table_mute_off.png</source>
+        <source file="../Buss Driver/table_mute_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Buss%20Driver/table_mute_on.png</source>
+      </version>
+    </reapack>
+    <reapack name="Lyx_FX Router.lua" type="script" desc="Lyx_FX Router">
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source file="../Lyx FX Router/FXChains/3BANDSTOCK.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/3BANDSTOCK.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/4BANDSTOCK.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/4BANDSTOCK.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/5BANDSTOCK.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/5BANDSTOCK.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_2_4_MODE_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_2_4_MODE_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_2_BANDNOTCH_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_2_BANDNOTCH_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_2_COMBPHASE_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_2_COMBPHASE_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_3_MIN_PHASE_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_3_MIN_PHASE_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_ENVELOPE_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_ENVELOPE_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_GATE_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_GATE_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/LEWLOIWC_TRANSIENT_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/LEWLOIWC_TRANSIENT_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/MS_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/MS_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/SAIKE_2_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/SAIKE_2_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/SAIKE_3_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/SAIKE_3_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/SAIKE_4_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/SAIKE_4_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/FXChains/SAIKE_5_SETUP.RfxChain">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/FXChains/SAIKE_5_SETUP.RfxChain</source>
+        <source file="../Lyx FX Router/Fonts/Icons.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Fonts/Icons.ttf</source>
+        <source file="../Lyx FX Router/Fonts/ProggyClean.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Fonts/ProggyClean.ttf</source>
+        <source file="../Lyx FX Router/JSFX/MSMidFX.jsfx">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/JSFX/MSMidFX.jsfx</source>
+        <source file="../Lyx FX Router/JSFX/MSSideFX.jsfx">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/JSFX/MSSideFX.jsfx</source>
+        <source main="main" file="../Lyx FX Router/Lyx_FX Router.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Lyx_FX%20Router.lua</source>
+        <source file="../Lyx FX Router/Modules/Canvas.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/Canvas.lua</source>
+        <source file="../Lyx FX Router/Modules/ContainerCode.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/ContainerCode.lua</source>
+        <source file="../Lyx FX Router/Modules/Drawing.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/Drawing.lua</source>
+        <source file="../Lyx FX Router/Modules/Functions.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/Functions.lua</source>
+        <source file="../Lyx FX Router/Modules/LyxStyle.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/LyxStyle.lua</source>
+        <source file="../Lyx FX Router/Modules/Utils.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/Utils.lua</source>
+        <source file="../Lyx FX Router/Modules/flux.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20FX%20Router/Modules/flux.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Lyx_Tuner.lua" type="script" desc="Lyx_Tuner">
+      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
+        <source file="../Lyx Tuner/Lyx_Tuner toggle.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20Tuner/Lyx_Tuner%20toggle.lua</source>
+        <source main="main" file="../Lyx Tuner/Lyx_Tuner.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20Tuner/Lyx_Tuner.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Realive.lua" type="script" desc="Lyx_Realive">
