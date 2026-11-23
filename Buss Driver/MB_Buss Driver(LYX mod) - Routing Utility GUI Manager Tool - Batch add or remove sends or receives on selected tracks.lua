@@ -135,6 +135,8 @@ local _ui = {
 local LYX_THEME_KEY = "Buss Driver"
 package.path = package.path .. ";" .. (({reaper.get_action_context()})[2]:match("^(.*[/\\])[^/\\]+[/\\][^/\\]+$") or "") .. "?.lua"
 local _T_ok, T = pcall(require, "_lib._Lyx_Theme")
+local _DT_ok, DT = pcall(require, "_lib._Lyx_DragToggle")  -- drag-to-check rule
+if not _DT_ok then DT = nil end
 if not _T_ok then T = nil end
 local _inherit = T ~= nil and T.inherit(LYX_THEME_KEY)
 local _rtk_theme = {}  -- extra rtk theme overrides (only when inherited)
@@ -405,11 +407,8 @@ end
 -- ==== DRAG-TO-CHECK STATE ====
 local _drag_check = {
   active = false,
-  value = false,
   mouse_was_down = false,
-  start_cb = nil,
-  toggled = {},
-  last_cb = nil,
+  drag = nil,               -- _Lyx_DragToggle session (snapshot, lead, target)
   suppress_toggle = false,  -- suppress rtk's click-toggle during drag
   clear_suppress = false     -- one-frame delay for clearing suppress
 }
@@ -1633,66 +1632,62 @@ function defineRoutingOptionsEventHandlers()
     end
     _right_was_down = right_down
 
-    -- Step 2: detect mousedown transition → start drag + toggle start checkbox
-    if mouse_down and not _drag_check.mouse_was_down and not popup_open then
-      local info = hitTestRow(mx, my, true)
+    -- Drag-to-check, the Lyx rule (_lib/_Lyx_DragToggle.lua): on press,
+    -- snapshot every checkbox, the pressed one is the lead and flips; while
+    -- held, every visible row between the lead and the mouse Y takes the
+    -- lead's state and all other rows show the snapshot (so dragging back
+    -- restores them). Only the mouse Y counts: not whether it is on a
+    -- checkbox, nor inside the window. Nothing is tracked per row passed.
+
+    -- Step 2: mousedown on a checkbox -> begin
+    if DT and mouse_down and not _drag_check.mouse_was_down and not popup_open then
+      local info, lead = hitTestRow(mx, my, true)
       if info then
-        local cb = info.checkbox
-        local new_val = not cb.value
+        local states = {}
+        for k = 1, #_all_track_lines do
+          states[k] = _all_track_lines[k].checkbox.value and true or false
+        end
         _drag_check.active = true
         _drag_check.suppress_toggle = true  -- block rtk's click-toggle
-        _drag_check.start_cb = cb
-        _drag_check.value = new_val
-        _drag_check.toggled = {[cb] = true}
-        _drag_check.last_cb = cb
-        cb:attr("value", new_val)  -- toggle immediately on mousedown
+        _drag_check.drag = DT.begin(states, lead)
       end
     end
 
-    -- Step 3: during drag, toggle checkboxes as cursor passes over them
-    if _drag_check.active and mouse_down then
-      local hover_info = hitTestRow(mx, my, true)
-      local hover_cb = hover_info and hover_info.checkbox
-      if hover_cb then
-        -- Toggle new checkbox
-        if not _drag_check.toggled[hover_cb] then
-          if hover_cb.value ~= _drag_check.value then
-            hover_cb:attr("value", _drag_check.value)
-          end
-          _drag_check.toggled[hover_cb] = true
-        end
-
-        -- Revert checkboxes outside start→current range (mouse moved back)
-        if hover_cb ~= _drag_check.last_cb then
-          local start_idx, hover_idx = nil, nil
-          for j = 1, #_all_track_lines do
-            local cb = _all_track_lines[j].checkbox
-            if cb == _drag_check.start_cb then start_idx = j end
-            if cb == hover_cb then hover_idx = j end
-          end
-          if start_idx and hover_idx then
-            local lo = math.min(start_idx, hover_idx)
-            local hi = math.max(start_idx, hover_idx)
-            for j = 1, #_all_track_lines do
-              local cb = _all_track_lines[j].checkbox
-              if _drag_check.toggled[cb] and (j < lo or j > hi) then
-                cb:attr("value", not _drag_check.value)
-                _drag_check.toggled[cb] = nil
-              end
-            end
-          end
-          _drag_check.last_cb = hover_cb
+    -- Step 3: every frame of the drag (and the release frame): preview
+    if _drag_check.active then
+      local drag = _drag_check.drag
+      local items = {}
+      for k = 1, #_all_track_lines do
+        local w = _all_track_lines[k].line
+        if w.visible ~= false and w.clienty and w.calc and w.calc.h then
+          items[#items + 1] = {key = k, lo = w.clienty, hi = w.clienty + w.calc.h}
         end
       end
-    end
+      local want = DT.preview(drag, items, my)
+      -- a folder that changed carries its children with it (same as clicking it)
+      for k = 1, #_all_track_lines do
+        local info = _all_track_lines[k]
+        if info.is_folder and want[k] ~= drag.orig[k] then
+          for c = k + 1, #_all_track_lines do
+            if _all_track_lines[c].depth <= info.depth then break end
+            want[c] = want[k]
+          end
+        end
+      end
+      -- trigger = false: no onchange per box (no cascade fights, no
+      -- relayout mid-drag); the summary refreshes once on release
+      for k = 1, #_all_track_lines do
+        local cb = _all_track_lines[k].checkbox
+        if (cb.value and true or false) ~= want[k] then cb:attr("value", want[k], false) end
+      end
 
-    -- Step 4: mouseup → end drag, schedule suppress clear for next frame
-    if _drag_check.active and not mouse_down then
-      _drag_check.active = false
-      _drag_check.start_cb = nil
-      _drag_check.toggled = {}
-      _drag_check.last_cb = nil
-      _drag_check.clear_suppress = true  -- clear suppress NEXT frame (after rtk processes click)
+      -- Step 4: mouseup -> the last preview is the result
+      if not mouse_down then
+        _drag_check.active = false
+        _drag_check.drag = nil
+        markDirty()
+        _drag_check.clear_suppress = true  -- clear suppress NEXT frame (after rtk processes click)
+      end
     end
 
     _drag_check.mouse_was_down = mouse_down

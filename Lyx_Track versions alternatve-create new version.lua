@@ -14,7 +14,7 @@ package.path = package.path .. ";" .. script_path .. "?.lua"
 local r = reaper and require("_lib._Lyx_HOME")
 
 -----CUSTOM-----
-lane_name_position = 0
+lane_name_position = 1
     -- lane name in the track name: -1 = hidden, 0 = at the start, 1 = at the end
     -- (saved for all Lyx scripts: switch version, Play-Stop, Record, Render ...)
 lane_name_style = "｜"

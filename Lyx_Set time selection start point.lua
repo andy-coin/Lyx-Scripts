@@ -10,6 +10,7 @@
         local loop = reaper.GetToggleCommandState(1068) == 1
         if not loop then api.cmd(1168,0) end
         local cursor = api.gec()
+        if starttime == endtime then _,endtime = r.GetProjectLength() end
         reaper.GetSet_LoopTimeRange2(0, true, loop, cursor, endtime, false)
         api.pur(-1)
         reaper.UpdateTimeline()

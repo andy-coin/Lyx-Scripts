@@ -13,7 +13,7 @@
     local Kill_list = {"Actions","REAPER Preferences","Track Manager","Screensets/Layouts","Render to File",
                        "Media Item Properties","Snap/Grid","Metronome","Add FX to","Crossfade Editor",'Notes for',
                        "Virtual MIDI keyboard","Batch File/Item Converter","Finished in","Reascript console output",
-                       "Theme development/tweaker","Cycle Actions","LFO tool","ReaLauncher","ReaConsole"}
+                       "Theme development/tweaker","Cycle Actions","LFO tool","ReaConsole"}
 
     local DEBUG = false -- TEMP: print what ESC does to the console
     local function log(...) if DEBUG then reaper.ShowConsoleMsg(table.concat({...}," ").."\n") end end

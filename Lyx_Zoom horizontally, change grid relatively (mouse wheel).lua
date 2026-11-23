@@ -17,7 +17,7 @@
         
         mouse_scroll = mouse_scroll * reverse
         
-        --api.cmd(api.name('_WOL_SETHZOOMC_MOUSECUR'),0)
+        api.cmd(api.name('_WOL_SETHZOOMC_MOUSECUR'),0)
         
         if  mouse_scroll > 0 then 
             reaper.adjustZoom( -zoom_adjust,
