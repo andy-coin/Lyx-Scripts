@@ -1440,6 +1440,37 @@
         <source file="../Buss Driver/table_mute_on.png">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/Buss%20Driver/table_mute_on.png</source>
       </version>
     </reapack>
+    <reapack name="Lyx_Realive.lua" type="script" desc="Lyx_Realive">
+      <version name="2026.11.23.1001" author="Lyx" time="2026-11-23T10:01:23Z">
+        <source main="main" file="../Realive/Lyx_Realive.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/Lyx_Realive.lua</source>
+        <source file="../Realive/font/Inconsolata-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Inconsolata-Regular.ttf</source>
+        <source file="../Realive/font/Inconsolata_Condensed-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Inconsolata_Condensed-Regular.ttf</source>
+        <source file="../Realive/font/Inconsolata_SemiCondensed-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Inconsolata_SemiCondensed-Regular.ttf</source>
+        <source file="../Realive/font/Leland.otf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Leland.otf</source>
+        <source file="../Realive/font/LelandText.otf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/LelandText.otf</source>
+        <source file="../Realive/src/cleanup.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/cleanup.lua</source>
+        <source file="../Realive/src/config.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/config.lua</source>
+        <source file="../Realive/src/cue.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/cue.lua</source>
+        <source file="../Realive/src/engine.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/engine.lua</source>
+        <source file="../Realive/src/envelope.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/envelope.lua</source>
+        <source file="../Realive/src/io.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/io.lua</source>
+        <source file="../Realive/src/keys.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/keys.lua</source>
+        <source file="../Realive/src/midi.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/midi.lua</source>
+        <source file="../Realive/src/midi_editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/midi_editor.lua</source>
+        <source file="../Realive/src/state.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/state.lua</source>
+        <source file="../Realive/src/ui_bars.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_bars.lua</source>
+        <source file="../Realive/src/ui_edit.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit.lua</source>
+        <source file="../Realive/src/ui_edit_basic.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_basic.lua</source>
+        <source file="../Realive/src/ui_edit_meter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_meter.lua</source>
+        <source file="../Realive/src/ui_edit_note.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_note.lua</source>
+        <source file="../Realive/src/ui_edit_route.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_route.lua</source>
+        <source file="../Realive/src/ui_edit_waveform.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_waveform.lua</source>
+        <source file="../Realive/src/ui_interact.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_interact.lua</source>
+        <source file="../Realive/src/ui_popups.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_popups.lua</source>
+        <source file="../Realive/src/ui_table.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_table.lua</source>
+        <source file="../Realive/src/waveform.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/waveform.lua</source>
+      </version>
+    </reapack>
     <reapack name="Lyx_Theme Layout Modifier.lua" type="script" desc="Lyx_Theme Layout Modifier">
       <version name="2026.10.22.1840" author="Lyx" time="2026-10-22T18:40:43Z">
         <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/8a32492e0f7a30e7d63db627ce15fba45a530901/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>

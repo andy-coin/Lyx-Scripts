@@ -48,6 +48,7 @@ def pick(f):
 # script (same layout as the local folder). Version = last commit touching any of those files.
 BUNDLES = {
     "Buss Driver": "Buss Driver/MB_Buss Driver(LYX mod) - Routing Utility GUI Manager Tool - Batch add or remove sends or receives on selected tracks.lua",
+    "Realive": "Realive/Lyx_Realive.lua",  # temporary: laptop testing via ReaPack sync
     "Theme Layout Modifier": "Theme Layout Modifier/Lyx_Theme Layout Modifier.lua",
     "neutronic_Quick Adder (Lyx mod)": "neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua",
 }
