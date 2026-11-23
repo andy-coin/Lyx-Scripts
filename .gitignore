@@ -1,6 +1,6 @@
 .DS_Store
 _Backup/
-Realive/
+Realive/lagacy_version(Deprecated)/
 *.dylib
 *.ReaperThemeZip
 *.app/
@@ -32,3 +32,6 @@ Lyx_Solo selected or under mouse tracks[012].lua
 Lyx_Switch Screenset to small mixer&Arrange.lua
 Lyx_Switch between Mixer&Arrange view (Link folder track) .lua
 Lyx_Switch between Mixer-Arrange view (Link folder track) 2.lua
+
+# release plan: business notes, local only
+RELEASE_PLAN.md
