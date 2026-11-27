@@ -258,8 +258,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Add stretch marker at grid by mouse.lua" type="script" desc="Lyx_Add stretch marker at grid by mouse">
-      <version name="2026.10.19.1642" author="Lyx" time="2026-10-19T16:42:56Z">
-        <source main="main" file="../Lyx_Add stretch marker at grid by mouse.lua">https://github.com/andy-coin/Lyx-Scripts/raw/2de2260b34f3c0616e569e2d1a04acba42cbec84/Lyx_Add%20stretch%20marker%20at%20grid%20by%20mouse.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Add stretch marker at grid by mouse.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Add%20stretch%20marker%20at%20grid%20by%20mouse.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Add stretch marker at grid.lua" type="script" desc="Lyx_Add stretch marker at grid">
@@ -273,8 +273,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Adjust fade length.lua" type="script" desc="Lyx_Adjust fade length">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Adjust fade length.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Adjust%20fade%20length.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Adjust fade length.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Adjust%20fade%20length.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Adjust metronome volume by mouse wheel.lua" type="script" desc="Lyx_Adjust metronome volume by mouse wheel">
@@ -298,13 +298,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Click with cmd add item's selection.lua" type="script" desc="Lyx_Click with cmd add item's selection">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Click with cmd add item's selection.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Click%20with%20cmd%20add%20item%27s%20selection.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Click with cmd add item's selection.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Click%20with%20cmd%20add%20item%27s%20selection.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Click with shift add tracks selection.lua" type="script" desc="Lyx_Click with shift add tracks selection">
-      <version name="2026.10.20.0627" author="Lyx" time="2026-10-20T06:27:45Z">
-        <source main="main" file="../Lyx_Click with shift add tracks selection.lua">https://github.com/andy-coin/Lyx-Scripts/raw/e69bec94b80f531648c745df373cbf68acb66238/Lyx_Click%20with%20shift%20add%20tracks%20selection.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Click with shift add tracks selection.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Click%20with%20shift%20add%20tracks%20selection.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Close all floating FX windows.lua" type="script" desc="Lyx_Close all floating FX windows">
@@ -348,8 +348,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Create fade or crossfade to select items.lua" type="script" desc="Lyx_Create fade or crossfade to select items">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Create fade or crossfade to select items.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Create%20fade%20or%20crossfade%20to%20select%20items.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Create fade or crossfade to select items.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Create%20fade%20or%20crossfade%20to%20select%20items.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Create new MIDI track.lua" type="script" desc="Lyx_Create new MIDI track">
@@ -563,13 +563,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Move swing grid earlier.lua" type="script" desc="Lyx_Move swing grid earlier">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Move swing grid earlier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Move%20swing%20grid%20earlier.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Move swing grid earlier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Move%20swing%20grid%20earlier.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Move swing grid later.lua" type="script" desc="Lyx_Move swing grid later">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Move swing grid later.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Move%20swing%20grid%20later.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Move swing grid later.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Move%20swing%20grid%20later.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Move time selection left by one grid .lua" type="script" desc="Lyx_Move time selection left by one grid ">
@@ -628,18 +628,18 @@
       </version>
     </reapack>
     <reapack name="Lyx_Open RX without change original item.lua" type="script" desc="Lyx_Open RX without change original item">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Open RX without change original item.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Open%20RX%20without%20change%20original%20item.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Open RX without change original item.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Open%20RX%20without%20change%20original%20item.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Open item editor.lua" type="script" desc="Lyx_Open item editor">
-      <version name="2026.10.21.0813" author="Lyx" time="2026-10-21T08:13:00Z">
-        <source main="main" file="../Lyx_Open item editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/a2db6bdb3576189e90a80984706a9ad0086ea46b/Lyx_Open%20item%20editor.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Open item editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Open%20item%20editor.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Open item properties, subproject, notes.lua" type="script" desc="Lyx_Open item properties, subproject, notes">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Open item properties, subproject, notes.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Open%20item%20properties%2C%20subproject%2C%20notes.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Open item properties, subproject, notes.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Open%20item%20properties%2C%20subproject%2C%20notes.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Open-hide tuner.lua" type="script" desc="Lyx_Open-hide tuner">
@@ -668,13 +668,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Project Launcher (themed).lua" type="script" desc="Lyx_Project Launcher (themed)">
-      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
-        <source main="main" file="../Lyx_Project Launcher (themed).lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Project%20Launcher%20%28themed%29.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Project Launcher (themed).lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Project%20Launcher%20%28themed%29.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Project Launcher MOD generator.lua" type="script" desc="Lyx_Project Launcher MOD generator">
-      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
-        <source main="main" file="../Lyx_Project Launcher MOD generator.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Project%20Launcher%20MOD%20generator.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Project Launcher MOD generator.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Project%20Launcher%20MOD%20generator.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Randomize....lua" type="script" desc="Lyx_Randomize...">
@@ -688,8 +688,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Remove fade or crossfade to select items.lua" type="script" desc="Lyx_Remove fade or crossfade to select items">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Remove fade or crossfade to select items.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Remove%20fade%20or%20crossfade%20to%20select%20items.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Remove fade or crossfade to select items.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Remove%20fade%20or%20crossfade%20to%20select%20items.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Rename track or item .lua" type="script" desc="Lyx_Rename track or item ">
@@ -718,13 +718,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Reset selected track's pan.lua" type="script" desc="Lyx_Reset selected track's pan">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main" file="../Lyx_Reset selected track's pan.lua">https://github.com/andy-coin/Lyx-Scripts/raw/1aecc5763c30ac54f69706800ff64e82dce4eb64/Lyx_Reset%20selected%20track%27s%20pan.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Reset selected track's pan.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Reset%20selected%20track%27s%20pan.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Reset selected track's volume.lua" type="script" desc="Lyx_Reset selected track's volume">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main" file="../Lyx_Reset selected track's volume.lua">https://github.com/andy-coin/Lyx-Scripts/raw/1aecc5763c30ac54f69706800ff64e82dce4eb64/Lyx_Reset%20selected%20track%27s%20volume.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Reset selected track's volume.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Reset%20selected%20track%27s%20volume.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Reset stretch marker rate to 1.00.lua" type="script" desc="Lyx_Reset stretch marker rate to 1.00">
@@ -732,9 +732,9 @@
         <source main="main" file="../Lyx_Reset stretch marker rate to 1.00.lua">https://github.com/andy-coin/Lyx-Scripts/raw/2de2260b34f3c0616e569e2d1a04acba42cbec84/Lyx_Reset%20stretch%20marker%20rate%20to%201.00.lua</source>
       </version>
     </reapack>
-    <reapack name="Lyx_Reset swing grid to 60%.lua" type="script" desc="Lyx_Reset swing grid to 60%">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Reset swing grid to 60%.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Reset%20swing%20grid%20to%2060%25.lua</source>
+    <reapack name="Lyx_Reset swing grid.lua" type="script" desc="Lyx_Reset swing grid">
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Reset swing grid.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Reset%20swing%20grid.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Reveal selected items in finder.lua" type="script" desc="Lyx_Reveal selected items in finder">
@@ -788,8 +788,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Select items after current selected item in same track.lua" type="script" desc="Lyx_Select items after current selected item in same track">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Select items after current selected item in same track.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Select%20items%20after%20current%20selected%20item%20in%20same%20track.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Select items after current selected item in same track.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Select%20items%20after%20current%20selected%20item%20in%20same%20track.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Select items with same name or source.lua" type="script" desc="Lyx_Select items with same name or source">
@@ -803,8 +803,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Select only track and item.lua" type="script" desc="Lyx_Select only track and item">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Select only track and item.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Select%20only%20track%20and%20item.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Select only track and item.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Select%20only%20track%20and%20item.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Select only track under mouse.lua" type="script" desc="Lyx_Select only track under mouse">
@@ -958,8 +958,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Smart delete (no prompt).lua" type="script" desc="Lyx_Smart delete (no prompt)">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Smart delete (no prompt).lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Smart%20delete%20%28no%20prompt%29.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Smart delete (no prompt).lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Smart%20delete%20%28no%20prompt%29.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Smart duplicate.lua" type="script" desc="Lyx_Smart duplicate">
@@ -968,8 +968,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Smart mute.lua" type="script" desc="Lyx_Smart mute">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Smart mute.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Smart%20mute.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Smart mute.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Smart%20mute.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Smart paste.lua" type="script" desc="Lyx_Smart paste">
@@ -998,8 +998,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Solo selected or under mouse tracks.lua" type="script" desc="Lyx_Solo selected or under mouse tracks">
-      <version name="2026.11.03.1513" author="Lyx" time="2026-11-03T15:13:10Z">
-        <source main="main" file="../Lyx_Solo selected or under mouse tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/b870494fcf53ba5ce395b30eb2e44f9013929416/Lyx_Solo%20selected%20or%20under%20mouse%20tracks.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Solo selected or under mouse tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Solo%20selected%20or%20under%20mouse%20tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Speed up global playrate by 0.05.lua" type="script" desc="Lyx_Speed up global playrate by 0.05">
@@ -1018,8 +1018,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Split items at edit or play cursor.lua" type="script" desc="Lyx_Split items at edit or play cursor">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Split items at edit or play cursor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Split%20items%20at%20edit%20or%20play%20cursor.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Split items at edit or play cursor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Split%20items%20at%20edit%20or%20play%20cursor.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Split media items at razor area edges.lua" type="script" desc="Lyx_Split media items at razor area edges">
@@ -1053,8 +1053,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Switch to selected item's lane.lua" type="script" desc="Lyx_Switch to selected item's lane">
-      <version name="2026.10.27.1746" author="Lyx" time="2026-10-27T17:46:28Z">
-        <source main="main" file="../Lyx_Switch to selected item's lane.lua">https://github.com/andy-coin/Lyx-Scripts/raw/015c191b82069ce3e5abf234fdfe667e5120a769/Lyx_Switch%20to%20selected%20item%27s%20lane.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Switch to selected item's lane.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Switch%20to%20selected%20item%27s%20lane.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Tap tempo.lua" type="script" desc="Lyx_Tap tempo">
@@ -1158,8 +1158,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle item selection and move edit cursor by mouse.lua" type="script" desc="Lyx_Toggle item selection and move edit cursor by mouse">
-      <version name="2026.10.19.1642" author="Lyx" time="2026-10-19T16:42:56Z">
-        <source main="main" file="../Lyx_Toggle item selection and move edit cursor by mouse.lua">https://github.com/andy-coin/Lyx-Scripts/raw/2de2260b34f3c0616e569e2d1a04acba42cbec84/Lyx_Toggle%20item%20selection%20and%20move%20edit%20cursor%20by%20mouse.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle item selection and move edit cursor by mouse.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20item%20selection%20and%20move%20edit%20cursor%20by%20mouse.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle items mute.lua" type="script" desc="Lyx_Toggle items mute">
@@ -1203,8 +1203,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle show all active envelopes for all tracks.lua" type="script" desc="Lyx_Toggle show all active envelopes for all tracks">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Toggle show all active envelopes for all tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Toggle%20show%20all%20active%20envelopes%20for%20all%20tracks.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle show all active envelopes for all tracks.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20show%20all%20active%20envelopes%20for%20all%20tracks.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle show master track in TCP.lua" type="script" desc="Lyx_Toggle show master track in TCP">
@@ -1228,8 +1228,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle swing grid.lua" type="script" desc="Lyx_Toggle swing grid">
-      <version name="2026.10.19.0611" author="Lyx" time="2026-10-19T06:11:16Z">
-        <source main="main" file="../Lyx_Toggle swing grid.lua">https://github.com/andy-coin/Lyx-Scripts/raw/1aecc5763c30ac54f69706800ff64e82dce4eb64/Lyx_Toggle%20swing%20grid.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle swing grid.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20swing%20grid.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle throgh auto-punch mode.lua" type="script" desc="Lyx_Toggle throgh auto-punch mode">
@@ -1238,8 +1238,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle through normal-triplet-swing grid.lua" type="script" desc="Lyx_Toggle through normal-triplet-swing grid">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Toggle through normal-triplet-swing grid.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Toggle%20through%20normal-triplet-swing%20grid.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle through normal-triplet-swing grid.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20through%20normal-triplet-swing%20grid.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track automantion mode between latch-read.lua" type="script" desc="Lyx_Toggle track automantion mode between latch-read">
@@ -1248,8 +1248,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track folder state.lua" type="script" desc="Lyx_Toggle track folder state">
-      <version name="2026.10.27.1746" author="Lyx" time="2026-10-27T17:46:28Z">
-        <source main="main" file="../Lyx_Toggle track folder state.lua">https://github.com/andy-coin/Lyx-Scripts/raw/015c191b82069ce3e5abf234fdfe667e5120a769/Lyx_Toggle%20track%20folder%20state.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle track folder state.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20track%20folder%20state.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track freeze.lua" type="script" desc="Lyx_Toggle track freeze">
@@ -1308,8 +1308,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track solo defeat.lua" type="script" desc="Lyx_Toggle track solo defeat">
-      <version name="2026.10.19.1642" author="Lyx" time="2026-10-19T16:42:56Z">
-        <source main="main" file="../Lyx_Toggle track solo defeat.lua">https://github.com/andy-coin/Lyx-Scripts/raw/2de2260b34f3c0616e569e2d1a04acba42cbec84/Lyx_Toggle%20track%20solo%20defeat.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle track solo defeat.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20track%20solo%20defeat.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track zoom to global height.lua" type="script" desc="Lyx_Toggle track zoom to global height">
@@ -1323,8 +1323,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_Toggle track's selection by mouse.lua" type="script" desc="Lyx_Toggle track's selection by mouse">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Toggle track's selection by mouse.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Toggle%20track%27s%20selection%20by%20mouse.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Toggle track's selection by mouse.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Toggle%20track%27s%20selection%20by%20mouse.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Toggle tracks or items group state.lua" type="script" desc="Lyx_Toggle tracks or items group state">
@@ -1348,13 +1348,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Track versions alternative-switch to selected version.lua" type="script" desc="Lyx_Track versions alternative-switch to selected version">
-      <version name="2026.10.27.1746" author="Lyx" time="2026-10-27T17:46:28Z">
-        <source main="main" file="../Lyx_Track versions alternative-switch to selected version.lua">https://github.com/andy-coin/Lyx-Scripts/raw/015c191b82069ce3e5abf234fdfe667e5120a769/Lyx_Track%20versions%20alternative-switch%20to%20selected%20version.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Track versions alternative-switch to selected version.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Track%20versions%20alternative-switch%20to%20selected%20version.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Track versions alternatve-create new version.lua" type="script" desc="Lyx_Track versions alternatve-create new version">
-      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
-        <source main="main" file="../Lyx_Track versions alternatve-create new version.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx_Track%20versions%20alternatve-create%20new%20version.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Track versions alternatve-create new version.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Track%20versions%20alternatve-create%20new%20version.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Trigger next preset for focused FX.lua" type="script" desc="Lyx_Trigger next preset for focused FX">
@@ -1363,13 +1363,13 @@
       </version>
     </reapack>
     <reapack name="Lyx_Zoom  vertically (mousewheel).lua" type="script" desc="Lyx_Zoom  vertically (mousewheel)">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Zoom  vertically (mousewheel).lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Zoom%20%20vertically%20%28mousewheel%29.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Zoom  vertically (mousewheel).lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Zoom%20%20vertically%20%28mousewheel%29.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Zoom  vertically a little (mousewheel).lua.lua" type="script" desc="Lyx_Zoom  vertically a little (mousewheel).lua">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_Zoom  vertically a little (mousewheel).lua.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_Zoom%20%20vertically%20a%20little%20%28mousewheel%29.lua.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_Zoom  vertically a little (mousewheel).lua.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_Zoom%20%20vertically%20a%20little%20%28mousewheel%29.lua.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Zoom horizontally, change grid relatively (mouse wheel).lua" type="script" desc="Lyx_Zoom horizontally, change grid relatively (mouse wheel)">
@@ -1393,8 +1393,8 @@
       </version>
     </reapack>
     <reapack name="Lyx_split items and select right.lua" type="script" desc="Lyx_split items and select right">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source main="main" file="../Lyx_split items and select right.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/Lyx_split%20items%20and%20select%20right.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Lyx_split items and select right.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx_split%20items%20and%20select%20right.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_DragToggle.lua" type="script" desc="_Lyx_DragToggle">
@@ -1408,8 +1408,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_Fade.lua" type="script" desc="_Lyx_Fade">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source file="../_lib/_Lyx_Fade.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/_lib/_Lyx_Fade.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source file="../_lib/_Lyx_Fade.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/_lib/_Lyx_Fade.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_GUI.lua" type="script" desc="_Lyx_GUI">
@@ -1418,8 +1418,8 @@
       </version>
     </reapack>
     <reapack name="_Lyx_HOME.lua" type="script" desc="_Lyx_HOME">
-      <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
-        <source file="../_lib/_Lyx_HOME.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/_lib/_Lyx_HOME.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source file="../_lib/_Lyx_HOME.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/_lib/_Lyx_HOME.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_LaneName.lua" type="script" desc="_Lyx_LaneName">
@@ -1430,6 +1430,11 @@
     <reapack name="_Lyx_MIDI_Tools.lua" type="script" desc="_Lyx_MIDI_Tools">
       <version name="2026.10.19.1915" author="Lyx" time="2026-10-19T19:15:38Z">
         <source file="../_lib/_Lyx_MIDI_Tools.lua">https://github.com/andy-coin/Lyx-Scripts/raw/eca2078a9926364f5dd3729fad8dd9fc10873345/_lib/_Lyx_MIDI_Tools.lua</source>
+      </version>
+    </reapack>
+    <reapack name="_Lyx_SwingDefault.lua" type="script" desc="_Lyx_SwingDefault">
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source file="../_lib/_Lyx_SwingDefault.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/_lib/_Lyx_SwingDefault.lua</source>
       </version>
     </reapack>
     <reapack name="_Lyx_Theme.lua" type="script" desc="_Lyx_Theme">
@@ -1487,51 +1492,51 @@
       </version>
     </reapack>
     <reapack name="Lyx_Tuner.lua" type="script" desc="Lyx_Tuner">
-      <version name="2026.11.23.1018" author="Lyx" time="2026-11-23T10:18:19Z">
-        <source file="../Lyx Tuner/Lyx_Tuner toggle.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20Tuner/Lyx_Tuner%20toggle.lua</source>
-        <source main="main" file="../Lyx Tuner/Lyx_Tuner.lua">https://github.com/andy-coin/Lyx-Scripts/raw/f3e16d01760c17bc8938fb14877c5ae4a98a112d/Lyx%20Tuner/Lyx_Tuner.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source file="../Lyx Tuner/Lyx_Tuner toggle.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx%20Tuner/Lyx_Tuner%20toggle.lua</source>
+        <source main="main" file="../Lyx Tuner/Lyx_Tuner.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Lyx%20Tuner/Lyx_Tuner.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Realive.lua" type="script" desc="Lyx_Realive">
-      <version name="2026.11.23.1001" author="Lyx" time="2026-11-23T10:01:23Z">
-        <source main="main" file="../Realive/Lyx_Realive.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/Lyx_Realive.lua</source>
-        <source file="../Realive/font/Inconsolata-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Inconsolata-Regular.ttf</source>
-        <source file="../Realive/font/Inconsolata_Condensed-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Inconsolata_Condensed-Regular.ttf</source>
-        <source file="../Realive/font/Inconsolata_SemiCondensed-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Inconsolata_SemiCondensed-Regular.ttf</source>
-        <source file="../Realive/font/Leland.otf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/Leland.otf</source>
-        <source file="../Realive/font/LelandText.otf">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/font/LelandText.otf</source>
-        <source file="../Realive/src/cleanup.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/cleanup.lua</source>
-        <source file="../Realive/src/config.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/config.lua</source>
-        <source file="../Realive/src/cue.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/cue.lua</source>
-        <source file="../Realive/src/engine.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/engine.lua</source>
-        <source file="../Realive/src/envelope.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/envelope.lua</source>
-        <source file="../Realive/src/io.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/io.lua</source>
-        <source file="../Realive/src/keys.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/keys.lua</source>
-        <source file="../Realive/src/midi.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/midi.lua</source>
-        <source file="../Realive/src/midi_editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/midi_editor.lua</source>
-        <source file="../Realive/src/state.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/state.lua</source>
-        <source file="../Realive/src/ui_bars.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_bars.lua</source>
-        <source file="../Realive/src/ui_edit.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit.lua</source>
-        <source file="../Realive/src/ui_edit_basic.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_basic.lua</source>
-        <source file="../Realive/src/ui_edit_meter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_meter.lua</source>
-        <source file="../Realive/src/ui_edit_note.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_note.lua</source>
-        <source file="../Realive/src/ui_edit_route.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_route.lua</source>
-        <source file="../Realive/src/ui_edit_waveform.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_edit_waveform.lua</source>
-        <source file="../Realive/src/ui_interact.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_interact.lua</source>
-        <source file="../Realive/src/ui_popups.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_popups.lua</source>
-        <source file="../Realive/src/ui_table.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/ui_table.lua</source>
-        <source file="../Realive/src/waveform.lua">https://github.com/andy-coin/Lyx-Scripts/raw/92603c3f3e7ac7080b9128f8e34147ce150dfe90/Realive/src/waveform.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Realive/Lyx_Realive.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/Lyx_Realive.lua</source>
+        <source file="../Realive/font/Inconsolata-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/font/Inconsolata-Regular.ttf</source>
+        <source file="../Realive/font/Inconsolata_Condensed-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/font/Inconsolata_Condensed-Regular.ttf</source>
+        <source file="../Realive/font/Inconsolata_SemiCondensed-Regular.ttf">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/font/Inconsolata_SemiCondensed-Regular.ttf</source>
+        <source file="../Realive/font/Leland.otf">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/font/Leland.otf</source>
+        <source file="../Realive/font/LelandText.otf">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/font/LelandText.otf</source>
+        <source file="../Realive/src/cleanup.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/cleanup.lua</source>
+        <source file="../Realive/src/config.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/config.lua</source>
+        <source file="../Realive/src/cue.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/cue.lua</source>
+        <source file="../Realive/src/engine.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/engine.lua</source>
+        <source file="../Realive/src/envelope.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/envelope.lua</source>
+        <source file="../Realive/src/io.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/io.lua</source>
+        <source file="../Realive/src/keys.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/keys.lua</source>
+        <source file="../Realive/src/midi.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/midi.lua</source>
+        <source file="../Realive/src/midi_editor.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/midi_editor.lua</source>
+        <source file="../Realive/src/state.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/state.lua</source>
+        <source file="../Realive/src/ui_bars.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_bars.lua</source>
+        <source file="../Realive/src/ui_edit.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_edit.lua</source>
+        <source file="../Realive/src/ui_edit_basic.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_edit_basic.lua</source>
+        <source file="../Realive/src/ui_edit_meter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_edit_meter.lua</source>
+        <source file="../Realive/src/ui_edit_note.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_edit_note.lua</source>
+        <source file="../Realive/src/ui_edit_route.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_edit_route.lua</source>
+        <source file="../Realive/src/ui_edit_waveform.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_edit_waveform.lua</source>
+        <source file="../Realive/src/ui_interact.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_interact.lua</source>
+        <source file="../Realive/src/ui_popups.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_popups.lua</source>
+        <source file="../Realive/src/ui_table.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/ui_table.lua</source>
+        <source file="../Realive/src/waveform.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Realive/src/waveform.lua</source>
       </version>
     </reapack>
     <reapack name="Lyx_Theme Layout Modifier.lua" type="script" desc="Lyx_Theme Layout Modifier">
-      <version name="2026.10.22.1840" author="Lyx" time="2026-10-22T18:40:43Z">
-        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/8a32492e0f7a30e7d63db627ce15fba45a530901/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
-        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/8a32492e0f7a30e7d63db627ce15fba45a530901/Theme%20Layout%20Modifier/tlm_walter.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../Theme Layout Modifier/Lyx_Theme Layout Modifier.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Theme%20Layout%20Modifier/Lyx_Theme%20Layout%20Modifier.lua</source>
+        <source file="../Theme Layout Modifier/tlm_walter.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/Theme%20Layout%20Modifier/tlm_walter.lua</source>
       </version>
     </reapack>
     <reapack name="neutronic_Quick Adder 2.lua" type="script" desc="neutronic_Quick Adder 2">
-      <version name="2026.10.21.0727" author="Lyx" time="2026-10-21T07:27:32Z">
-        <source main="main" file="../neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua">https://github.com/andy-coin/Lyx-Scripts/raw/c47ee96fdbce3f115e5c491ae1328c66a0192dfc/neutronic_Quick%20Adder%20%28Lyx%20mod%29/neutronic_Quick%20Adder%202.lua</source>
+      <version name="2026.11.27.2001" author="Lyx" time="2026-11-27T20:01:29Z">
+        <source main="main" file="../neutronic_Quick Adder (Lyx mod)/neutronic_Quick Adder 2.lua">https://github.com/andy-coin/Lyx-Scripts/raw/bcd3480deb205386b2420ffb94bc072cc3dab673/neutronic_Quick%20Adder%20%28Lyx%20mod%29/neutronic_Quick%20Adder%202.lua</source>
       </version>
     </reapack>
   </category>
