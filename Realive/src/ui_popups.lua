@@ -30,10 +30,15 @@ local COL_CATS = {
     {key="col_text_dim",     name="Dim Text"},
     {key="col_row",          name="Row Background"},
     {key="col_border",       name="Border"},
-    {key="col_accent",       name="Accent"},
+    {key="col_accent",       name="Primary"},
+    {key="col_gold",         name="Highlight"},
+    {key="col_field",        name="Field"},
+    {key="col_btn",          name="Button"},
+    {key="col_card",         name="Card"},
   }},
   {cat="Transport", items={
     {key="col_go",           name="GO Button"},
+    {key="col_danger",       name="PANIC / Danger"},
   }},
   {cat="Progress", items={
     {key="col_prewait",      name="Pre-Wait"},
@@ -54,126 +59,76 @@ local COL_CATS = {
 function FUNC.draw_settings()
   if not popup.settings then scut_listen = nil; return end
 
-  -- Panel visibility state (非持久) -- panel toggle state (session only)
-  if popup._pref_colors == nil then popup._pref_colors = true end
-  if popup._pref_scuts == nil then popup._pref_scuts = true end
-
-  -- Dimensions -- 面板尺寸
-  local col_w = FUNC.sz(240)
-  local mid_w = FUNC.sz(260)
-  local sc_w = FUNC.sz(310)
-  local tog_w = FUNC.sz(16)
-  local pad = FUNC.sz(16)
-
-  -- 動態寬度，以中間欄為錨點 -- dynamic width, middle column anchored at center
-  local left_w = popup._pref_colors and col_w or 0
-  local right_w = popup._pref_scuts and sc_w or 0
-  local total_w = left_w + tog_w + mid_w + tog_w + right_w + pad
-
-  -- 中間錨點：追蹤中間欄左邊界的螢幕X，toggle時保持不變 -- track middle column's screen X, keep it stationary on toggle
-  local new_left = left_w + tog_w  -- 中間欄左邊界在視窗內的偏移 -- middle column offset within window
-  if popup._pref_mid_sx and popup._pref_prev_left ~= nil and popup._pref_prev_left ~= new_left then
-    local new_wx = popup._pref_mid_sx - new_left  -- 反推新的視窗X -- derive new window X from stored mid X
-    ImGui.SetNextWindowPos(ctx, new_wx, popup._pref_wy or 0)
-  end
-  popup._pref_prev_left = new_left
+  -- 分頁式：Colors / General / Shortcuts，固定寬度 -- tabbed layout, fixed width
+  local total_w = FUNC.sz(316)  -- 原 380，窄約 1/6 -- was 380, ~1/6 narrower
 
   ImGui.SetNextWindowSize(ctx, total_w, FUNC.sz(600), ImGui.Cond_Always())
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(35,35,45))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), FUNC.rgba(65,65,90))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Preferences###Settings", true,
     ImGui.WindowFlags_NoDocking() | ImGui.WindowFlags_NoResize())
   if vis then
     if popup_lost_focus() then op = false end  -- 失焦自動關閉
-    -- 每幀記錄視窗位置+中間欄螢幕X -- store window pos + middle column screen X each frame
-    local wx, wy = ImGui.GetWindowPos(ctx)
-    popup._pref_wy = wy
-    popup._pref_mid_sx = wx + (popup._pref_prev_left or 0)  -- 中間欄左邊界的螢幕X -- middle column left edge screen X
     ImGui.PushFont(ctx, FONT, FUNC.sz(13))
-    local _, avail_h = ImGui.GetContentRegionAvail(ctx)
-    local ch = avail_h - FUNC.sz(34)  -- 留空間給底部按鈕 -- reserve for save button
-    local pdl = ImGui.GetWindowDrawList(ctx)
-    local cefl = ImGui.ColorEditFlags_NoInputs() | ImGui.ColorEditFlags_NoLabel()
+    local mid_w = ImGui.GetContentRegionAvail(ctx)  -- 分頁內容寬 -- tab content width
+    local foot_h = FUNC.sz(26)   -- 底部按鈕高 -- footer button height
+    local stack_gap = FUNC.sz(10) -- Output Maps / Reset / Save & Close 之間統一間距 -- uniform gap between the bottom buttons
+    local ch = -(foot_h + stack_gap)  -- 子區塊底到 Save & Close 剛好一個 stack_gap -- child bottom sits one gap above Save & Close
+    local sp_y = select(2, ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing()))
     local pref_notes_active = false  -- notes輸入框是否活躍 -- track notes InputText active state
     local pref_enter_consumed = false  -- 有輸入框消耗了Enter -- an input consumed Enter this frame
-
-    -- Toggle button helper -- 三角形toggle按鈕繪製
-    local function draw_tog(id, w, h, point_right)
-      local tx, ty = ImGui.GetCursorScreenPos(ctx)
-      ImGui.InvisibleButton(ctx, id, w, h)
-      local hov = ImGui.IsItemHovered(ctx)
-      local bg = hov and FUNC.rgba(55,55,75) or FUNC.rgba(40,40,55)
-      ImGui.DrawList_AddRectFilled(pdl, tx, ty, tx+w, ty+h, bg, 2)
-      local tri = FUNC.sz(5)
-      local cx, cy = tx + w/2, ty + h/2
-      local tc = hov and FUNC.rgba(200,200,220) or FUNC.rgba(110,110,130)
-      if point_right then
-        ImGui.DrawList_AddTriangleFilled(pdl, cx-tri*0.4, cy-tri, cx+tri*0.6, cy, cx-tri*0.4, cy+tri, tc)
-      else
-        ImGui.DrawList_AddTriangleFilled(pdl, cx+tri*0.4, cy-tri, cx-tri*0.6, cy, cx+tri*0.4, cy+tri, tc)
+    local function save_close_btn()
+      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.primary)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.primary_h)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), C.primary_hi)
+      -- Enter只在沒有輸入框活躍或剛結束編輯時觸發 -- Enter only when no input is active AND no input just committed
+      local enter_ok = (ImGui.IsKeyPressed(ctx, ImGui.Key_Enter()) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter()))
+        and not ImGui.IsAnyItemActive(ctx) and not pref_notes_active and not scut_listen
+        and not pref_enter_consumed and not popup._cp_key
+      if ImGui.Button(ctx, "Save & Close", -1, foot_h) or enter_ok then
+        FUNC.save_prefs(); FUNC.save_shortcuts(); FUNC.save_wf_wheel()
+        -- 儲存project notes -- save project notes
+        reaper.SetProjExtState(0, EXT.SECTION, "ProjectNotes", project_notes or "")
+        popup.settings = false; scut_listen = nil
       end
-      return ImGui.IsItemClicked(ctx, ImGui.MouseButton_Left())
+      ImGui.PopStyleColor(ctx, 3)
     end
+    local function reset_btn()
+      -- 危險鈕：淡紅底 + 紅字，不搶 Save 的視線 -- destructive: soft red fill + red text, doesn't compete with Save
+      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.col2im(prefs.col_danger, 46))
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.col2im(prefs.col_danger, 90))
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.col2im(prefs.col_danger, 130))
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.danger_h)
+      if ImGui.Button(ctx, "Reset Project Data", -1, foot_h) then
+        popup._reset_confirm = true
+      end
+      ImGui.PopStyleColor(ctx, 4)
+    end
+    local on_general = false  -- 這一幀是否在 General 分頁 -- is the General tab showing this frame
+    -- 小標題：跟 edit 卡片標題同風格（粗體小字大寫、淡色）-- section title styled like edit card headers
+    local function sec_title(t)
+      ImGui.PushFont(ctx, FONT_B, FUNC.sz(11))
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
+      ImGui.Text(ctx, t:upper())
+      ImGui.PopStyleColor(ctx, 1); ImGui.PopFont(ctx)
+      ImGui.Separator(ctx)
+    end
+    local pdl = ImGui.GetWindowDrawList(ctx)
+    local cefl = ImGui.ColorEditFlags_NoInputs() | ImGui.ColorEditFlags_NoLabel()
 
     -- ═══════════════ LEFT: Colors ═══════════════
-    if popup._pref_colors then
-      if ImGui.BeginChild(ctx, "##pref_col", col_w, ch) then
-        local clbl_w = FUNC.sz(120)
-        for ci, grp in ipairs(COL_CATS) do
-          if ci > 1 then ImGui.Dummy(ctx, 0, FUNC.sz(4)) end
-          ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
-          ImGui.Text(ctx, grp.cat)
-          ImGui.PopStyleColor(ctx, 1)
-          ImGui.Separator(ctx)
-          for _, cd in ipairs(grp.items) do
-            ImGui.Text(ctx, "  "..cd.name); ImGui.SameLine(ctx, clbl_w)
-            local cch, cnv = ImGui.ColorEdit3(ctx, "##"..cd.key, prefs[cd.key], cefl)
-            if cch then prefs[cd.key] = cnv; FUNC.upd_colors(); FUNC.upd_types() end
-          end
-        end
-        -- Themes section -- 主題區塊
-        ImGui.Dummy(ctx, 0, FUNC.sz(6)); ImGui.Separator(ctx); ImGui.Dummy(ctx, 0, 3)
-        ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
-        ImGui.Text(ctx, "Themes")
-        ImGui.PopStyleColor(ctx, 1)
-        ImGui.Separator(ctx)
-        if not popup.theme_name_buf then popup.theme_name_buf = "" end
-        ImGui.SetNextItemWidth(ctx, -FUNC.sz(42))
-        local tnch, tnnv = ImGui.InputText(ctx, "##theme_name", popup.theme_name_buf)
-        if tnch then popup.theme_name_buf = tnnv end
-        ImGui.SameLine(ctx)
-        if ImGui.Button(ctx, "Save##theme") and popup.theme_name_buf ~= "" then
-          FUNC.save_theme(popup.theme_name_buf)
-        end
-        local themes = FUNC.get_theme_list()
-        if #themes > 0 then
-          ImGui.SetNextItemWidth(ctx, -FUNC.sz(42))
-          if ImGui.BeginCombo(ctx, "##theme_load", "Load...") then
-            for _, tn in ipairs(themes) do
-              if ImGui.Selectable(ctx, tn, false) then FUNC.load_theme(tn) end
-            end
-            ImGui.EndCombo(ctx)
-          end
-          ImGui.SameLine(ctx)
-          if ImGui.BeginCombo(ctx, "##theme_del", "Del", ImGui.ComboFlags_NoPreview()) then
-            for _, tn in ipairs(themes) do
-              if ImGui.Selectable(ctx, tn.."##del", false) then FUNC.delete_theme(tn) end
-            end
-            ImGui.EndCombo(ctx)
-          end
-        end
-      end
-      ImGui.EndChild(ctx)
-      ImGui.SameLine(ctx, 0, 0)
-    end
-
-    -- Left toggle (Colors) -- 左側toggle
-    if draw_tog("##tog_col", tog_w, ch, popup._pref_colors) then
-      popup._pref_colors = not popup._pref_colors
-    end
-
+    -- 分頁樣式：未選=凹槽色、選中=按鈕色+主色上緣線 -- tabs: well color, selected = button color + primary overline
+    ImGui.PushStyleColor(ctx, ImGui.Col_Tab(), C.seg)
+    ImGui.PushStyleColor(ctx, ImGui.Col_TabHovered(), C.btn_h)
+    ImGui.PushStyleColor(ctx, ImGui.Col_TabSelected(), C.btn)
+    ImGui.PushStyleColor(ctx, ImGui.Col_TabSelectedOverline(), C.primary_hi)
+    ImGui.PushStyleColor(ctx, ImGui.Col_TabDimmedSelected(), C.btn)
+    ImGui.PushStyleVar(ctx, ImGui.StyleVar_TabRounding(), FUNC.rad("s"))
+    local tabs_open = ImGui.BeginTabBar(ctx, "##pref_tabs")
+    if tabs_open then
     -- ═══════════════ MIDDLE: Settings + Project Info ═══════════════
-    ImGui.SameLine(ctx, 0, 0)
+    if ImGui.BeginTabItem(ctx, "General") then
+    on_general = true
     local mid_pad = FUNC.sz(8)  -- 中欄左右留白 -- middle column padding
     if ImGui.BeginChild(ctx, "##pref_mid", mid_w, ch) then
       ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + mid_pad)
@@ -181,10 +136,7 @@ function FUNC.draw_settings()
       local slbl_w = FUNC.sz(80)
 
       -- ── Project Info ── 專案資訊
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
-      ImGui.Text(ctx, "Project Info")
-      ImGui.PopStyleColor(ctx, 1)
-      ImGui.Separator(ctx)
+      sec_title("Project Info")
 
       -- Name -- 專案名稱
       ImGui.Text(ctx, "Name"); ImGui.SameLine(ctx, slbl_w)
@@ -245,10 +197,7 @@ function FUNC.draw_settings()
 
       -- ── Notes ── 專案備註（左右下留4px，上方緊貼separator）
       ImGui.Dummy(ctx, 0, FUNC.sz(4))
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
-      ImGui.Text(ctx, "Notes")
-      ImGui.PopStyleColor(ctx, 1)
-      ImGui.Separator(ctx)
+      sec_title("Notes")
       local np = FUNC.sz(4)
       local notes_cx = ImGui.GetCursorPosX(ctx)
       local notes_avail = ImGui.GetContentRegionAvail(ctx)
@@ -261,18 +210,29 @@ function FUNC.draw_settings()
 
       -- ── Settings ── 設定
       ImGui.Dummy(ctx, 0, FUNC.sz(4))
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
-      ImGui.Text(ctx, "Settings")
-      ImGui.PopStyleColor(ctx, 1)
-      ImGui.Separator(ctx)
+      sec_title("Settings")
 
       -- helper: vdrag後檢查是否剛結束輸入 -- check if input just committed (blocks Enter from reaching Save)
       local function vd_check() if ImGui.IsItemDeactivatedAfterEdit(ctx) then pref_enter_consumed = true end end
 
       ImGui.Text(ctx, "Scale"); ImGui.SameLine(ctx, slbl_w)
-      ImGui.SetNextItemWidth(ctx, -1)
-      local sch, snv = ImGui.SliderInt(ctx, "##scale", prefs.scale, 50, 200, "%d%%")
-      if sch then prefs.scale = snv end
+      -- 加減按鈕，每次 5%（範圍 50~200，先對齊到 5 的倍數）-- -/+ buttons, 5% steps
+      local function scale_step(d)
+        prefs.scale = math.max(50, math.min(200, math.floor(prefs.scale / 5 + 0.5) * 5 + d))
+      end
+      local sbw = FUNC.sz(24)
+      local sgap = FUNC.sz(4)
+      local savail = ImGui.GetContentRegionAvail(ctx)
+      local sval_w = savail - sbw * 2 - sgap * 2
+      if ImGui.Button(ctx, "-##scale_dn", sbw, 0) then scale_step(-5) end
+      ImGui.SameLine(ctx, 0, sgap)
+      local scx = ImGui.GetCursorPosX(ctx)
+      local stxt = string.format("%d%%", prefs.scale)
+      ImGui.SetCursorPosX(ctx, scx + (sval_w - ImGui.CalcTextSize(ctx, stxt)) / 2)
+      ImGui.AlignTextToFramePadding(ctx)
+      ImGui.Text(ctx, stxt)
+      ImGui.SameLine(ctx, scx + sval_w + sgap)
+      if ImGui.Button(ctx, "+##scale_up", sbw, 0) then scale_step(5) end
 
       ImGui.Text(ctx, "Fade Time"); ImGui.SameLine(ctx, slbl_w)
       local fch, fnv = FUNC.vdrag("pref_dft", prefs.default_fade_time, 0.1, 0.5, 60, "%.1f s")
@@ -283,7 +243,7 @@ function FUNC.draw_settings()
       if skch then prefs.soft_kill_time = sknv end; vd_check()
 
       ImGui.Text(ctx, "Dyn Range"); ImGui.SameLine(ctx, slbl_w)
-      local dr_w = (mid_w - mid_pad * 2 - slbl_w - FUNC.sz(30)) * 0.5  -- 扣掉padding -- subtract padding from width calc
+      local dr_w = (ImGui.GetContentRegionAvail(ctx) - ImGui.CalcTextSize(ctx, "~") - FUNC.sz(2) * 2) * 0.5  -- 兩格右緣對齊上面欄位 -- right edge aligns with the fields above
       local vmn_ch, vmn_nv = FUNC.vdrag("pref_vmin", prefs.vol_min, 1, -120, 0, "%.0f dB", nil, dr_w)
       if vmn_ch then prefs.vol_min = vmn_nv; prefs.inf_db = prefs.vol_min; FUNC.update_env_bounds() end; vd_check()
       ImGui.SameLine(ctx, 0, FUNC.sz(2))
@@ -319,24 +279,25 @@ function FUNC.draw_settings()
       if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Sync REAPER track color (PLAY) and MIDI item color (MIDI) to cue color") end
 
       -- ── Output Maps 按鈕 ──
-      ImGui.Dummy(ctx, 0, FUNC.sz(6)); ImGui.Separator(ctx); ImGui.Dummy(ctx, 0, 3)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(50, 70, 110))
-      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(60, 85, 140))
-      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(70, 100, 160))
-      if ImGui.Button(ctx, "Output Maps", -1, FUNC.sz(26)) then
+      -- 底部兩顆貼齊子區塊底部：Output Maps ─gap─ Save & Close ─gap─ Reset（確認重置時改成順排）
+      -- bottom-anchored: Output Maps ─gap─ Save & Close ─gap─ Reset (flows normally while confirming reset)
+      if not popup._reset_confirm then
+        local _, rem_h = ImGui.GetContentRegionAvail(ctx)
+        local need = foot_h * 2 + stack_gap
+        if rem_h > need + sp_y then ImGui.Dummy(ctx, 0, rem_h - need - sp_y) end
+      else
+        ImGui.Dummy(ctx, 0, math.max(0, stack_gap - sp_y))
+      end
+      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.btn)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.btn_h)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), C.btn_a)
+      if ImGui.Button(ctx, "Output Maps", -1, foot_h) then
         popup.output_maps = true
       end
       ImGui.PopStyleColor(ctx, 3)
 
-      -- ── 底部：Reset Project Data ── 移至最下方
-      ImGui.Dummy(ctx, 0, FUNC.sz(6)); ImGui.Separator(ctx); ImGui.Dummy(ctx, 0, 3)
-      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(130,40,40))
-      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(160,50,50))
-      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(180,60,60))
-      if ImGui.Button(ctx, "Reset Project Data", -1, FUNC.sz(26)) then
-        popup._reset_confirm = true
-      end
-      ImGui.PopStyleColor(ctx, 3)
+      ImGui.SetCursorPosY(ctx, ImGui.GetCursorPosY(ctx) - sp_y + stack_gap)  -- 兩鈕間距 = stack_gap -- gap = stack_gap
+      save_close_btn()  -- Save & Close 在中間，Reset 在最底（footer）-- Save in the middle, Reset at the footer
       if popup._reset_confirm then
         ImGui.TextColored(ctx, FUNC.rgba(255,100,100), "Delete all cues and saved\ndata for this project?")
         if ImGui.Button(ctx, "Yes, Reset", FUNC.sz(100), FUNC.sz(24)) then
@@ -356,21 +317,97 @@ function FUNC.draw_settings()
           popup._reset_confirm = false
         end
       end
+      ImGui.EndChild(ctx)  -- ##pref_mid_inner
+      end
+      ImGui.EndChild(ctx)  -- ##pref_mid
     end
-    ImGui.EndChild(ctx)  -- ##pref_mid_inner
+      ImGui.EndTabItem(ctx)
     end
-    ImGui.EndChild(ctx)  -- ##pref_mid
-    ImGui.SameLine(ctx, 0, 0)
 
-    -- Right toggle (Shortcuts) -- 右側toggle
-    if draw_tog("##tog_sc", tog_w, ch, not popup._pref_scuts) then
-      popup._pref_scuts = not popup._pref_scuts
+    -- ═══════════════ Colors ═══════════════
+    if ImGui.BeginTabItem(ctx, "Colors") then
+      if ImGui.BeginChild(ctx, "##pref_col", -1, ch) then
+        local clbl_w = FUNC.sz(120)
+        for ci, grp in ipairs(COL_CATS) do
+          if ci > 1 then ImGui.Dummy(ctx, 0, FUNC.sz(4)) end
+          ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
+          ImGui.Text(ctx, grp.cat)
+          ImGui.PopStyleColor(ctx, 1)
+          ImGui.Separator(ctx)
+          for _, cd in ipairs(grp.items) do
+            ImGui.Text(ctx, "  "..cd.name); ImGui.SameLine(ctx, clbl_w)
+            local fh = ImGui.GetFrameHeight(ctx)
+            if ImGui.ColorButton(ctx, "##"..cd.key, FUNC.col2im(prefs[cd.key]), ImGui.ColorEditFlags_NoTooltip(), fh, fh) then
+              popup._cp_key = cd.key; popup._cp_orig = prefs[cd.key]; popup._cp_cancel = nil
+              ImGui.OpenPopup(ctx, "##cp_pop")
+            end
+          end
+        end
+        -- 色票：即時預覽，OK 保留、Cancel / Esc / 點外面 = 還原 -- picker: live preview; OK keeps, Cancel / Esc / click-away reverts
+        if popup._cp_key then
+          local k, revert = popup._cp_key, false
+          if ImGui.BeginPopup(ctx, "##cp_pop") then
+            local pch, pnv = ImGui.ColorPicker3(ctx, "##cp_pick", prefs[k], ImGui.ColorEditFlags_NoSidePreview())
+            if pch then prefs[k] = pnv; FUNC.upd_colors(); FUNC.upd_types() end
+            local bw = FUNC.sz(90)
+            if ImGui.Button(ctx, "Cancel##cp", bw) or popup._cp_cancel then revert = true; ImGui.CloseCurrentPopup(ctx) end
+            ImGui.SameLine(ctx)
+            ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.primary)
+            ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.primary_h)
+            if (ImGui.Button(ctx, "OK##cp", bw) or popup_enter_pressed()) and not revert then
+              popup._cp_key = nil; pref_enter_consumed = true; ImGui.CloseCurrentPopup(ctx)
+            end
+            ImGui.PopStyleColor(ctx, 2)
+            ImGui.EndPopup(ctx)
+          else
+            revert = true  -- 被關掉卻沒按 OK -- closed without OK
+          end
+          if revert and popup._cp_key then
+            prefs[k] = popup._cp_orig; FUNC.upd_colors(); FUNC.upd_types()
+            popup._cp_key = nil
+          end
+          popup._cp_cancel = nil
+        end
+        -- Themes section -- 主題區塊
+        ImGui.Dummy(ctx, 0, FUNC.sz(6)); ImGui.Separator(ctx); ImGui.Dummy(ctx, 0, 3)
+        ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
+        ImGui.Text(ctx, "Themes")
+        ImGui.PopStyleColor(ctx, 1)
+        ImGui.Separator(ctx)
+        if not popup.theme_name_buf then popup.theme_name_buf = "" end
+        ImGui.SetNextItemWidth(ctx, -FUNC.sz(42))
+        local tnch, tnnv = ImGui.InputText(ctx, "##theme_name", popup.theme_name_buf)
+        if tnch then popup.theme_name_buf = tnnv end
+        ImGui.SameLine(ctx)
+        if ImGui.Button(ctx, "Save##theme") and popup.theme_name_buf ~= "" then
+          FUNC.save_theme(popup.theme_name_buf)
+        end
+        local themes = FUNC.get_theme_list()
+        if #themes > 0 then
+          ImGui.SetNextItemWidth(ctx, -FUNC.sz(42))
+          if ImGui.BeginCombo(ctx, "##theme_load", "Load...") then
+            for _, tn in ipairs(themes) do
+              if ImGui.Selectable(ctx, tn, false) then FUNC.load_theme(tn) end
+            end
+            ImGui.EndCombo(ctx)
+          end
+          ImGui.SameLine(ctx)
+          if ImGui.BeginCombo(ctx, "##theme_del", "Del", ImGui.ComboFlags_NoPreview()) then
+            for _, tn in ipairs(themes) do
+              if ImGui.Selectable(ctx, tn.."##del", false) then FUNC.delete_theme(tn) end
+            end
+            ImGui.EndCombo(ctx)
+          end
+        end
+        ImGui.EndChild(ctx)
+      end
+      ImGui.EndTabItem(ctx)
     end
+
 
     -- ═══════════════ RIGHT: Shortcuts ═══════════════
-    if popup._pref_scuts then
-      ImGui.SameLine(ctx, 0, 0)
-      if ImGui.BeginChild(ctx, "##pref_sc", sc_w, ch) then
+    if ImGui.BeginTabItem(ctx, "Shortcuts") then
+      if ImGui.BeginChild(ctx, "##pref_sc", -1, ch) then
         -- 鍵盤監聽處理 -- keyboard listen mode: capture next keypress
         if scut_listen then
           if ImGui.IsKeyPressed(ctx, ImGui.Key_Escape()) then
@@ -408,7 +445,7 @@ function FUNC.draw_settings()
             if is_listening then
               local blink = math.floor(reaper.time_precise() * 3) % 2 == 0
               ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), FUNC.rgba(60,50,20))
-              ImGui.PushStyleColor(ctx, ImGui.Col_Text(), blink and FUNC.rgba(255,200,80) or FUNC.rgba(180,140,50))
+              ImGui.PushStyleColor(ctx, ImGui.Col_Text(), blink and C.gold or FUNC.rgba(180,140,50))
               ImGui.SetNextItemWidth(ctx, key_w)
               ImGui.InputText(ctx, "##sk_"..sd.id, "Press key...", ImGui.InputTextFlags_ReadOnly())
               ImGui.PopStyleColor(ctx, 2)
@@ -488,26 +525,22 @@ function FUNC.draw_settings()
           local wrch, wrnv = ImGui.Checkbox(ctx, "Rev##ww_r_"..wd.id, w.rev)
           if wrch then w.rev = wrnv end
         end
+        ImGui.EndChild(ctx)
       end
-      ImGui.EndChild(ctx)
+      ImGui.EndTabItem(ctx)
     end
+    ImGui.EndTabBar(ctx)
+    end
+    ImGui.PopStyleVar(ctx, 1); ImGui.PopStyleColor(ctx, 5)  -- 分頁樣式（要撐到每個 TabItem 畫完）-- tab style (must outlive every TabItem)
 
-    -- ─── Bottom: Save & Close ─── 底部儲存按鈕
-    ImGui.Dummy(ctx, 0, FUNC.sz(2))
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(40,100,40))
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(50,130,50))
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(60,150,60))
-    -- Enter只在沒有輸入框活躍或剛結束編輯時觸發 -- Enter only when no input is active AND no input just committed
-    local enter_ok = (ImGui.IsKeyPressed(ctx, ImGui.Key_Enter()) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter()))
-      and not ImGui.IsAnyItemActive(ctx) and not pref_notes_active and not scut_listen
-      and not pref_enter_consumed
-    if ImGui.Button(ctx, "Save & Close", -1, FUNC.sz(26)) or enter_ok then
-      FUNC.save_prefs(); FUNC.save_shortcuts(); FUNC.save_wf_wheel()
-      -- 儲存project notes -- save project notes
-      reaper.SetProjExtState(0, EXT.SECTION, "ProjectNotes", project_notes or "")
-      popup.settings = false; scut_listen = nil
+    -- ─── Bottom: Save & Close ─── 底部儲存按鈕（貼底，跟上方間距 = stack_gap）-- pinned to bottom, one stack_gap below content
+    do
+      local _, wpy = ImGui.GetStyleVar(ctx, ImGui.StyleVar_WindowPadding())
+      ImGui.SetCursorPosY(ctx, ImGui.GetWindowHeight(ctx) - wpy - foot_h)
     end
-    ImGui.PopStyleColor(ctx, 3)
+    -- General 分頁：最底是 Reset（Save & Close 在它上面）；其他分頁：最底是 Save & Close
+    -- General tab: Reset at the very bottom (Save & Close above it); other tabs: Save & Close at the bottom
+    if on_general then reset_btn() else save_close_btn() end
 
     ImGui.PopFont(ctx); ImGui.End(ctx)
   end
@@ -555,8 +588,8 @@ function FUNC.draw_output_maps()
   local win_h = FUNC.sz(44) + row_h * math.min(total_outs, 16) + FUNC.sz(50)
 
   ImGui.SetNextWindowSize(ctx, win_w, win_h, ImGui.Cond_FirstUseEver())
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(30, 30, 42))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), FUNC.rgba(50, 60, 90))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Output Maps###OutputMaps", true,
     ImGui.WindowFlags_NoDocking() | ImGui.WindowFlags_NoCollapse())
   if vis then
@@ -663,7 +696,7 @@ function FUNC.draw_output_maps()
         if is_sel then
           ImGui.DrawList_AddRectFilled(odl, rx, ry, rx + row_w, ry + row_h, FUNC.rgba(60, 80, 120))
         elseif oi % 2 == 0 then
-          ImGui.DrawList_AddRectFilled(odl, rx, ry, rx + row_w, ry + row_h, FUNC.rgba(40, 40, 55))
+          ImGui.DrawList_AddRectFilled(odl, rx, ry, rx + row_w, ry + row_h, C.field)
         end
 
         -- ─── 整行互動(選取+拖曳)，不覆蓋color欄 ─── full row interaction, excludes color column
@@ -758,7 +791,7 @@ function FUNC.draw_output_maps()
           end
           -- guide line (僅水平線) -- horizontal line only
           if om.drag_active then
-            ImGui.DrawList_AddLine(fdl, rx, ry, rx + row_w, ry, FUNC.rgba(255, 200, 80), FUNC.sz(2))
+            ImGui.DrawList_AddLine(fdl, rx, ry, rx + row_w, ry, C.gold, FUNC.sz(2))
           end
           ImGui.PopStyleColor(ctx, 1)
           ImGui.EndDragDropTarget(ctx)
@@ -851,8 +884,8 @@ function FUNC.draw_output_maps()
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.col2im(e.color, 200))
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.col2im(e.color, 255))
         else
-          ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(50, 50, 65))
-          ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(65, 65, 80))
+          ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.btn)
+          ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.btn_h)
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(75, 75, 90))
         end
         if ImGui.Button(ctx, "##ocol" .. oi, csz, csz) then
@@ -946,9 +979,9 @@ function FUNC.draw_output_maps()
     local btn_w = FUNC.sz(80)
 
     -- Save
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(40, 100, 40))
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(50, 130, 50))
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(60, 150, 60))
+    ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.primary)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.primary_h)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), C.primary_hi)
     local omap_enter = not ImGui.IsAnyItemActive(ctx)
       and (ImGui.IsKeyPressed(ctx, ImGui.Key_Enter()) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadEnter()))
     if ImGui.Button(ctx, "Save", btn_w, btn_h) or omap_enter then
@@ -1008,7 +1041,7 @@ end
 function FUNC.draw_save_popup()
   if not popup.save then return end
   ImGui.SetNextWindowSize(ctx, FUNC.sz(340), FUNC.sz(140), ImGui.Cond_FirstUseEver())
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(35,35,45))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Save Show###SaveShow", true, ImGui.WindowFlags_NoDocking())
   if vis then
     if popup_lost_focus() then op = false end  -- 失焦自動關閉
@@ -1030,9 +1063,9 @@ function FUNC.draw_save_popup()
       end
       ImGui.PopStyleColor(ctx, 3)
     else
-      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(40,100,40))
-      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(50,130,50))
-      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(60,150,60))
+      ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.primary)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.primary_h)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), C.primary_hi)
       if (ImGui.Button(ctx, "Save", FUNC.sz(80), FUNC.sz(26)) or popup_enter_pressed()) and popup.save_title_buf ~= "" then
         local exists = false
         for _, t in ipairs(FUNC.get_show_titles()) do if t == popup.save_title_buf then exists = true; break end end
@@ -1051,7 +1084,7 @@ function FUNC.draw_save_popup()
 
     -- Status / warning line (always reserved)
     if popup.save_overwrite then
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), FUNC.rgba(255,200,80))
+      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.gold)
       ImGui.Text(ctx, "\""..popup.save_title_buf.."\" already exists. Overwrite?")
       ImGui.PopStyleColor(ctx, 1)
     else
@@ -1069,7 +1102,7 @@ end
 function FUNC.draw_load_popup()
   if not popup.load then return end
   ImGui.SetNextWindowSize(ctx, FUNC.sz(380), FUNC.sz(300), ImGui.Cond_FirstUseEver())
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(35,35,45))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Load Show###LoadShow", true, ImGui.WindowFlags_NoDocking())
   if vis then
     if popup_lost_focus() then op = false end  -- 失焦自動關閉
@@ -1136,7 +1169,7 @@ function FUNC.draw_trim()
   if c.trim_end <= 0 or c.trim_end > dur then c.trim_end = dur end
 
   ImGui.SetNextWindowSize(ctx, FUNC.sz(480), FUNC.sz(160), ImGui.Cond_FirstUseEver())
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(30,30,40))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Trim Q."..c.cue_number.."###Trim", true, ImGui.WindowFlags_NoDocking())
   if vis then
     if popup_lost_focus() then op = false end  -- 失焦自動關閉
@@ -1148,7 +1181,7 @@ function FUNC.draw_trim()
     local bar_h = FUNC.sz(30)
     local cx, cy = ImGui.GetCursorScreenPos(ctx)
     local dl2 = ImGui.GetWindowDrawList(ctx)
-    ImGui.DrawList_AddRectFilled(dl2, cx, cy, cx+aw, cy+bar_h, FUNC.rgba(50,50,65), 4)
+    ImGui.DrawList_AddRectFilled(dl2, cx, cy, cx+aw, cy+bar_h, C.btn, 4)
     -- Waveform blocks per item
     local items = FUNC.get_items(c.track_idx)
     if #items > 0 then
@@ -1193,7 +1226,7 @@ function FUNC.draw_fade_edit()
   if c.type ~= "FADE" then popup.fade_edit = false; return end
 
   ImGui.SetNextWindowSize(ctx, FUNC.sz(340), FUNC.sz(340), ImGui.Cond_FirstUseEver())  -- 加高容納rate/pitch -- taller for rate/pitch controls
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(30,30,40))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Fade Q."..c.cue_number.."###FadeEdit", true, ImGui.WindowFlags_NoDocking())
   if vis then
     if popup_lost_focus() then op = false end  -- 失焦自動關閉
@@ -1247,7 +1280,7 @@ function FUNC.draw_fade_edit()
     -- Grid lines (within padded area)
     for gi = 1, 3 do
       local gy = pa_y + pa_h * gi / 4
-      ImGui.DrawList_AddLine(dl2, pa_x, gy, pa_x+pa_w, gy, FUNC.rgba(50,50,65), 1)
+      ImGui.DrawList_AddLine(dl2, pa_x, gy, pa_x+pa_w, gy, C.btn, 1)
     end
     -- Volume labels (scale vol_max ~ vol_min dB) -- 刻度標示跟隨prefs
     ImGui.DrawList_AddText(dl2, cx + FUNC.sz(4), cy + FUNC.sz(2),
@@ -1296,7 +1329,7 @@ function FUNC.draw_fade_edit()
         ImGui.DrawList_AddText(dl2, cx + pw - tw - FUNC.sz(6), cy + FUNC.sz(2), FUNC.rgba(255, 220, 80), info_txt)
       end
     end
-    ImGui.DrawList_AddRect(dl2, cx, cy, cx+pw, cy+ph, FUNC.rgba(60,60,80), 4, 0, 1)
+    ImGui.DrawList_AddRect(dl2, cx, cy, cx+pw, cy+ph, C.line2, 4, 0, 1)
     ImGui.Dummy(ctx, pw, ph)
     ImGui.Dummy(ctx, 0, FUNC.sz(4))
 
@@ -1341,8 +1374,8 @@ function FUNC.draw_warn_popup()
 
   ImGui.SetNextWindowFocus(ctx)
   ImGui.SetNextWindowSizeConstraints(ctx, FUNC.sz(340), 0, FUNC.sz(340), FUNC.sz(600))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBg(), FUNC.rgba(120,40,35))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), FUNC.rgba(140,50,40))
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBg(), (C.danger & 0xFFFFFF00) | 150)
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), C.danger)
   local vis, op = ImGui.Begin(ctx, "WARNING!###warn_popup", true, ImGui.WindowFlags_NoCollapse() | ImGui.WindowFlags_AlwaysAutoResize() | ImGui.WindowFlags_NoResize())
   if vis then
     local trk_info = "Track " .. tostring(c.track_idx + 1) .. ": " .. FUNC.tr_name(c.track_idx)
@@ -1354,7 +1387,7 @@ function FUNC.draw_warn_popup()
       ImGui.TextColored(ctx, FUNC.rgba(255,180,80), "Volume: " .. w.vol)
     end
     if w.pan then
-      ImGui.TextColored(ctx, FUNC.rgba(255,200,80), "Pan: " .. w.pan)
+      ImGui.TextColored(ctx, C.gold, "Pan: " .. w.pan)
     end
 
     ImGui.Spacing(ctx); ImGui.Separator(ctx); ImGui.Spacing(ctx)
@@ -1415,8 +1448,8 @@ function FUNC.draw_warn_missing_popup()
 
   ImGui.SetNextWindowFocus(ctx)
   ImGui.SetNextWindowSizeConstraints(ctx, FUNC.sz(320), 0, FUNC.sz(320), FUNC.sz(400))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBg(), FUNC.rgba(120,40,35))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), FUNC.rgba(140,50,40))
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBg(), (C.danger & 0xFFFFFF00) | 150)
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), C.danger)
   local vis, op = ImGui.Begin(ctx, "Source Missing###warn_missing_popup", true,
     ImGui.WindowFlags_NoCollapse() | ImGui.WindowFlags_AlwaysAutoResize() | ImGui.WindowFlags_NoResize())
   if vis then
@@ -1504,8 +1537,8 @@ function FUNC.draw_fx_env_missing_popup()
 
   ImGui.SetNextWindowFocus(ctx)
   ImGui.SetNextWindowSizeConstraints(ctx, FUNC.sz(340), 0, FUNC.sz(340), FUNC.sz(300))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBg(), FUNC.rgba(120,40,35))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), FUNC.rgba(140,50,40))
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBg(), (C.danger & 0xFFFFFF00) | 150)
+  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgActive(), C.danger)
   local vis, op = ImGui.Begin(ctx, "FX Envelope: FX Missing###fxe_missing_popup", true,
     ImGui.WindowFlags_NoCollapse() | ImGui.WindowFlags_AlwaysAutoResize() | ImGui.WindowFlags_NoResize())
   if vis then
@@ -1631,7 +1664,7 @@ end
 function FUNC.draw_sel_paste_popup()
   if not popup.sel_paste then return end
   ImGui.SetNextWindowSize(ctx, FUNC.sz(520), FUNC.sz(420), ImGui.Cond_FirstUseEver())
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), FUNC.rgba(35,35,45))
+  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.chrome)
   local vis, op = ImGui.Begin(ctx, "Selective Paste###SelPaste", true, ImGui.WindowFlags_NoDocking())
   if vis then
     if popup_lost_focus() then op = false end  -- 失焦自動關閉
@@ -1690,9 +1723,9 @@ function FUNC.draw_sel_paste_popup()
     local fl = sel_paste_collect_fields(srcs)
     local can_apply = mode_ok and #fl > 0
     if not can_apply then ImGui.BeginDisabled(ctx) end
-    ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(40,100,40))
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(50,130,50))
-    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(60,150,60))
+    ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.primary)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.primary_h)
+    ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), C.primary_hi)
     if ImGui.Button(ctx, "Apply", FUNC.sz(90), FUNC.sz(24)) then
       local ok, err = FUNC.do_paste_selective(fl)
       if ok then

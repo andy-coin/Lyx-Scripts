@@ -1539,6 +1539,14 @@
       close_undo()
       return "No FX"
     else
+      --Lyx Modified: 空白軌名 + 樂器 → 用樂器名（去品牌、去類型）命名
+      local raw = wait_result or scr.results_list[gui.Results.sel]
+      if raw:match("^%w-i:") and not isInput() then
+        local _, tr_name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
+        if tr_name:match("^%s*$") then
+          reaper.GetSetMediaTrackInfo_String(track, "P_NAME", (undo_name:gsub("^.-: ", "")), true)
+        end
+      end
       return name, undo_name, fx_i
     end
   end

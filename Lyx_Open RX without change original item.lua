@@ -4,8 +4,7 @@
   
   local function main()
       
-      reaper.BR_GetMouseCursorContext()
-      item=reaper.BR_GetMouseCursorContext_Item()
+      item=api.mci()
       
       if  r.isMIDI(item) then
           api.cmd(40639,0) -- duplicate active take

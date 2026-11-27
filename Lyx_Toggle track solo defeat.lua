@@ -1,6 +1,5 @@
   
   r=reaper
-  if not reaper.BR_GetMouseCursorContext then reaper.MB("This script needs the SWS extension (install via ReaPack / sws-extension.org).","Lyx Scripts",0) return end
   
   local function main()
       
@@ -8,7 +7,7 @@
       tr_n=reaper.CountSelectedTracks(0)
       
       if tr_n==1 then
-         tr=reaper.BR_TrackAtMouseCursor() or reaper.GetSelectedTrack(0,0) -- shortcut with mouse off the tracks
+         tr=reaper.GetTrackFromPoint(reaper.GetMousePosition()) or reaper.GetSelectedTrack(0,0) -- shortcut with mouse off the tracks
          Solo=reaper.GetMediaTrackInfo_Value(tr,"B_SOLO_DEFEAT")
          reaper.SetMediaTrackInfo_Value(tr,"B_SOLO_DEFEAT",math.abs(Solo-1))
       else

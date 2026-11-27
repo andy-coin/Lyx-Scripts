@@ -2,7 +2,8 @@
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 --script_path=script_path:gsub("[/\\]MIDI Editor[/\\]$","/")
 package.path = package.path..";"..script_path.."?.lua"
-local r=require("_lib._Lyx_HOME")      
+local r=require("_lib._Lyx_HOME")
+local DEFAULT_SWING=require("_lib._Lyx_SwingDefault")      
 
 -----CUSTOM-----
 link_editor = true
@@ -17,7 +18,7 @@ local function main()
     end
     
     if  swingamt == 0 then 
-        swingamt = 0.6
+        swingamt = DEFAULT_SWING
     end
 
     swingamt = swingamt - 0.01

@@ -107,7 +107,6 @@
         
         local razor,razorMap = r.GetRazorEdits(false,true)
         
-        api.mcw()
         mouse_item = api.mci()
 
         if  razor then

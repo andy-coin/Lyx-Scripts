@@ -115,7 +115,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local label_h = FUNC.sz(14)
             local fader_area_h = math.floor(rt_h - label_h - FUNC.sz(8))
             local fader_h = math.max(FUNC.sz(32), fader_area_h)
-            local handle_h = FUNC.sz(3)
+            local handle_h = FUNC.sz(8)  -- v2 膠囊把手（原 3px 細線）-- v2 capsule knob (was 3px line)
 
             ImGui.PushFont(ctx, FONT, FUNC.sz(11))
             local rt_sx, rt_sy = ImGui.GetCursorScreenPos(ctx)
@@ -130,6 +130,9 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local scale_tw = math.max(stw1, stw2, stw3)
             local scale_w = scale_tw + FUNC.sz(6)
 
+            -- fader 依面板寬度縮放 -- fit faders to section width
+            fader_w, fader_gap, scale_w = FUNC.fit_faders(#ch_list, rt_w - rt_pad * 2, scale_w)
+            slot_w = fader_w + fader_gap
             local fx = rt_sx + rt_pad + scale_w
             local fy = rt_sy
 
@@ -137,13 +140,13 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local scale_x = rt_sx + rt_pad
             local scale_col = FUNC.rgba(120, 120, 130)
             local txt_h = FUNC.sz(11)
-            ImGui.DrawList_AddText(rt_dl, scale_x, fy, scale_col, scale_top_txt)
-            ImGui.DrawList_AddText(rt_dl, scale_x, fy + fader_h - txt_h, scale_col, scale_bot_txt)
+            if scale_w > 0 then ImGui.DrawList_AddText(rt_dl, scale_x, fy, scale_col, scale_top_txt) end
+            if scale_w > 0 then ImGui.DrawList_AddText(rt_dl, scale_x, fy + fader_h - txt_h, scale_col, scale_bot_txt) end
             if prefs.vol_min < 0 and prefs.vol_max > 0 then
               local zero_frac = -prefs.vol_min / (prefs.vol_max - prefs.vol_min)
               local zero_label_y = fy + fader_h - math.floor(fader_h * zero_frac) - math.floor(txt_h * 0.5)
               if zero_label_y > fy + txt_h + FUNC.sz(2) and zero_label_y < fy + fader_h - txt_h * 2 - FUNC.sz(2) then
-                ImGui.DrawList_AddText(rt_dl, scale_x, zero_label_y, scale_col, scale_zero_txt)
+                if scale_w > 0 then ImGui.DrawList_AddText(rt_dl, scale_x, zero_label_y, scale_col, scale_zero_txt) end
               end
             end
 
@@ -189,29 +192,13 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               local sel_this = rsel[ch]
 
               -- fader背景 -- fader background
-              ImGui.DrawList_AddRectFilled(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(15, 15, 22), 3)
+              ImGui.DrawList_AddRectFilled(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.dim_c(C.field), FUNC.rad("m"))  -- v2 凹槽 -- v2 well
 
               -- ─── Meter fill (播放時即時顯示) ─── real-time meter
               local pk_lin = ch_peaks[ch] or 0
               local pk_db = pk_lin > 0 and (20 * math.log(pk_lin, 10)) or prefs.vol_min
               if pk_lin > 0 then
-                local vr = prefs.vol_max - prefs.vol_min
-                local segs = {
-                  {lo=prefs.vol_min, hi=-6,  col=FUNC.rgba(30, 160, 60, 200)},
-                  {lo=-6,  hi=-3,  col=FUNC.rgba(200, 200, 40, 200)},
-                  {lo=-3,  hi=prefs.vol_max,  col=FUNC.rgba(220, 50, 30, 200)},
-                }
-                for _, seg in ipairs(segs) do
-                  if pk_db > seg.lo then
-                    local s_lo = FUNC.clamp((math.max(seg.lo, prefs.vol_min) - prefs.vol_min) / vr, 0, 1)
-                    local s_hi = FUNC.clamp((math.min(pk_db, seg.hi) - prefs.vol_min) / vr, 0, 1)
-                    local y_bot = fy + fader_h - math.floor(fader_h * s_lo)
-                    local y_top = fy + fader_h - math.floor(fader_h * s_hi)
-                    if y_top < y_bot then
-                      ImGui.DrawList_AddRectFilled(rt_dl, fx + 1, y_top, fx + fader_w - 1, y_bot, seg.col)
-                    end
-                  end
-                end
+                FUNC.draw_meter_fill(rt_dl, fx, fx + fader_w, fy, fader_h, pk_db)  -- 漸層 meter -- gradient meter
               end
 
               -- peak hold線 -- peak hold line
@@ -230,8 +217,10 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               local vol_frac = FUNC.clamp((trim_db - prefs.vol_min) / (prefs.vol_max - prefs.vol_min), 0, 1)
               local handle_y = fy + fader_h - math.floor(fader_h * vol_frac) - math.floor(handle_h / 2)
               handle_y = FUNC.clamp(handle_y, fy, fy + fader_h - handle_h)
-              local hcol = sel_this and FUNC.rgba(255, 200, 80) or FUNC.rgba(200, 200, 210)
-              ImGui.DrawList_AddRectFilled(rt_dl, fx, handle_y, fx + fader_w, handle_y + handle_h, hcol)
+              local hcol = sel_this and C.gold or C.knob  -- 選取=金色 -- selected = gold
+              local kov = FUNC.sz(3)  -- 把手比軌道寬一點 -- knob overhangs the track
+              ImGui.DrawList_AddRectFilled(rt_dl, fx - kov, handle_y + 1, fx + fader_w + kov, handle_y + handle_h + 1, FUNC.rgba(0,0,0,110), FUNC.sz(3))  -- 陰影 -- shadow
+              ImGui.DrawList_AddRectFilled(rt_dl, fx - kov, handle_y, fx + fader_w + kov, handle_y + handle_h, FUNC.dim_c(hcol), FUNC.sz(3))
 
               -- 0dB參考線 -- 0dB reference line
               local zero_frac = FUNC.clamp((0 - prefs.vol_min) / (prefs.vol_max - prefs.vol_min), 0, 1)
@@ -242,17 +231,17 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               local grt_omap_col = FUNC.omap_color(ch)
               local grt_omap_im = grt_omap_col >= 0 and FUNC.col2im(grt_omap_col) or nil
               if sel_this then
-                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(255, 200, 80), 3, 0, FUNC.sz(2.5))
+                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, C.gold, 3, 0, FUNC.sz(2.5))
               elseif grt_omap_im then
                 ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, grt_omap_im, 3, 0, FUNC.sz(1.5))
               else
-                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(60, 60, 80), 3, 0, 1)
+                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.dim_c(C.line), FUNC.rad("m"), 0, 1)
               end
 
               -- dB文字（滑桿內底部） -- dB text at fader bottom
               local vol_txt = trim_db <= prefs.vol_min and "-inf" or string.format("%.0f", trim_db)
               local vtw = ImGui.CalcTextSize(ctx, vol_txt)
-              ImGui.DrawList_AddText(rt_dl, fx + (fader_w - vtw) * 0.5, fy + fader_h - FUNC.sz(13), C.text, vol_txt)
+              if vtw <= fader_w then ImGui.DrawList_AddText(rt_dl, fx + (fader_w - vtw) * 0.5, fy + fader_h - FUNC.sz(13), C.text, vol_txt) end  -- 太窄就不顯示 -- hide when too narrow
 
               -- 互動區 -- interaction area
               ImGui.SetCursorScreenPos(ctx, fx, fy)
@@ -464,7 +453,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local btn_area_h = btn_sz + FUNC.sz(6)  -- 底部按鈕區高度 -- bottom button area height
             local fader_area_h = math.floor(rt_h - label_h - btn_area_h - FUNC.sz(8))
             local fader_h = math.max(FUNC.sz(32), fader_area_h)
-            local handle_h = FUNC.sz(3)
+            local handle_h = FUNC.sz(8)  -- v2 膠囊把手（原 3px 細線）-- v2 capsule knob (was 3px line)
 
             ImGui.PushFont(ctx, FONT, FUNC.sz(11))
             local rt_sx, rt_sy = ImGui.GetCursorScreenPos(ctx)
@@ -479,6 +468,9 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local scale_tw = math.max(stw1, stw2, stw3)
             local scale_w = scale_tw + FUNC.sz(6)  -- 刻度標籤寬度 -- scale label width
 
+            -- fader 依面板寬度縮放 -- fit faders to section width
+            fader_w, fader_gap, scale_w = FUNC.fit_faders(#hw_outs, rt_w - rt_pad * 2, scale_w)
+            slot_w = fader_w + fader_gap
             local fx = rt_sx + rt_pad + scale_w
             local fy = rt_sy
             local total_num_outs = reaper.GetNumAudioOutputs()
@@ -512,16 +504,16 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local scale_col = FUNC.rgba(120, 120, 130)
             local txt_h = FUNC.sz(11)
             -- 頂部: vol_max -- top: vol_max
-            ImGui.DrawList_AddText(rt_dl, scale_x, fy, scale_col, scale_top_txt)
+            if scale_w > 0 then ImGui.DrawList_AddText(rt_dl, scale_x, fy, scale_col, scale_top_txt) end
             -- 底部: vol_min -- bottom: vol_min
-            ImGui.DrawList_AddText(rt_dl, scale_x, fy + fader_h - txt_h, scale_col, scale_bot_txt)
+            if scale_w > 0 then ImGui.DrawList_AddText(rt_dl, scale_x, fy + fader_h - txt_h, scale_col, scale_bot_txt) end
             -- 0dB標籤（僅在不與top/bottom重疊時繪製）-- 0dB label (only if not overlapping top/bottom)
             if prefs.vol_min < 0 and prefs.vol_max > 0 then
               local zero_frac = -prefs.vol_min / (prefs.vol_max - prefs.vol_min)
               local zero_label_y = fy + fader_h - math.floor(fader_h * zero_frac) - math.floor(txt_h * 0.5)
               -- 只在離top/bottom夠遠時才畫 -- only draw if far enough from top/bottom
               if zero_label_y > fy + txt_h + FUNC.sz(2) and zero_label_y < fy + fader_h - txt_h * 2 - FUNC.sz(2) then
-                ImGui.DrawList_AddText(rt_dl, scale_x, zero_label_y, scale_col, scale_zero_txt)
+                if scale_w > 0 then ImGui.DrawList_AddText(rt_dl, scale_x, zero_label_y, scale_col, scale_zero_txt) end
               end
             end
 
@@ -531,7 +523,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               local is_unassigned = (hw.ch < 0)  -- ch=-1 表示未指定 -- ch=-1 = unassigned
 
               -- 背景矩形 -- background rect
-              ImGui.DrawList_AddRectFilled(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(15, 15, 22), 3)
+              ImGui.DrawList_AddRectFilled(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.dim_c(C.field), FUNC.rad("m"))  -- v2 凹槽 -- v2 well
 
               -- ─── Meter fill (播放時即時顯示) ─── real-time meter
               if any_playing and not is_unassigned then
@@ -544,23 +536,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
                 local fader_lin = hw.vol_db <= prefs.vol_min and 0 or (10 ^ (hw.vol_db / 20))
                 pk = pk * fader_lin
                 local pk_db = pk > 0 and (20 * math.log(pk, 10)) or prefs.vol_min
-                local segs = {
-                  {lo=prefs.vol_min, hi=-6,  col=FUNC.rgba(30, 160, 60, 200)},
-                  {lo=-6,  hi=-3,  col=FUNC.rgba(200, 200, 40, 200)},
-                  {lo=-3,  hi=prefs.vol_max,  col=FUNC.rgba(220, 50, 30, 200)},
-                }
-                for _, seg in ipairs(segs) do
-                  if pk_db > seg.lo then
-                    local vr = prefs.vol_max - prefs.vol_min
-                    local s_lo = FUNC.clamp((math.max(seg.lo, prefs.vol_min) - prefs.vol_min) / vr, 0, 1)
-                    local s_hi = FUNC.clamp((math.min(pk_db, seg.hi) - prefs.vol_min) / vr, 0, 1)
-                    local y_bot = fy + fader_h - math.floor(fader_h * s_lo)
-                    local y_top = fy + fader_h - math.floor(fader_h * s_hi)
-                    if y_top < y_bot then
-                      ImGui.DrawList_AddRectFilled(rt_dl, fx + 1, y_top, fx + fader_w - 1, y_bot, seg.col)
-                    end
-                  end
-                end
+                FUNC.draw_meter_fill(rt_dl, fx, fx + fader_w, fy, fader_h, pk_db)  -- 漸層 meter -- gradient meter
               end
 
               -- ─── Volume handle bar ─── 音量位置橫桿
@@ -568,8 +544,10 @@ function FUNC.draw_edit_section_route(c, apply, multi)
                 local vol_frac = FUNC.clamp((hw.vol_db - prefs.vol_min) / (prefs.vol_max - prefs.vol_min), 0, 1)
                 local handle_y = fy + fader_h - math.floor(fader_h * vol_frac) - math.floor(handle_h / 2)
                 handle_y = FUNC.clamp(handle_y, fy, fy + fader_h - handle_h)
-                local hcol = sel_this and FUNC.rgba(255, 200, 80) or FUNC.rgba(200, 200, 210)
-                ImGui.DrawList_AddRectFilled(rt_dl, fx, handle_y, fx + fader_w, handle_y + handle_h, hcol)
+                local hcol = sel_this and C.gold or C.knob  -- 選取=金色 -- selected = gold
+                local kov = FUNC.sz(3)  -- 把手比軌道寬一點 -- knob overhangs the track
+                ImGui.DrawList_AddRectFilled(rt_dl, fx - kov, handle_y + 1, fx + fader_w + kov, handle_y + handle_h + 1, FUNC.rgba(0,0,0,110), FUNC.sz(3))  -- 陰影 -- shadow
+                ImGui.DrawList_AddRectFilled(rt_dl, fx - kov, handle_y, fx + fader_w + kov, handle_y + handle_h, FUNC.dim_c(hcol), FUNC.sz(3))
               end
 
               -- 0dB參考線 -- 0dB reference line
@@ -582,13 +560,13 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               local omap_col = (not is_unassigned) and FUNC.omap_color(hw.ch) or -1
               local omap_col_im = omap_col >= 0 and FUNC.col2im(omap_col) or nil
               if sel_this then
-                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(255, 200, 80), 3, 0, FUNC.sz(2.5))
+                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, C.gold, 3, 0, FUNC.sz(2.5))
               elseif is_dd_highlight then
                 ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(255, 200, 80, 120), 3, 0, FUNC.sz(2.5))
               elseif omap_col_im then
                 ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, omap_col_im, 3, 0, FUNC.sz(1.5))
               else
-                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(60, 60, 80), 3, 0, 1)
+                ImGui.DrawList_AddRect(rt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.dim_c(C.line), FUNC.rad("m"), 0, 1)
               end
 
               -- dB文字（滑桿內底部） -- dB text at fader bottom
@@ -599,7 +577,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               else
                 local vol_txt = hw.vol_db <= prefs.vol_min and "-inf" or string.format("%.0f", hw.vol_db)
                 local vtw = ImGui.CalcTextSize(ctx, vol_txt)
-                ImGui.DrawList_AddText(rt_dl, fx + (fader_w - vtw) * 0.5, fy + fader_h - FUNC.sz(13), C.text, vol_txt)
+                if vtw <= fader_w then ImGui.DrawList_AddText(rt_dl, fx + (fader_w - vtw) * 0.5, fy + fader_h - FUNC.sz(13), C.text, vol_txt) end  -- 太窄就不顯示 -- hide when too narrow
               end
 
               -- 互動區 -- interaction area
@@ -674,7 +652,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
               local dd_x = fx + math.floor(fader_w * 0.5) - math.floor(dd_w * 0.5)  -- 以fader中心對齊 -- center on fader
 
               -- channel label 外框 -- channel label border
-              ImGui.DrawList_AddRect(rt_dl, dd_x, dd_y, dd_x + dd_w, dd_y + label_h, FUNC.rgba(50, 50, 65), 2, 0, 1)
+              ImGui.DrawList_AddRect(rt_dl, dd_x, dd_y, dd_x + dd_w, dd_y + label_h, C.btn, 2, 0, 1)
 
               ImGui.SetCursorScreenPos(ctx, dd_x, dd_y)
               ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), FUNC.rgba(0,0,0,0))
@@ -726,7 +704,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local btn_x = rt_sx + rt_pad
 
             ImGui.SetCursorScreenPos(ctx, btn_x, btn_y)
-            if FUNC.draw_pm_btn("##rt_add", "+", btn_sz, FUNC.rgba(50,80,60), FUNC.rgba(60,110,80), FUNC.rgba(70,140,100)) then
+            if FUNC.draw_pm_btn("##rt_add", "+", btn_sz, C.primary, C.primary_h, C.primary_hi) then
               -- 新增虛擬channel（未指定，ch=-1）-- add unassigned virtual channel (ch=-1)
               if not c.route_hw then c.route_hw = {} end
               c.route_hw[#c.route_hw+1] = {ch=-1, vol_db=0}
@@ -738,7 +716,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
             local has_sel = false
             for _, v in pairs(rsel) do if v then has_sel = true; break end end
             local rt_del_col = has_sel and C.text or FUNC.rgba(80,80,80)
-            if FUNC.draw_pm_btn("##rt_del", "-", btn_sz, FUNC.rgba(100,50,50), FUNC.rgba(140,60,60), FUNC.rgba(170,70,70), rt_del_col) and has_sel then
+            if FUNC.draw_pm_btn("##rt_del", "-", btn_sz, C.btn, C.danger, C.danger_h, rt_del_col) and has_sel then
               -- 刪除選中的虛擬channel（從後往前） -- delete selected virtual channels (back-to-front)
               local to_del = {}
               for idx, v in pairs(rsel) do if v then to_del[#to_del+1] = idx end end
@@ -771,7 +749,7 @@ function FUNC.draw_edit_section_route(c, apply, multi)
                   ImGui.DrawList_AddRectFilled(rt_dl, mx0, my0, mx1, my1, FUNC.rgba(255, 200, 80, 30))
                   ImGui.DrawList_AddRect(rt_dl, mx0, my0, mx1, my1, FUNC.rgba(255, 200, 80, 120), 0, 0, 1)
                   rsel = {}
-                  local mfx = rt_sx + rt_pad
+                  local mfx = rt_sx + rt_pad + scale_w
                   for hi2 = 1, #hw_outs do
                     local fr = mfx + fader_w
                     local fb = fy + fader_h

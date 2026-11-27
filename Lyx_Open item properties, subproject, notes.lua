@@ -6,7 +6,6 @@
 
     local function main()
 
-        api.mcw()
         local item = api.mci()
 
         if api.csi(0) > 1 then 

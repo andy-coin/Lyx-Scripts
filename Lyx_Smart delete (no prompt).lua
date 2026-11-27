@@ -174,23 +174,48 @@
 
         if reaper.CountSelectedTracks(0) == 0 then return 'nothing' end
 
-        api.cmd(api.name('_SWS_SAVETIME1'),0)
-        local start_time, end_time = reaper.GetSet_ArrangeView2(0, false, 0, 0, 0, 0)
-        r.TimeSelection(start_time, end_time)
-        
-        r.SaveItems(true)
-        
-        api.cmd(40289, 0)
-        api.cmd(40718, 0) -- Item: Select all items on selected tracks in current time selection
-        local clean = api.csi(0) == 0
+        local view_s, view_e = reaper.GetSet_ArrangeView2(0, false, 0, 0, 0, 0)
 
-        api.cmd(api.name('_SWS_RESTTIME1'),0)
+        -- 畫面上看得到的 item（在目前視窗時間內、且不在收起來的 lane 裡）
+        local function Surface(tr)
+            local collapsed = api.gtv(tr,"C_LANESCOLLAPSED") ~= 0
+            local visible, lane_hidden = false, false
+            for i=0,api.cti(tr)-1 do
+                local it  = reaper.GetTrackMediaItem(tr,i)
+                local pos = reaper.GetMediaItemInfo_Value(it,"D_POSITION")
+                local len = reaper.GetMediaItemInfo_Value(it,"D_LENGTH")
+                if  collapsed and reaper.GetMediaItemInfo_Value(it,"C_LANEPLAYS") <= 0 then
+                    lane_hidden = true
+                elseif pos < view_e and pos+len > view_s then
+                    visible = true
+                end
+            end
+            return visible, lane_hidden
+        end
+
+        -- folder parent：底下子軌是否有 item（刪 parent 會連子軌一起刪）
+        local function ChildHasItems(tr)
+            if  api.gtv(tr,"I_FOLDERDEPTH") ~= 1 then return false end
+            local depth = 1
+            for i=api.gtv(tr,"IP_TRACKNUMBER"),reaper.CountTracks(0)-1 do
+                local ch = reaper.GetTrack(0,i)
+                if  api.cti(ch) > 0 then return true end
+                depth = depth + api.gtv(ch,"I_FOLDERDEPTH")
+                if  depth <= 0 then break end
+            end
+            return false
+        end
 
         for abi=1,reaper.CountSelectedTracks(0) do
             local tr=reaper.GetSelectedTrack(0,abi-1)
             local message
-            if  api.cti(tr) ~= 0 and (api.gtv(tr,"I_RECARM") == 1 or clean ) then
-                message = (clean and 'Items in track') or "This track is Rec armed" 
+            local has = api.cti(tr) ~= 0
+            local visible, lane_hidden = Surface(tr)
+            if      has and api.gtv(tr,"I_RECARM") == 1 then message = "This track is Rec armed"
+            elseif  has and not visible then message = lane_hidden and "Items in hidden lanes" or "Items in track"
+            elseif  ChildHasItems(tr) then message = "Items in child tracks"
+            end
+            if  message then
                 ret = reaper.ShowMessageBox("Do you want to delete it !? ", message.." !!!  Q_Q",1)
                 if  ret ~= 1 then
                     return "nothing"

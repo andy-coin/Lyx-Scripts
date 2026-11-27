@@ -89,9 +89,13 @@ local function make_ctx()
 end
 make_ctx()
 
-FONT = ImGui.CreateFont("sans-serif")
-FONT_B = ImGui.CreateFont("sans-serif",ImGui.FontFlags_Bold())
-FONT_MONO = ImGui.CreateFont("Inconsolata Condensed",ImGui.FontFlags_Bold())
+-- 介面字型：macOS 系統字型（SF Pro）；中文由系統自動補蘋方。看起來不對就把這行改回 "sans-serif"
+-- UI font: macOS system font (SF Pro), CJK falls back to PingFang. If it renders wrong, set back to "sans-serif"
+local UI_FONT = ".AppleSystemUIFont"
+FONT = ImGui.CreateFont(UI_FONT)
+FONT_B = ImGui.CreateFont(UI_FONT,ImGui.FontFlags_Bold())
+-- 數字欄：Helvetica Neue 的數字本身等寬，對齊不跳動又不像工程字型 -- tabular digits without the terminal look
+FONT_MONO = ImGui.CreateFont("Helvetica Neue")
 -- SMuFL音符字體：檢查檔案存在再載入，fallback到sans-serif -- music notation font with fallback
 local leland_path = "/Library/Fonts/Leland.otf"
 local leland_f = io.open(leland_path, "r")
@@ -197,24 +201,51 @@ end
 
 -- 畫面部分：回傳視窗是否仍開著 -- UI part: returns whether the window is still open
 local function ui_frame()
-  ImGui.PushStyleColor(ctx, ImGui.Col_WindowBg(), C.bg)
-  ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), FUNC.rgba(50,50,62))
-  ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), FUNC.rgba(65,65,80))
-  ImGui.PushStyleColor(ctx, ImGui.Col_Header(), FUNC.rgba(60,60,90))
-  ImGui.PushStyleColor(ctx, ImGui.Col_HeaderHovered(), FUNC.rgba(70,70,110))
-  ImGui.PushStyleColor(ctx, ImGui.Col_HeaderActive(), FUNC.rgba(80,80,130))
-  ImGui.PushStyleColor(ctx, ImGui.Col_TableHeaderBg(), C.header)
-  ImGui.PushStyleColor(ctx, ImGui.Col_TableRowBg(), C.row)
-  ImGui.PushStyleColor(ctx, ImGui.Col_TableRowBgAlt(), C.row_a)
-  ImGui.PushStyleColor(ctx, ImGui.Col_Separator(), C.bdr)
-  ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderStrong(), C.bdr)
-  ImGui.PushStyleColor(ctx, ImGui.Col_TableBorderLight(), C.bdr)
-  ImGui.PushStyleColor(ctx, ImGui.Col_Border(), C.bdr)
-  ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.text)
-  ImGui.PushStyleColor(ctx, ImGui.Col_TitleBgCollapsed(), FUNC.rgba(180, 110, 30, 255))  -- 摺疊時亮橘色標題列 -- bright orange collapsed title
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowRounding(), 6)
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameRounding(), 5)  -- 加大導角 -- increased rounding
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_GrabRounding(), 4)   -- slider/drag handle 導角 -- grab rounding
+  -- ═══ v2 全域樣式（顏色來自 config.lua 的 C token）═══ -- v2 global style (colors from C tokens)
+  local STYLE_COLS = {
+    {ImGui.Col_WindowBg(), C.bg},
+    {ImGui.Col_ChildBg(), 0},
+    {ImGui.Col_PopupBg(), C.chrome},
+    {ImGui.Col_FrameBg(), C.field},
+    {ImGui.Col_FrameBgHovered(), C.btn},
+    {ImGui.Col_FrameBgActive(), C.btn_h},
+    {ImGui.Col_Button(), C.btn},
+    {ImGui.Col_ButtonHovered(), C.btn_h},
+    {ImGui.Col_ButtonActive(), C.btn_a},
+    {ImGui.Col_Header(), C.primary_soft},
+    {ImGui.Col_HeaderHovered(), C.ghost_h},
+    {ImGui.Col_HeaderActive(), C.primary_soft},
+    {ImGui.Col_CheckMark(), C.primary_hi},
+    {ImGui.Col_SliderGrab(), C.knob},
+    {ImGui.Col_SliderGrabActive(), C.knob},
+    {ImGui.Col_TableHeaderBg(), C.header},
+    {ImGui.Col_TableRowBg(), C.row},
+    {ImGui.Col_TableRowBgAlt(), C.row_a},
+    {ImGui.Col_Separator(), C.line},
+    {ImGui.Col_TableBorderStrong(), C.line},
+    {ImGui.Col_TableBorderLight(), C.line},
+    {ImGui.Col_Border(), C.line2},
+    {ImGui.Col_Text(), C.text},
+    {ImGui.Col_TextDisabled(), C.dim},
+    {ImGui.Col_TitleBg(), C.chrome},
+    {ImGui.Col_TitleBgActive(), C.chrome},
+    {ImGui.Col_TitleBgCollapsed(), C.gold},  -- 摺疊時金色標題列 -- gold collapsed title
+    {ImGui.Col_ScrollbarBg(), 0},
+    {ImGui.Col_ScrollbarGrab(), FUNC.rgba(255,255,255,40)},
+    {ImGui.Col_ScrollbarGrabHovered(), FUNC.rgba(255,255,255,70)},
+    {ImGui.Col_ScrollbarGrabActive(), FUNC.rgba(255,255,255,90)},
+    {ImGui.Col_TextSelectedBg(), C.primary_soft},
+  }
+  for _, sc in ipairs(STYLE_COLS) do ImGui.PushStyleColor(ctx, sc[1], sc[2]) end
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowRounding(), FUNC.rad("l"))
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameRounding(), FUNC.rad("s"))   -- 輸入框/按鈕 4px -- fields & buttons
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_GrabRounding(), FUNC.rad("s"))
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_PopupRounding(), FUNC.rad("m"))
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ScrollbarRounding(), FUNC.rad("m"))
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ScrollbarSize(), FUNC.sz(9))       -- 細捲軸（macOS 感）-- slim scrollbar
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowBorderSize(), 0)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_PopupBorderSize(), 1)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameBorderSize(), 1)  -- 輸入框/勾選框細外框 -- hairline on fields & checkboxes
   ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding(), 6, 6)
 
   local modal_open = popup.warn or popup.settings or popup.save or popup.load or popup.reset_mode
@@ -309,15 +340,25 @@ local function ui_frame()
       end
       -- 分隔條視覺：hover/drag時亮色 -- separator visual feedback
       local sep_dl = ImGui.GetWindowDrawList(ctx)
-      local sep_col = (drag_hov or drag_act) and FUNC.rgba(100,100,130) or FUNC.rgba(55,55,70)
-      ImGui.DrawList_AddRectFilled(sep_dl, dx, dy, dx + dw, dy + drag_h, sep_col, 2)
+      -- v2：平常只有一條細線；hover/拖曳時中間出現主色短把手 -- hairline; primary grip on hover/drag
+      local my = dy + math.floor(drag_h / 2)
+      ImGui.DrawList_AddLine(sep_dl, dx, my, dx + dw, my, C.line, 1)
+      if drag_hov or drag_act then
+        local gw = FUNC.sz(36)
+        ImGui.DrawList_AddRectFilled(sep_dl, dx + dw/2 - gw/2, my - FUNC.sz(1.5), dx + dw/2 + gw/2, my + FUNC.sz(1.5), drag_act and C.primary_hi or C.line2, FUNC.sz(2))
+      end
       -- 下方：edit panel -- bottom: edit panel
-      ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg(), FUNC.rgba(30,30,40))
-      if ImGui.BeginChild(ctx, "##edit_child", -1, edit_h, ImGui.ChildFlags_Borders(), ImGui.WindowFlags_NoScrollbar() | ImGui.WindowFlags_NoScrollWithMouse()) then
+      -- C 稿做法：edit 底用最深底色，卡片明顯較亮。底色畫完立刻 Pop：
+      -- 不然裡面每個區塊子視窗都會繼承這個不透明底色，把卡片整個蓋掉（之前卡片一直看不到的根因）
+      -- mockup C: darkest base, lighter cards. Pop right after Begin, otherwise every nested section child
+      -- inherits this opaque bg and paints over the cards (root cause of the invisible cards)
+      ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg(), C.edit_bg)
+      local edit_open = ImGui.BeginChild(ctx, "##edit_child", -1, edit_h, ImGui.ChildFlags_None(), ImGui.WindowFlags_NoScrollbar() | ImGui.WindowFlags_NoScrollWithMouse())
+      ImGui.PopStyleColor(ctx, 1)
+      if edit_open then
         FUNC.draw_edit_panel_inline()
         ImGui.EndChild(ctx)
       end
-      ImGui.PopStyleColor(ctx, 1)
     else
       -- 收合時也用同一個child ID，讓column寬度共用
       local table_h = avail_h - btm_h - sp_y
@@ -332,7 +373,7 @@ local function ui_frame()
   end
   FUNC.draw_settings(); FUNC.draw_output_maps(); FUNC.draw_save_popup(); FUNC.draw_load_popup(); FUNC.draw_trim(); FUNC.draw_fade_edit(); FUNC.draw_warn_popup(); FUNC.draw_warn_missing_popup(); FUNC.draw_fx_env_missing_popup(); FUNC.draw_sel_paste_popup()
 
-  ImGui.PopFont(ctx); ImGui.PopStyleVar(ctx, 4); ImGui.PopStyleColor(ctx, 15)
+  ImGui.PopFont(ctx); ImGui.PopStyleVar(ctx, 10); ImGui.PopStyleColor(ctx, #STYLE_COLS)
   return op
 end
 

@@ -2152,18 +2152,19 @@ local function do_open(mode)
             if SB.open(it, m) then opened = opened + 1 end
             SB.log('  SB.open done')
         end
-        pcall(SB.notify_open, items, opened)
         -- 'online' starts an FX job after the window closed: restart
         -- the loop so its progress window can run
         if not keep and SB.fx_job then SB.resume_loop() end
     end
     -- every open mode (tab/current/new version/offline/online/...)
     if keep then
-        SB.later(function() run(); if not keep then S.quit = true end end)
+        SB.later(function() pcall(SB.notify_open, items); run(); if not keep then S.quit = true end end)
     else
         -- not keeping the window open: close it first, THEN load
         S.quit = true
         SB.log('  S.quit set, closing first')
+        -- billboard now, so it is up while the project loads
+        pcall(SB.notify_open, items)
         -- wait until ReaImGui has really destroyed the window (ctx
         -- garbage-collected), max 1 s, then load
         -- ctx dying is not enough on macOS: the OS window is only taken
@@ -4181,8 +4182,14 @@ end
 local function loop()
     if S.quit then
         -- Main window closed with FX still coming online: only the
-        -- progress window is left.
-        if SB.fx_job then fx_job_window() end
+        -- progress window is left. do_open waited for the old ctx to be
+        -- garbage-collected before loading, so make a fresh one for it.
+        if SB.fx_job then
+            if not ImGui.ValidatePtr(ctx, 'ImGui_Context*') then
+                ctx = ImGui.CreateContext(SB.NAME)
+            end
+            fx_job_window()
+        end
         if SB.fx_job then reaper.defer(loop) end
         return
     end
@@ -4409,6 +4416,7 @@ do
         local msg = (#items <= 1)
             and ('Project Launcher  -  ' .. (it and (it.name or it.path) or ''))
             or  ('Project Launcher  -  opening ' .. tostring(opened or #items) .. ' projects')
-        pcall(_G.BBB, msg)
+        -- focus back to REAPER, not the launcher window that is closing
+        pcall(_G.BBB, msg, nil, reaper.GetMainHwnd())
     end
 end

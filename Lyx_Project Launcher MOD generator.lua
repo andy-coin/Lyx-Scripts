@@ -167,18 +167,19 @@ local PATCHES = {
             "            if SB.open(it, m) then opened = opened + 1 end",
             "            SB.log('  SB.open done')",
             "        end",
-            "        pcall(SB.notify_open, items, opened)",
             "        -- 'online' starts an FX job after the window closed: restart",
             "        -- the loop so its progress window can run",
             "        if not keep and SB.fx_job then SB.resume_loop() end",
             "    end",
             "    -- every open mode (tab/current/new version/offline/online/...)",
             "    if keep then",
-            "        SB.later(function() run(); if not keep then S.quit = true end end)",
+            "        SB.later(function() pcall(SB.notify_open, items); run(); if not keep then S.quit = true end end)",
             "    else",
             "        -- not keeping the window open: close it first, THEN load",
             "        S.quit = true",
             "        SB.log('  S.quit set, closing first')",
+            "        -- billboard now, so it is up while the project loads",
+            "        pcall(SB.notify_open, items)",
             "        -- wait until ReaImGui has really destroyed the window (ctx",
             "        -- garbage-collected), max 1 s, then load",
             "        -- ctx dying is not enough on macOS: the OS window is only taken",
@@ -244,6 +245,21 @@ local PATCHES = {
                "    reaper.SetExtState('Lyx_GUI', 'alive', tostring(reaper.time_precise()), false)\n" ..
                "    local _esc_t = tonumber(reaper.GetExtState('Lyx_GUI', 'close'))\n" ..
                "    if _esc_t and _esc_t > SB._esc_handled then SB._esc_handled = _esc_t; S.quit = true end",
+    },
+
+    -- (8) do_open waits for ctx to be garbage-collected before loading, so
+    -- the FX-online progress window needs a fresh ctx afterwards.
+    {
+        name = 'fx job window fresh ctx',
+        find = "        -- progress window is left.\n        if SB.fx_job then fx_job_window() end",
+        repl = "        -- progress window is left. do_open waited for the old ctx to be\n" ..
+               "        -- garbage-collected before loading, so make a fresh one for it.\n" ..
+               "        if SB.fx_job then\n" ..
+               "            if not ImGui.ValidatePtr(ctx, 'ImGui_Context*') then\n" ..
+               "                ctx = ImGui.CreateContext(SB.NAME)\n" ..
+               "            end\n" ..
+               "            fx_job_window()\n" ..
+               "        end",
     },
 
     -- (3d) Keep the multi-select set consistent when the list is rebuilt:
@@ -439,7 +455,8 @@ do
         local msg = (#items <= 1)
             and ('Project Launcher  -  ' .. (it and (it.name or it.path) or ''))
             or  ('Project Launcher  -  opening ' .. tostring(opened or #items) .. ' projects')
-        pcall(_G.BBB, msg)
+        -- focus back to REAPER, not the launcher window that is closing
+        pcall(_G.BBB, msg, nil, reaper.GetMainHwnd())
     end
 end
 ]==]):format(LYX_LIB)

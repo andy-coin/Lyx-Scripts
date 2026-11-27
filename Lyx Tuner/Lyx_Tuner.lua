@@ -1245,7 +1245,12 @@ end
 
 -- The project the tuner should be operating in right now.
 function TunerProj()
-    return T.proj or 0
+    -- ValidatePtr2 rejects 0, and a closed tab's pointer is stale: fall
+    -- back to the real active project object in both cases.
+    if T.proj and reaper.ValidatePtr(T.proj, 'ReaProject*') then
+        return T.proj
+    end
+    return (reaper.EnumProjects(-1))
 end
 
 function FindTunerTrack()
@@ -3695,6 +3700,13 @@ function SetCursor(cursor)
     prev_cursor = cursor
 end
 
+-- Lyx: a crashed/killed run never releases its intercepts, and the next run
+-- then locks itself out. No fresh heartbeat at load = nobody else is alive,
+-- so any block on our own messages is leftover and we clear it once.
+local stale_alive = tonumber(reaper.GetExtState(extname, 'alive'))
+local can_clear_stale = not stale_alive
+    or math.abs(reaper.time_precise() - stale_alive) > 2
+
 local prev_blocked_str
 function StartIntercepts()
     if is_intercept then return end
@@ -3704,6 +3716,23 @@ function StartIntercepts()
     for entry in (intercept_str .. ','):gmatch('(.-),') do
         local blocked_message = entry:match('(.-):block')
         if blocked_message then blocked_messages[blocked_message] = true end
+    end
+    if can_clear_stale then
+        can_clear_stale = false
+        for _, intercept in ipairs(intercepts) do
+            if blocked_messages[intercept.message] then
+                Release(window_hwnd, intercept.message)
+                blocked_messages[intercept.message] = nil
+            end
+        end
+        -- WM_MOUSEWHEEL is listed as WM_MOUSELAST; free it too
+        Release(window_hwnd, 'WM_MOUSEWHEEL')
+        _, intercept_str = reaper.JS_WindowMessage_ListIntercepts(window_hwnd)
+        blocked_messages = {}
+        for entry in (intercept_str .. ','):gmatch('(.-),') do
+            local m = entry:match('(.-):block')
+            if m then blocked_messages[m] = true end
+        end
     end
     for _, intercept in ipairs(intercepts) do
         local msg = intercept.message

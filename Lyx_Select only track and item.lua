@@ -4,7 +4,7 @@
     local r=require("_lib._Lyx_HOME")
 
     window,segment,detail = reaper.BR_GetMouseCursorContext()
-    item=reaper.BR_GetMouseCursorContext_Item()
+    item=api.mci()
     if  segment == 'envelope' then
         return 
     elseif  item then

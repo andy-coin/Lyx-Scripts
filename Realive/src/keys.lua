@@ -38,6 +38,7 @@ function FUNC.handle_keys()
     if ie.active then ie.active = false; return
     elseif hotkey_listen then hotkey_listen = false; return  -- 取消hotkey監聽
     elseif scut_listen then scut_listen = nil; return  -- 取消shortcut監聽
+    elseif popup._cp_key then popup._cp_cancel = true; return  -- 色票開著：Esc = Cancel，不關設定 -- color picker open: Esc = Cancel, keep Settings
     elseif popup.shortcuts then popup.shortcuts = false; return  -- 關閉shortcut panel
     elseif popup.reset_mode then popup.reset_mode = false; popup.reset_drag = nil; return
     elseif FUNC.any_popup_open() then

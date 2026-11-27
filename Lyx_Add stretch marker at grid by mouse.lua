@@ -57,6 +57,7 @@
       P=reaper.GetCursorPosition()
       reaper.BR_GetMouseCursorContext()
       mouse=reaper.BR_GetMouseCursorContext_Position()
+      local mx,my=reaper.GetMousePosition()
       it_n=reaper.CountSelectedMediaItems(0)
       
       if play~=5 then --or play==2 then
@@ -65,7 +66,7 @@
          reaper.Main_OnCommand(41842,0)
          reaper.SetEditCurPos(P,false,false)
          if it_n==0 then
-            item=reaper.BR_GetMouseCursorContext_Item()
+            item=reaper.GetItemFromPoint(mx,my,true)
             if item then
                reaper.SetMediaItemSelected(item,true)
                grid=reaper.SnapToGrid(0,mouse)
@@ -83,7 +84,7 @@
       --[[elseif play==1 then
       
          if it_n==0 then
-            item=reaper.BR_GetMouseCursorContext_Item()
+            item=reaper.GetItemFromPoint(mx,my,true)
             if item then
                reaper.SetMediaItemSelected(item,true)
                reaper.Main_OnCommand(41848,0)

@@ -1,6 +1,8 @@
 -- ui_edit_note.lua — Edit panel: Notes tab
 -- 顯示+外部編輯（osascript） -- display + native dialog edit
 
+local NOTES_DLG = (debug.getinfo(1, "S").source:match("@(.+[/\\])") or "") .. "../tools/notes_dialog.js"
+
 function FUNC.draw_edit_section_note(c, apply, multi, valid)
         -- SECTION: NOTES — 顯示+外部編輯（osascript）
         -- ═══════════════════════════════════════════════════════
@@ -27,8 +29,8 @@ function FUNC.draw_edit_section_note(c, apply, multi, valid)
           return ImGui.IsItemClicked(ctx)
         end
 
-        -- 工具列：右對齊三個按鈕
-        local total_btn_w = btn_sz * 3 + btn_gap * 2
+        -- 工具列：右對齊兩個按鈕（編輯改成點文字區）-- toolbar: 2 buttons right-aligned (edit = click text area)
+        local total_btn_w = btn_sz * 2 + btn_gap
         ImGui.SetCursorPosX(ctx, avail_w - total_btn_w)
 
         -- 非同步 poll：檢查 osascript 結果 -- async poll: check for osascript result
@@ -52,62 +54,7 @@ function FUNC.draw_edit_section_note(c, apply, multi, valid)
           end
         end
 
-        -- / Edit button — opens native osascript dialog (async)
         local is_pending = popup.notes_pending ~= nil
-        if nt_btn("##nt_edit", "✎", is_pending and "Waiting..." or "Edit notes",
-          is_pending and FUNC.rgba(60,60,30) or FUNC.rgba(40,60,40),
-          FUNC.rgba(55,90,55), FUNC.rgba(70,120,70)) and not is_pending then
-          local cur = not multi and (c.notes or "") or ""
-          local tmp_in   = "/tmp/_realive_notes_in.txt"
-          local tmp_scpt = "/tmp/_realive_notes.scpt"
-          -- 保證至少20行高度 -- ensure at least 20 lines in dialog
-          local padded = cur
-          local line_count = 1
-          for _ in cur:gmatch("\n") do line_count = line_count + 1 end
-          if line_count < 20 then padded = cur .. string.rep("\n", 20 - line_count) end
-          local fi = io.open(tmp_in, "w"); if fi then fi:write(padded); fi:close() end
-          -- 記住要套用的 cue ids -- capture cue ids for async apply
-          local ids = {}
-          for _, si in ipairs(valid) do ids[#ids+1] = cues[si].id end
-          popup.notes_pending = {cue_ids = ids}
-          -- 刪除舊的 output 以免誤判 -- remove stale output
-          os.remove(tmp_out)
-          -- AppleScript: 結果寫入檔案而非 stdout -- write result to file instead of stdout
-          local title = ("Cue " .. (c.cue_number or "?") .. " - " .. ((c.name ~= "" and c.name) or FUNC.tr_name(c.track_idx) or "Untitled")):gsub('"', '\\"')
-          -- 輔助 script：延遲送 Cmd+Down 把游標移到文末、取消全選 -- helper: deselect after dialog appears
-          local desel_scpt = '/tmp/_realive_notes_desel.scpt'
-          local ds = table.concat({
-            'delay 0.05',
-            'tell application "System Events"',
-            '  key code 126 using command down', -- Cmd+Up = move to top
-            'end tell'
-          }, '\n')
-          local df = io.open(desel_scpt, "w"); if df then df:write(ds); df:close() end
-          os.execute("osascript " .. desel_scpt .. " &")
-          local scpt = table.concat({
-            'try',
-            '  set def to read POSIX file "' .. tmp_in .. '" as \xC2\xABclass utf8\xC2\xBB',
-            'on error',
-            '  set def to ""',
-            'end try',
-            'try',
-            '  set r to text returned of (display dialog "Notes :" default answer def with title "' .. title .. '" buttons {"Cancel", "OK"} default button "OK")',
-            '  set f to open for access POSIX file "' .. tmp_out .. '" with write permission',
-            '  set eof f to 0',
-            '  write r to f as \xC2\xABclass utf8\xC2\xBB',
-            '  close access f',
-            'on error',
-            '  set f to open for access POSIX file "' .. tmp_out .. '" with write permission',
-            '  set eof f to 0',
-            '  write "__RLCXL__" to f',
-            '  close access f',
-            'end try'
-          }, '\n')
-          local sf = io.open(tmp_scpt, "w"); if sf then sf:write(scpt); sf:close() end
-          os.execute("osascript " .. tmp_scpt .. " &")
-        end
-
-        ImGui.SameLine(ctx, 0, btn_gap)
 
         -- ⎘ Copy button
         if nt_btn("##nt_copy", "\xE2\x8E\x98", "Copy to clipboard", FUNC.rgba(40,40,60), FUNC.rgba(55,55,90), FUNC.rgba(70,70,120)) and has_text then
@@ -128,7 +75,7 @@ function FUNC.draw_edit_section_note(c, apply, multi, valid)
         local disp_h = math.max(avail_h - toolbar_h - FUNC.sz(3), FUNC.sz(30))
         local nt_pad = FUNC.sz(6)
         ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding(), nt_pad, nt_pad)
-        ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg(), FUNC.rgba(15,15,15,150))
+        ImGui.PushStyleColor(ctx, ImGui.Col_ChildBg(), C.field)
         if ImGui.BeginChild(ctx, "##notes_disp", -nt_pad, disp_h, ImGui.ChildFlags_Borders()) then
           ImGui.PushFont(ctx, FONT, FUNC.sz(13))
           if not has_text then
@@ -146,4 +93,52 @@ function FUNC.draw_edit_section_note(c, apply, multi, valid)
         end
         ImGui.PopStyleColor(ctx, 1)
         ImGui.PopStyleVar(ctx, 1)
+        local dx1, dy1 = ImGui.GetItemRectMin(ctx)
+        local dx2, dy2 = ImGui.GetItemRectMax(ctx)
+
+        -- 點文字區 = 開始編輯 -- click the text area to edit
+        local want_edit = false
+        if ImGui.IsMouseHoveringRect(ctx, dx1, dy1, dx2, dy2) and ImGui.IsWindowHovered(ctx, ImGui.HoveredFlags_ChildWindows()) then
+          if not is_pending then ImGui.SetMouseCursor(ctx, ImGui.MouseCursor_TextInput()) end
+          want_edit = ImGui.IsMouseClicked(ctx, ImGui.MouseButton_Left())
+        end
+        -- 編輯框程序意外消失（當掉）時，再點文字區可解除卡住 -- recover if the editor process died
+        if want_edit and is_pending then
+          local ph = io.popen("pgrep -f notes_dialog.js")
+          local alive = ph and ph:read("*a") or ""; if ph then ph:close() end
+          if alive == "" then popup.notes_pending = nil; is_pending = false else want_edit = false end
+        end
+
+        -- 開啟原生編輯框（tools/notes_dialog.js），蓋在顯示區正上方、同大小
+        -- launch native editor overlaid exactly on the display area: IME works, Return = newline, Cmd+Return = save
+        if want_edit and not is_pending then
+          local cur = not multi and (c.notes or "") or ""
+          local tmp_in = "/tmp/_realive_notes_in.txt"
+          local fi = io.open(tmp_in, "w"); if fi then fi:write(cur); fi:close() end
+          -- 記住要套用的 cue ids -- capture cue ids for async apply
+          local ids = {}
+          for _, si in ipairs(valid) do ids[#ids+1] = cues[si].id end
+          popup.notes_pending = {cue_ids = ids}
+          os.remove(tmp_out)  -- 刪除舊的 output 以免誤判 -- remove stale output
+          -- ImGui 座標（左上原點）→ macOS 原生座標（左下原點），取顯示區左下角
+          -- ImGui coords (top-left origin) → native Cocoa coords (bottom-left origin)
+          -- 四邊內縮，留出 Notes 原本的外框 -- inset to keep the Notes border visible
+          local bw = FUNC.sz(2)
+          dx1, dy1, dx2, dy2 = dx1 + bw, dy1 + bw, dx2 - bw, dy2 - bw
+          -- 裁到 edit 面板可見範圍（水平捲動 / 視窗邊被切掉的部分不露出）-- clip to the visible edit area
+          local cr = FUNC.ep_clip
+          if cr then
+            dx1, dy1 = math.max(dx1, cr[1]), math.max(dy1, cr[2])
+            dx2, dy2 = math.min(dx2, cr[3]), math.min(dy2, cr[4])
+          end
+          if dx2 - dx1 < FUNC.sz(40) or dy2 - dy1 < FUNC.sz(20) then  -- 幾乎整塊被裁掉：不開 -- mostly hidden: don't open
+            popup.notes_pending = nil
+            return
+          end
+          local nx, ny = ImGui.PointConvertNative(ctx, dx1, dy2, true)
+          local function shq(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
+          os.execute(string.format("osascript -l JavaScript %s %s %s %d %d %d %d %d &",
+            shq(NOTES_DLG), shq(tmp_in), shq(tmp_out),
+            math.floor(nx), math.floor(ny), math.floor(dx2 - dx1), math.floor(dy2 - dy1), math.floor(FUNC.sz(13))))
+        end
 end

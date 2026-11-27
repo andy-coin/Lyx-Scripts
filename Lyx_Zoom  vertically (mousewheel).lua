@@ -15,7 +15,7 @@
       
       r.SaveTracks(true)
 
-      local tr = reaper.BR_GetMouseCursorContext_Track() or api.gst(0,0) or api.gt(0,0)
+      local tr = api.mct() or api.gst(0,0) or api.gt(0,0)
       if not tr then return end
       
       tcph = api.gtv(tr,"I_TCPH")

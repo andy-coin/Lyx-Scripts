@@ -505,7 +505,7 @@ function FUNC.draw_waveform_display(c, dl, cx, cy, cw, ch)
       end
       ImGui.PopFont(ctx)
     end
-    ImGui.DrawList_AddRect(dl, cx, wy, cx + pre_px, wy + wh, FUNC.dim_c(FUNC.rgba(60,60,80)), 4, 0, 1)
+    ImGui.DrawList_AddRect(dl, cx, wy, cx + pre_px, wy + wh, FUNC.dim_c(C.line2), 4, 0, 1)
     -- 三角形在文字下方，左右指向變化方向 -- triangle below text, points toward change direction
     local tri_h = PP_TRI_SZ * 0.5
     local last_y = txt_y0 + plh + cd_row_h + PP_TRI_GAP  -- "Pre" + 倒數(若有) + 間距 -- after label + countdown + gap
@@ -588,7 +588,7 @@ function FUNC.draw_waveform_display(c, dl, cx, cy, cw, ch)
       end
       ImGui.PopFont(ctx)
     end
-    ImGui.DrawList_AddRect(dl, post_x, wy, cx + cw, wy + wh, FUNC.dim_c(FUNC.rgba(60,60,80)), 4, 0, 1)
+    ImGui.DrawList_AddRect(dl, post_x, wy, cx + cw, wy + wh, FUNC.dim_c(C.line2), 4, 0, 1)
     -- 三角形在文字下方，左右指向變化方向 -- triangle below text, points toward change direction
     local ptri_h = PP_TRI_SZ * 0.5
     local plast_y = post_ty0 + polh + pcd_row_h + PP_TRI_GAP  -- "Post" + 倒數(若有) + 間距
@@ -943,6 +943,7 @@ function FUNC.draw_waveform_display(c, dl, cx, cy, cw, ch)
     local wheel_v, wheel_h = ImGui.GetMouseWheel(ctx)
     local wheel = wheel_v ~= 0 and wheel_v or wheel_h  -- Shift+wheel→horizontal in ImGui
     if wheel ~= 0 then
+      FUNC.wheel_taken = true  -- edit 面板就不要再水平捲動 -- edit panel won't also h-scroll
       local hs = ImGui.IsKeyDown(ctx, ImGui.Mod_Shift()) and true or false
       local hc = ImGui.IsKeyDown(ctx, ImGui.Mod_Ctrl()) and true or false
       local ha = ImGui.IsKeyDown(ctx, ImGui.Mod_Alt()) and true or false
@@ -1188,7 +1189,7 @@ function FUNC.draw_waveform_display(c, dl, cx, cy, cw, ch)
 
   local function wf_btn(bx, by, label, col_n, col_h, enabled)
     local bhov = ImGui.IsMouseHoveringRect(ctx, bx, by, bx + mbtn_sz, by + mbtn_sz)
-    local bcol = (bhov and enabled) and col_h or (enabled and col_n or FUNC.rgba(40, 40, 50))
+    local bcol = (bhov and enabled) and col_h or (enabled and col_n or C.field)
     ImGui.DrawList_AddRectFilled(dl, bx, by, bx + mbtn_sz, by + mbtn_sz, FUNC.dim_c(bcol), 3)
     local ltw, lth = ImGui.CalcTextSize(ctx, label, 0, 0)
     local tcol = enabled and FUNC.dim_c(C.text) or FUNC.dim_c(FUNC.rgba(80, 80, 90))
@@ -1233,13 +1234,13 @@ function FUNC.draw_waveform_display(c, dl, cx, cy, cw, ch)
     return false
   end
 
-  if zoom_btn(btn_x_minus, btn_y, "-", FUNC.rgba(50, 50, 70), FUNC.rgba(70, 70, 100)) then
+  if zoom_btn(btn_x_minus, btn_y, "-", C.btn, C.btn_h) then
     view.zoom = math.max(view.zoom / 1.5, 1); FUNC.wf_invalidate(cid)
   end
-  if zoom_btn(btn_x_reset, btn_y, "R", FUNC.rgba(50, 50, 70), FUNC.rgba(70, 70, 100)) then
+  if zoom_btn(btn_x_reset, btn_y, "R", C.btn, C.btn_h) then
     view.zoom = 1; view.pos = 0; view.v_zoom = 1; FUNC.wf_invalidate(cid)
   end
-  if zoom_btn(btn_x_plus, btn_y, "+", FUNC.rgba(50, 50, 70), FUNC.rgba(70, 70, 100)) then
+  if zoom_btn(btn_x_plus, btn_y, "+", C.btn, C.btn_h) then
     local center_t = view_start + view_dur / 2
     view.zoom = math.min(view.zoom * 1.5, 200)
     local new_vd = total_dur / view.zoom
@@ -1542,7 +1543,7 @@ function FUNC.draw_group_waveform(gc, dl, cx, cy, cw, ch, skip_ruler)
         char_x = char_x + chw2
       end
     end
-    ImGui.DrawList_AddRect(dl, cx, wy, cx + g_pre_px, wy + wh, FUNC.dim_c(FUNC.rgba(60,60,80)), 4, 0, 1)
+    ImGui.DrawList_AddRect(dl, cx, wy, cx + g_pre_px, wy + wh, FUNC.dim_c(C.line2), 4, 0, 1)
   end
   if g_post_px > 0 then
     local post_x = cx + cw - g_post_px
@@ -1568,7 +1569,7 @@ function FUNC.draw_group_waveform(gc, dl, cx, cy, cw, ch, skip_ruler)
         post_char_x = post_char_x + chw2
       end
     end
-    ImGui.DrawList_AddRect(dl, post_x, wy, cx + cw, wy + wh, FUNC.dim_c(FUNC.rgba(60,60,80)), 4, 0, 1)
+    ImGui.DrawList_AddRect(dl, post_x, wy, cx + cw, wy + wh, FUNC.dim_c(C.line2), 4, 0, 1)
   end
   -- 覆蓋cx/cw為波形內容區域（扣除GROUP pre/post）-- shift cx/cw for waveform content
   cx = cx + g_pre_px; cw = cw - g_pre_px - g_post_px
@@ -1963,7 +1964,7 @@ function FUNC.draw_group_waveform(gc, dl, cx, cy, cw, ch, skip_ruler)
   ImGui.DrawList_AddText(dl, g_handle_x - g_vz_tw - FUNC.sz(3), g_mid_y - g_vz_th / 2, FUNC.dim_c(C.text), g_vz_txt)  -- 文字垂直對齊中線 -- vertically centered on baseline
 
   -- 外框 -- border
-  ImGui.DrawList_AddRect(dl, cx, wy, cx + cw, wy + wh, FUNC.dim_c(FUNC.rgba(60, 60, 80)), 4, 0, 1)
+  ImGui.DrawList_AddRect(dl, cx, wy, cx + cw, wy + wh, FUNC.dim_c(C.line2), 4, 0, 1)
 
   -- === INTERACTION === -- 互動處理
   local mx, my = ImGui.GetMousePos(ctx)
@@ -2306,7 +2307,7 @@ function FUNC.draw_group_waveform(gc, dl, cx, cy, cw, ch, skip_ruler)
 
   local function gwf_btn(bx, by, label, col_n, col_h, enabled)
     local bhov = ImGui.IsMouseHoveringRect(ctx, bx, by, bx + gmbtn_sz, by + gmbtn_sz)
-    local bcol = (bhov and enabled) and col_h or (enabled and col_n or FUNC.rgba(40, 40, 50))
+    local bcol = (bhov and enabled) and col_h or (enabled and col_n or C.field)
     ImGui.DrawList_AddRectFilled(dl, bx, by, bx + gmbtn_sz, by + gmbtn_sz, FUNC.dim_c(bcol), 3)
     local ltw, lth = ImGui.CalcTextSize(ctx, label, 0, 0)
     local tcol = enabled and FUNC.dim_c(C.text) or FUNC.dim_c(FUNC.rgba(80, 80, 90))
@@ -2375,13 +2376,13 @@ function FUNC.draw_group_waveform(gc, dl, cx, cy, cw, ch, skip_ruler)
     if bhov and ImGui.IsMouseClicked(ctx, ImGui.MouseButton_Left()) then return true end
     return false
   end
-  if zbtn(btn_x_minus, btn_y, "-", FUNC.rgba(50,50,70), FUNC.rgba(70,70,100)) then
+  if zbtn(btn_x_minus, btn_y, "-", C.btn, C.btn_h) then
     view.zoom = math.max(view.zoom / 1.5, 1)
   end
-  if zbtn(btn_x_reset, btn_y, "R", FUNC.rgba(50,50,70), FUNC.rgba(70,70,100)) then
+  if zbtn(btn_x_reset, btn_y, "R", C.btn, C.btn_h) then
     view.zoom = 1; view.pos = 0; view.v_zoom = 1
   end
-  if zbtn(btn_x_plus, btn_y, "+", FUNC.rgba(50,50,70), FUNC.rgba(70,70,100)) then
+  if zbtn(btn_x_plus, btn_y, "+", C.btn, C.btn_h) then
     local center_t = view_start + view_dur / 2
     view.zoom = math.min(view.zoom * 1.5, 200)
     local new_vd = total_dur / view.zoom

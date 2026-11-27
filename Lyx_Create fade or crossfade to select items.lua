@@ -9,9 +9,8 @@
 ]]
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
-require("_lib._Lyx_HOME")
-local F = require("_lib._Lyx_Fade")
-local R = reaper
+local r = require("_lib._Lyx_HOME")
+local F = require("_lib._Lyx_Fade") -- fade engine (lanes, crossover math)
 
 local TOUCH = 0.001 -- gap (s) still treated as "touching"
 
@@ -54,7 +53,7 @@ local function razor_area(a)
                         F.fade_in(B, e - s)
                         target = F.crossover(A, B, a_end, b_pos)
                     end
-                elseif (b_pos - a_end) * R.GetHZoomLevel() <= 2 then
+                elseif (b_pos - a_end) * reaper.GetHZoomLevel() <= 2 then
                     -- gap of ≤2 px counts as butted: build the overlap
                     F.edges(A, a_pos, e)
                     F.edges(B, s, b_end)
@@ -87,8 +86,8 @@ end
 -- No razor
 ---------------------------------------------------------------------------
 local function fade_size()
-    local v = tonumber(R.GetExtState("fade_length", "fade_length")) or 10
-    return (R.GetExtState("fade_length", "length_unit") == "s") and v or v / 1000
+    local v = tonumber(reaper.GetExtState("fade_length", "fade_length")) or 10
+    return (reaper.GetExtState("fade_length", "length_unit") == "s") and v or v / 1000
 end
 
 -- a's end and b's start meet in the middle with an overlap of 2*fs
@@ -96,10 +95,13 @@ local function crossfade(a, b, fs)
     local ap, ae = F.bounds(a)
     local bp, be = F.bounds(b)
     local c = (ae + bp) / 2
-    R.SetMediaItemInfo_Value(a, "D_LENGTH", c + fs - ap)
+    reaper.SetMediaItemInfo_Value(a, "D_LENGTH", c + fs - ap)
     F.edges(b, c - fs, be)
-    R.SetMediaItemInfo_Value(a, "D_FADEOUTLEN_AUTO", fs * 2)
-    R.SetMediaItemInfo_Value(b, "D_FADEINLEN_AUTO",  fs * 2)
+    -- set manual + auto length: a later edit of the item (e.g. its next
+    -- crossfade changing D_LENGTH) resets the auto value and REAPER falls back
+    -- to the manual one, which would otherwise still be the default fade
+    F.fade_out(a, fs * 2)
+    F.fade_in(b, fs * 2)
 end
 
 local function normal(items)
@@ -139,7 +141,7 @@ F.wrap("Create fade or crossfade to selected item(s)", function()
     local areas = F.razor_areas()
     if #areas > 0 then
         for _, a in ipairs(areas) do razor_area(a) end
-        R.Main_OnCommand(42406, 0) -- clear razor edits
+        api.cmd(0,42406, 0) -- clear razor edits
     else
         normal(F.selected_items())
     end

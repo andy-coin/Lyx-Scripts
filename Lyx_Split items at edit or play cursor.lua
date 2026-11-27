@@ -32,7 +32,6 @@
         
         E = (api.gps()%2==0 and api.gec()) or api.gpc()
         
-        api.mcw()
         item = api.mci()
         if item and reaper.IsMediaItemSelected(item) then E = api.gec() end
         

@@ -29,7 +29,7 @@
         end
         
         local win = reaper.BR_GetMouseCursorContext()
-        local under_mouse_tr = reaper.BR_GetMouseCursorContext_Track()
+        local under_mouse_tr = api.mct()
 
         trz=(#trzz>#trzzz and trzz) or trzzz 
         

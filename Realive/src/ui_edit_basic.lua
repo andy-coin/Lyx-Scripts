@@ -72,9 +72,13 @@ function FUNC.draw_edit_section_basic(ectx, cw_s, ch_s)
         end
         -- SameLine(x)從window起始定位，不含Indent，所以x要加lpad -- SameLine(x) ignores Indent, so add lpad
         local x1 = lpad + lbl1_w + spc  -- 左欄input起始 -- left input start
-        local x2 = x1 + val_w + spc  -- 右欄label起始 -- right label start
         local _rw1 = ImGui.CalcTextSize(ctx, "Pan", 0, 0)
         local _rw2 = ImGui.CalcTextSize(ctx, "Rate", 0, 0)
+        -- 寬版：左右兩欄輸入框平分寬度（至少80）-- wide: both input columns share width equally (min 80)
+        if not bas_narrow then
+          val_w = math.max(val_w, math.floor((cw_s - rpad - x1 - spc - math.max(_rw1, _rw2) - spc) / 2))
+        end
+        local x2 = x1 + val_w + spc  -- 右欄label起始 -- right label start
         local x3 = x2 + math.max(_rw1, _rw2) + spc  -- 右欄input起始 -- right input start
         local cnt_w = FUNC.sz(40)
         local TAP_PAD_X = FUNC.sz(6)  -- @ tap-tempo button horizontal padding (hover/flash border)
@@ -85,7 +89,7 @@ function FUNC.draw_edit_section_basic(ectx, cw_s, ch_s)
           local lx, ly = ImGui.GetCursorScreenPos(ctx)
           local fh = ImGui.GetFrameHeight(ctx)
           local tw, th = ImGui.CalcTextSize(ctx, text, 0, 0)
-          ImGui.DrawList_AddText(dl_bas, lx, ly + (fh - th) * 0.5, C.text, text)
+          ImGui.DrawList_AddText(dl_bas, lx, ly + (fh - th) * 0.5, C.dim, text)  -- 標籤用淡字，數值才是白字 -- labels dim, values white
           ImGui.Dummy(ctx, tw, fh)
         end
 
@@ -111,7 +115,7 @@ function FUNC.draw_edit_section_basic(ectx, cw_s, ch_s)
             local ename_pad = FUNC.sz(4)
             -- 覆蓋InputText背景（精確匹配InputText大小）-- cover with exact InputText rect
             ImGui.DrawList_AddRectFilled(ep_nm_dl, ename_rx1 + 1, ename_ry1 + 1,
-              ename_rx2 - 1, ename_ry2 - 1, FUNC.rgba(50, 50, 62), 5)
+              ename_rx2 - 1, ename_ry2 - 1, C.field, 5)
             local ename_text_y = ename_ry1 + math.floor((ename_ry2 - ename_ry1 - ename_th) * 0.5)
             FUNC.draw_marquee(ep_nm_dl, FONT, ename_fsz, c.name, C.text,
               ename_rx1 + ename_pad, ename_text_y, ename_inner_w, ename_th, "ep_name"..valid[1],
@@ -130,8 +134,8 @@ function FUNC.draw_edit_section_basic(ectx, cw_s, ch_s)
           local cur_mode = c[mode_field] or "time"
           local is_bpm = (cur_mode == "bpm")
           -- icon toggle button -- 圖示切換按鈕
-          local btn_col = is_bpm and FUNC.rgba(120,90,30) or FUNC.rgba(50,50,62)
-          local btn_hov = is_bpm and FUNC.rgba(140,110,40) or FUNC.rgba(65,65,80)
+          local btn_col = is_bpm and FUNC.rgba(120,90,30) or C.field
+          local btn_hov = is_bpm and FUNC.rgba(140,110,40) or C.btn_h
           ImGui.PushStyleColor(ctx, ImGui.Col_Button(), btn_col)
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), btn_hov)
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(160,120,50))
@@ -545,8 +549,8 @@ function FUNC.draw_edit_section_basic(ectx, cw_s, ch_s)
         if _is_msg then
           -- icon toggle button (照抄 pre/post wait)
           local is_bpm = _msg_bpm_mode
-          local btn_col = is_bpm and FUNC.rgba(120,90,30) or FUNC.rgba(50,50,62)
-          local btn_hov = is_bpm and FUNC.rgba(140,110,40) or FUNC.rgba(65,65,80)
+          local btn_col = is_bpm and FUNC.rgba(120,90,30) or C.field
+          local btn_hov = is_bpm and FUNC.rgba(140,110,40) or C.btn_h
           ImGui.PushStyleColor(ctx, ImGui.Col_Button(), btn_col)
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), btn_hov)
           ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(160,120,50))
@@ -838,7 +842,7 @@ function FUNC.draw_edit_section_basic(ectx, cw_s, ch_s)
           local hk_label = (hk ~= "") and ("HotKey:"..hk) or "HotKey"
           if hotkey_listen then
             local blink = math.floor(reaper.time_precise() * 4) % 2 == 0
-            local blink_col = blink and FUNC.rgba(255,200,80) or FUNC.rgba(180,140,60)
+            local blink_col = blink and C.gold or FUNC.rgba(180,140,60)
             ImGui.PushStyleColor(ctx, ImGui.Col_Text(), blink_col)
             ImGui.Text(ctx, "Press 0-9...")
             ImGui.PopStyleColor(ctx, 1)

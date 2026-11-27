@@ -6,7 +6,6 @@
 
         local item,track,all_lane,lane,idx
         
-        api.mcw()
         mouse_item = api.mci()
         mouse_track = api.mct()
 

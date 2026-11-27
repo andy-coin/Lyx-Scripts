@@ -6,8 +6,7 @@
 
     local function main()
 
-        reaper.BR_GetMouseCursorContext()
-        track=reaper.BR_GetMouseCursorContext_Track()
+        track=api.mct()
         if not track then return end
         
         local idx,first,last,low,high

@@ -163,8 +163,12 @@ function FUNC.draw_cue_table()
     local ir_x1, ir_y1 = ImGui.GetItemRectMin(ctx)
     local ir_x2, ir_y2 = ImGui.GetItemRectMax(ctx)
     local ir_w, ir_h = ir_x2 - ir_x1, ir_y2 - ir_y1
+    -- v2：表頭小一號淡灰字 -- v2: smaller dim header text
+    local hfs = FUNC.sz(11.5)
+    ImGui.PushFont(ctx, FONT, hfs)
     local tw, th = ImGui.CalcTextSize(ctx, hdrs[hi+1], 0, 0)
-    ImGui.DrawList_AddText(dl, ir_x1 + math.max(0, (ir_w - tw) * 0.5), ir_y1 + (ir_h - th) * 0.5, C.column_title, hdrs[hi+1])
+    ImGui.PopFont(ctx)
+    ImGui.DrawList_AddTextEx(dl, FONT, hfs, ir_x1 + math.max(0, (ir_w - tw) * 0.5), ir_y1 + (ir_h - th) * 0.5, C.column_title, hdrs[hi+1])
     if not rm and tips[hi+1] then
       if mx >= ir_x1 and mx <= ir_x2 and my >= ir_y1 and my <= ir_y2 then
         pending_hdr_tip = tips[hi+1]
@@ -206,7 +210,7 @@ function FUNC.draw_cue_table()
   ImGui.PopStyleColor(ctx, 2)
 
   -- Body
-  ImGui.PushFont(ctx, FONT, FUNC.sz(15))
+  ImGui.PushFont(ctx, FONT, FUNC.sz(13))  -- v2：15→13，列內留白（設計稿比例）-- v2: 15→13 for breathing room
   dl = ImGui.GetWindowDrawList(ctx)  -- 重用header段宣告的dl -- reuse dl declared in header section
   tbl.row_screen = {}
   local _, body_sy = ImGui.GetCursorScreenPos(ctx)
@@ -266,15 +270,15 @@ function FUNC.draw_cue_table()
     local has_cc = eff_color ~= nil
     if has_cc then
       -- group中alpha依亮度三階
-      local cc_a = 160  -- GROUP標題與自訂色預設alpha=160
+      local cc_a = 92  -- 淡底色（鮮豔化後再疊；58 還是太暗沉）-- tint over a vivid version (58 was still dull)
       if c.group_id then
         local cr = (eff_color >> 16) & 0xFF
         local cg = (eff_color >> 8) & 0xFF
         local cb = eff_color & 0xFF
         local lum = cr * 0.299 + cg * 0.587 + cb * 0.114
-        cc_a = lum > 140 and 80 or (lum > 80 and 100 or 120)
+        cc_a = lum > 140 and 40 or (lum > 80 and 46 or 54)  -- 子 cue 較淡（原 28/32/38）-- children lighter (was 28/32/38)
       end
-      ImGui.TableSetBgColor(ctx, ImGui.TableBgTarget_RowBg0(), FUNC.col2im(eff_color, cc_a))
+      ImGui.TableSetBgColor(ctx, ImGui.TableBgTarget_RowBg0(), FUNC.col2im(FUNC.vivid(eff_color), cc_a))
     else
       -- group底色fallback：沒有明確cue_color，用group邊框色當淡底色 -- group bg fallback
       local fb_gid = (c.type == "GROUP") and c.id or c.group_id
@@ -283,8 +287,8 @@ function FUNC.draw_cue_table()
         local _, fb_gc = FUNC.find_id(fb_gid)
         if not fb_gc or fb_gc.cue_color ~= 0 then
           local grp_col = FUNC.get_grp_color(fb_gid)
-          local a = c.group_id and 50 or 70  -- 子cue淡一點，GROUP本身稍深
-          ImGui.TableSetBgColor(ctx, ImGui.TableBgTarget_RowBg0(), (grp_col & 0x00FFFFFF) | (a << 24))
+          local a = c.group_id and 44 or 80  -- 子cue淡一點，GROUP本身稍深（原 28/48）-- children lighter (was 28/48)
+          ImGui.TableSetBgColor(ctx, ImGui.TableBgTarget_RowBg0(), (grp_col & 0xFFFFFF00) | a)  -- 修：原本把 alpha 寫進紅色位元 -- fix: alpha was written into the red byte
           has_cc = true
         end
       end
@@ -293,7 +297,7 @@ function FUNC.draw_cue_table()
     if c.state==STATE.PREWAIT then rc=C.pw
     elseif c.state==STATE.POSTWAIT then rc=C.ptw
     elseif FUNC.is_sel(ci) then
-      rc = has_cc and FUNC.rgba(150, 150, 150, 80) or C.sel
+      rc = C.primary_soft  -- v2：選取=淡主色 -- selection = soft primary
     end
     if rc then ImGui.TableSetBgColor(ctx, ImGui.TableBgTarget_RowBg1(), rc) end
     -- 損壞 cue（s2c 缺必要欄位）：覆蓋灰底警告 -- broken cue: grey overlay
@@ -434,36 +438,43 @@ function FUNC.draw_cue_table()
     -- Col 2: Type
     ImGui.TableNextColumn(ctx)
     FUNC.nav_check(ci, 2)
-    local type_txt = TYPE_SHORT[c.type] or c.type
+    -- v2：靠左 + 依層級縮排；群組 = ›/⌄ + 色塊 + 淡色字，其他 = 彩色圖示 + 淡色字
+    -- v2: left-aligned, indented by depth; group = chevron + color chip + dim word, others = colored icon + dim word
+    local TYPE_ICON = {PLAY="play", STOP="stop", PAUSE="pause", FADE="fade", MIDI="note"}
+    local type_txt = ((TYPE_SHORT[c.type] or c.type):gsub("^[^%a]+", ""))
+    local t_isz, t_igap = FUNC.sz(10), FUNC.sz(6)
+    local cell_x = ImGui.GetCursorPosX(ctx)
+    local chev_w = FUNC.sz(14)                                  -- 收合箭頭欄位 -- chevron slot
+    local depth = FUNC.cue_depth(c) or 0
+    local lead = chev_w + depth * FUNC.sz(14)                   -- 子層往右縮 -- children indent per level
+    ImGui.SetCursorPosX(ctx, cell_x + lead + t_isz + t_igap)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Text(), C.dim)
+    ImGui.PushStyleColor(ctx, ImGui.Col_Header(), 0)
+    ImGui.PushStyleColor(ctx, ImGui.Col_HeaderHovered(), c.type == "GROUP" and FUNC.rgba(255,255,255,15) or 0)
+    ImGui.PushStyleColor(ctx, ImGui.Col_HeaderActive(), 0)
+    local t_clicked = ImGui.Selectable(ctx, type_txt.."##tp"..ci, false, c.type ~= "GROUP" and ImGui.SelectableFlags_AllowDoubleClick() or 0)
+    ImGui.PopStyleColor(ctx, 4)
+    local ix1, iy1 = ImGui.GetItemRectMin(ctx)
+    local _, iy2 = ImGui.GetItemRectMax(ctx)
+    local icy = (iy1 + iy2) / 2
+    local icx = ix1 - t_igap - t_isz / 2
+    local t_dl = ImGui.GetWindowDrawList(ctx)
     if c.type == "GROUP" then
-      local collapsed = collapsed_groups[c.id]
-      type_txt = (collapsed and "+ " or "- ") .. type_txt
-      local cw3 = ImGui.GetContentRegionAvail(ctx)
-      local tw3,_ = ImGui.CalcTextSize(ctx, type_txt, 0, 0)
-      ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw3 - tw3) * 0.5))
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), FUNC.get_grp_text_color(c.id))
-      ImGui.PushStyleColor(ctx, ImGui.Col_Header(), 0)
-      ImGui.PushStyleColor(ctx, ImGui.Col_HeaderHovered(), FUNC.rgba(255,255,255,15))
-      ImGui.PushStyleColor(ctx, ImGui.Col_HeaderActive(), 0)
-      if ImGui.Selectable(ctx, type_txt.."##tp"..ci, false) then
-        collapsed_groups[c.id] = not collapsed_groups[c.id] end
-      ImGui.PopStyleColor(ctx, 4)
-      FUNC.cell_post(ci, c, false)
-    else
-      ImGui.PushStyleColor(ctx, ImGui.Col_Text(), TYPE_COL[c.type] or C.text)
-      local cw2 = ImGui.GetContentRegionAvail(ctx)
-      local tw2,_ = ImGui.CalcTextSize(ctx, type_txt, 0, 0)
-      ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw2 - tw2) * 0.5))
-      ImGui.PushStyleColor(ctx, ImGui.Col_Header(), 0)
-      ImGui.PushStyleColor(ctx, ImGui.Col_HeaderHovered(), 0)
-      ImGui.PushStyleColor(ctx, ImGui.Col_HeaderActive(), 0)
-      if ImGui.Selectable(ctx, type_txt.."##tp"..ci, false, ImGui.SelectableFlags_AllowDoubleClick()) then
-        if FUNC.try_dbl("tp"..ci) then FUNC.open_edit() end
+      if t_clicked then collapsed_groups[c.id] = not collapsed_groups[c.id] end
+      local gcol = (FUNC.get_grp_color(c.id) & 0xFFFFFF00) | 0xFF
+      do  -- 小色塊也鮮豔化（get_grp_color 是 RRGGBBAA）-- vivid swatch too
+        local v = FUNC.vivid((gcol >> 8) & 0xFFFFFF)
+        gcol = (v << 8) | 0xFF
       end
-      ImGui.PopStyleColor(ctx, 3)
-      FUNC.cell_post(ci, c, false)
-      ImGui.PopStyleColor(ctx, 1)
+      local cell_sx = ix1 - (lead + t_isz + t_igap)
+      FUNC.icon(t_dl, collapsed_groups[c.id] and "right" or "down", cell_sx + chev_w / 2, icy, FUNC.sz(9), FUNC.dim_c(C.dim))
+      local cs = FUNC.sz(9)
+      ImGui.DrawList_AddRectFilled(t_dl, icx - cs/2, icy - cs/2, icx + cs/2, icy + cs/2, FUNC.dim_c(gcol), FUNC.sz(2.5))
+    else
+      if t_clicked and FUNC.try_dbl("tp"..ci) then FUNC.open_edit() end
+      if TYPE_ICON[c.type] then FUNC.icon(t_dl, TYPE_ICON[c.type], icx, icy, t_isz, FUNC.dim_c(TYPE_COL[c.type] or C.text)) end
     end
+    FUNC.cell_post(ci, c, false)
     FUNC.nav_track(2)
 
     -- Col 3: Name（過長hover 1秒後跑馬燈）-- marquee after 1s hover if truncated
@@ -503,6 +514,9 @@ function FUNC.draw_cue_table()
       -- DrawList繪製文字 -- render text via DrawList
       local nm_dl = ImGui.GetWindowDrawList(ctx)
       local nm_pad = FUNC.sz(2)
+      local nm_fs = ImGui.GetFontSize(ctx)
+      local nm_font = (c.type == "GROUP") and FONT_B or FONT  -- 群組名稱粗體 -- bold group names
+      local function nm_text(x, y, s) ImGui.DrawList_AddTextEx(nm_dl, nm_font, nm_fs, x, y, nc, s) end
       local _, nm_th = ImGui.CalcTextSize(ctx, "Ay", 0, 0)  -- 用固定字串測量文字高度 -- measure text height
       local nm_ty = nm_sy + math.floor((nm_h - nm_th) * 0.5)  -- 垂直置中 -- vertical center
       if mq and mq.t_scroll then
@@ -515,13 +529,13 @@ function FUNC.draw_cue_table()
         local offset = (elapsed * speed) % loop_tw
         ImGui.DrawList_PushClipRect(nm_dl, nm_sx, nm_sy, nm_sx + nm_cw, nm_sy + nm_h, true)
         local tx = nm_sx + nm_pad - offset
-        ImGui.DrawList_AddText(nm_dl, tx, nm_ty, nc, loop_txt)
-        ImGui.DrawList_AddText(nm_dl, tx + loop_tw, nm_ty, nc, loop_txt)
+        nm_text(tx, nm_ty, loop_txt)
+        nm_text(tx + loop_tw, nm_ty, loop_txt)
         ImGui.DrawList_PopClipRect(nm_dl)
       else
         -- 靜態顯示（ClipRect截斷）-- static with clip
         ImGui.DrawList_PushClipRect(nm_dl, nm_sx, nm_sy, nm_sx + nm_cw, nm_sy + nm_h, true)
-        ImGui.DrawList_AddText(nm_dl, nm_sx + nm_pad, nm_ty, nc, nd)
+        nm_text(nm_sx + nm_pad, nm_ty, nd)
         ImGui.DrawList_PopClipRect(nm_dl)
       end
       FUNC.cell_post(ci, c, false)
@@ -532,13 +546,17 @@ function FUNC.draw_cue_table()
     ImGui.TableNextColumn(ctx)
     FUNC.nav_check(ci, 4)
     if c.type == "PLAY" then
-      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), FUNC.rgba(35, 55, 75))
-      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), FUNC.rgba(45, 70, 95))
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), C.field)
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), C.btn)
       ImGui.SetNextItemWidth(ctx, -1)
       local trk_label = c.track_invalid and "??" or string.format("Tr.%d", c.track_idx+1)
       local dd_max_h = ImGui.GetTextLineHeightWithSpacing(ctx) * DD_POPUP_ROWS + FUNC.sz(8)
       ImGui.SetNextWindowSizeConstraints(ctx, FUNC.sz(DD_POPUP_W), 0, FUNC.sz(DD_POPUP_W), dd_max_h)
-      if ImGui.BeginCombo(ctx, "##trk"..ci, trk_label) then
+      -- v2：不用大方塊箭頭，改畫細 ⌄ -- v2: thin chevron instead of the boxed arrow
+      local _cb_dl = ImGui.GetWindowDrawList(ctx); local _cbx, _cby = ImGui.GetCursorScreenPos(ctx); local _cbw = ImGui.GetContentRegionAvail(ctx)
+      local _cb_open = ImGui.BeginCombo(ctx, "##trk"..ci, trk_label, ImGui.ComboFlags_NoArrowButton())
+      FUNC.icon(_cb_dl, "down", _cbx + _cbw - FUNC.sz(9), _cby + ImGui.GetFrameHeight(ctx) / 2, FUNC.sz(8), FUNC.dim_c(C.dim))
+      if _cb_open then
         local just_opened = ImGui.IsWindowAppearing(ctx)  -- 只在combo剛開啟時定位
         -- 計算Tr.x欄固定寬度，確保 | 對齊 -- fixed width for Tr.x column so | aligns vertically
         local pipe_x = ImGui.CalcTextSize(ctx, string.format("Tr.%d ", FUNC.tr_count())) + ImGui.GetCursorPosX(ctx)
@@ -627,13 +645,17 @@ function FUNC.draw_cue_table()
       FUNC.cell_post(ci, c, true)  -- skip_drag=true：TARGET欄拖曳是指定target，不是reorder -- target column drag = link, not reorder
     elseif c.type == "MIDI" then
       -- MIDI target 欄：與 audio PLAY 一樣的 track dropdown -- track dropdown (mirrors PLAY)
-      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), FUNC.rgba(55, 45, 75))
-      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), FUNC.rgba(75, 60, 95))
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), C.field)
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), C.btn)
       ImGui.SetNextItemWidth(ctx, -1)
       local mt_label = (c.track_idx and c.track_idx >= 0) and string.format("Tr.%d", c.track_idx+1) or "Tr.?"
       local dd_max_h = ImGui.GetTextLineHeightWithSpacing(ctx) * DD_POPUP_ROWS + FUNC.sz(8)
       ImGui.SetNextWindowSizeConstraints(ctx, FUNC.sz(DD_POPUP_W), 0, FUNC.sz(DD_POPUP_W), dd_max_h)
-      if ImGui.BeginCombo(ctx, "##midi_trk"..ci, mt_label) then
+      -- v2：不用大方塊箭頭，改畫細 ⌄ -- v2: thin chevron instead of the boxed arrow
+      local _cb_dl = ImGui.GetWindowDrawList(ctx); local _cbx, _cby = ImGui.GetCursorScreenPos(ctx); local _cbw = ImGui.GetContentRegionAvail(ctx)
+      local _cb_open = ImGui.BeginCombo(ctx, "##midi_trk"..ci, mt_label, ImGui.ComboFlags_NoArrowButton())
+      FUNC.icon(_cb_dl, "down", _cbx + _cbw - FUNC.sz(9), _cby + ImGui.GetFrameHeight(ctx) / 2, FUNC.sz(8), FUNC.dim_c(C.dim))
+      if _cb_open then
         local just_opened = ImGui.IsWindowAppearing(ctx)
         local pipe_x = ImGui.CalcTextSize(ctx, string.format("Tr.%d ", FUNC.tr_count())) + ImGui.GetCursorPosX(ctx)
         for ti = 0, FUNC.tr_count()-1 do
@@ -664,12 +686,16 @@ function FUNC.draw_cue_table()
       FUNC.target_drag_src(ci, c)
       FUNC.cell_post(ci, c, true)
     else
-      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), FUNC.rgba(75, 50, 35))
-      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), FUNC.rgba(95, 65, 45))
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), C.field)
+      ImGui.PushStyleColor(ctx, ImGui.Col_FrameBgHovered(), C.btn)
       ImGui.SetNextItemWidth(ctx, -1)
       local dd_max_h = ImGui.GetTextLineHeightWithSpacing(ctx) * DD_POPUP_ROWS + FUNC.sz(8)
       ImGui.SetNextWindowSizeConstraints(ctx, FUNC.sz(DD_POPUP_W), 0, FUNC.sz(DD_POPUP_W), dd_max_h)
-      if ImGui.BeginCombo(ctx, "##tgt"..ci, FUNC.target_label(c)) then
+      -- v2：不用大方塊箭頭，改畫細 ⌄ -- v2: thin chevron instead of the boxed arrow
+      local _cb_dl = ImGui.GetWindowDrawList(ctx); local _cbx, _cby = ImGui.GetCursorScreenPos(ctx); local _cbw = ImGui.GetContentRegionAvail(ctx)
+      local _cb_open = ImGui.BeginCombo(ctx, "##tgt"..ci, FUNC.target_label(c), ImGui.ComboFlags_NoArrowButton())
+      FUNC.icon(_cb_dl, "down", _cbx + _cbw - FUNC.sz(9), _cby + ImGui.GetFrameHeight(ctx) / 2, FUNC.sz(8), FUNC.dim_c(C.dim))
+      if _cb_open then
         local just_opened = ImGui.IsWindowAppearing(ctx)  -- 只在combo剛開啟時定位
         -- 計算Tr/G欄固定寬度，確保 | 對齊 -- fixed width so | aligns vertically
         local max_prefix = "Tr."..tostring(FUNC.tr_count()).." "
@@ -732,7 +758,7 @@ function FUNC.draw_cue_table()
     ImGui.SetCursorPosY(ctx, ImGui.GetCursorPosY(ctx) + text_oy + grp_extra_oy)
     FUNC.nav_check(ci, 5)
     do
-      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
       if FUNC.draw_ie(ci, "volume") then
       else
         local vtxt = FUNC.fmt_v(c.volume)
@@ -803,7 +829,7 @@ function FUNC.draw_cue_table()
       ImGui.InvisibleButton(ctx, "##pw_pb"..ci, cw6, FUNC.sz(18))
       FUNC.cell_post(ci, c, false)
     else
-      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
       if FUNC.draw_ie(ci, "pre_wait") then
       else
         local pw_d, pw_e
@@ -886,7 +912,7 @@ function FUNC.draw_cue_table()
         if ImGui.IsItemClicked(ctx) and FUNC.try_dbl("du"..ci) then FUNC.open_edit() end
         FUNC.cell_post(ci, c, false); dur_drawn = true
       elseif (not dur_drawn) and not FUNC.draw_ie(ci, "fade_time") then
-        ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+        ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
         local ft_txt, ft_edit
         if c.fade_wait_mode == "bpm" then
           local nv = NOTE_VALUES[c.fade_note_idx or NOTE_DEFAULT_IDX] or NOTE_VALUES[NOTE_DEFAULT_IDX]
@@ -998,7 +1024,7 @@ function FUNC.draw_cue_table()
         FUNC.cell_post(ci, c, false)
         local dx1, dy1 = ImGui.GetItemRectMin(ctx)
         local dx2, dy2 = ImGui.GetItemRectMax(ctx)
-        ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+        ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
         local tw_du, th_du = ImGui.CalcTextSize(ctx, dtxt, 0, 0)
         ImGui.DrawList_AddText(dl, dx2 - tw_du - 4, dy1 + math.floor((dy2 - dy1 - th_du) / 2), FUNC.dim_c(C.text), dtxt)
         ImGui.PopFont(ctx)
@@ -1097,7 +1123,7 @@ function FUNC.draw_cue_table()
         FUNC.cell_post(ci, c, false)
         local gx1, gy1 = ImGui.GetItemRectMin(ctx)
         local gx2, gy2 = ImGui.GetItemRectMax(ctx)
-        ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+        ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
         local tw_gd, th_gd = ImGui.CalcTextSize(ctx, gtxt, 0, 0)
         ImGui.DrawList_AddText(dl, gx2 - tw_gd - 4, gy1 + math.floor((gy2 - gy1 - th_gd) / 2), FUNC.dim_c(C.text), gtxt)
         ImGui.PopFont(ctx)
@@ -1153,7 +1179,7 @@ function FUNC.draw_cue_table()
           FUNC.cell_post(ci, c, false)
           local dx1, dy1 = ImGui.GetItemRectMin(ctx)
           local dx2, dy2 = ImGui.GetItemRectMax(ctx)
-          ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+          ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
           local tw_du, th_du = ImGui.CalcTextSize(ctx, dtxt, 0, 0)
           ImGui.DrawList_AddText(dl, dx2 - tw_du - 4, dy1 + math.floor((dy2 - dy1 - th_du) / 2), FUNC.dim_c(C.text), dtxt)
           ImGui.PopFont(ctx)
@@ -1170,7 +1196,7 @@ function FUNC.draw_cue_table()
       FUNC.cell_post(ci, c, false)
       local fx1, fy1 = ImGui.GetItemRectMin(ctx)
       local fx2, fy2 = ImGui.GetItemRectMax(ctx)
-      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
       local tw_fb, th_fb = ImGui.CalcTextSize(ctx, "--", 0, 0)
       ImGui.DrawList_AddText(dl, fx2 - tw_fb - 4, fy1 + math.floor((fy2 - fy1 - th_fb) / 2), C.muted, "--")
       ImGui.PopFont(ctx)
@@ -1206,7 +1232,7 @@ function FUNC.draw_cue_table()
       ImGui.InvisibleButton(ctx, "##pw_pb2"..ci, cw8, FUNC.sz(18))
       FUNC.cell_post(ci, c, false)
     else
-      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(14))
+      ImGui.PushFont(ctx, FONT_MONO, FUNC.sz(13))
       if FUNC.draw_ie(ci, "post_wait") then
       else
         local ptw_d, ptw_e
@@ -1255,9 +1281,9 @@ function FUNC.draw_cue_table()
     -- Col 9: Follow^
     ImGui.TableNextColumn(ctx)
     local cw10 = ImGui.GetContentRegionAvail(ctx)
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw10 - FUNC.sz(18)) * 0.5))
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw10 - FUNC.sz(14)) * 0.5))
     FUNC.nav_check(ci, 9)
-    local af_ch, af_nv = ImGui.Checkbox(ctx, "##af"..ci, c.auto_go)
+    local af_ch, af_nv = FUNC.ui_check("##af"..ci, c.auto_go)
     if af_ch then c.auto_go = af_nv; FUNC.save_cues() end
     FUNC.nav_track(9)
     FUNC.cell_post(ci, c, false)
@@ -1265,9 +1291,9 @@ function FUNC.draw_cue_table()
     -- Col 10: Kill^
     ImGui.TableNextColumn(ctx)
     local cw11 = ImGui.GetContentRegionAvail(ctx)
-    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw11 - FUNC.sz(18)) * 0.5))
+    ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw11 - FUNC.sz(14)) * 0.5))
     FUNC.nav_check(ci, 10)
-    local ka_ch, ka_nv = ImGui.Checkbox(ctx, "##ka"..ci, c.kill_above)
+    local ka_ch, ka_nv = FUNC.ui_check("##ka"..ci, c.kill_above)
     if ka_ch then c.kill_above = ka_nv; FUNC.save_cues() end
     FUNC.nav_track(10)
     FUNC.cell_post(ci, c, false)
@@ -1303,8 +1329,8 @@ function FUNC.draw_cue_table()
         FUNC.cell_post(ci, c, false)
       else
         local cw_lp = ImGui.GetContentRegionAvail(ctx)
-        ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw_lp - FUNC.sz(18)) * 0.5))
-        local lp_ch, lp_nv = ImGui.Checkbox(ctx, "##lp"..ci, c.loop)
+        ImGui.SetCursorPosX(ctx, ImGui.GetCursorPosX(ctx) + math.max(0, (cw_lp - FUNC.sz(14)) * 0.5))
+        local lp_ch, lp_nv = FUNC.ui_check("##lp"..ci, c.loop)
         if lp_ch then
           c.loop = lp_nv
           if c.type == "GROUP" then
@@ -1417,8 +1443,9 @@ function FUNC.draw_cue_table()
         break
       end
     end
-    ImGui.DrawList_AddRect(grp_dl, tbl.x1 - 2 + x_off, gr.y1, tbl.x2 + 2, gr.y2 + bot_shift,
-      FUNC.dim_c(gr.col), 0, 0, bw)
+    -- v2：群組不再畫整圈粗框，改成左側色帶（巢狀往右錯開）-- v2: left color stripe instead of a full outline
+    local sx = tbl.x1 + x_off
+    ImGui.DrawList_AddRectFilled(grp_dl, sx, gr.y1, sx + bw, gr.y2, FUNC.dim_c((gr.col & 0xFFFFFF00) | 0xFF), FUNC.sz(1.5))
   end
   -- SPACER：不透明背景蓋住column lines + 對齊文字（無邊線，像單一儲存格）-- SPACER: opaque bg covers column lines + aligned text (no borders, like a single cell)
   for _, sp in ipairs(spacer_rows) do

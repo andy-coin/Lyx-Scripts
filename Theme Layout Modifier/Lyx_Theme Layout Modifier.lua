@@ -312,6 +312,7 @@ local S = {
   hints = reaper.GetExtState(EXT, "hints") ~= "0", -- mouse/keyboard hints in the canvas corner
   snap = reaper.GetExtState(EXT, "snap") ~= "0", -- dragged edges snap to nearby element / panel edges
   guides = reaper.GetExtState(EXT, "guides") ~= "0", -- guide lines while dragging
+  grow = reaper.GetExtState(EXT, "grow") == "1", -- always show the "+100 px" preview (otherwise hold Alt / Option)
   cat_closed = {}, -- element list categories the user collapsed (ExtState "cat_closed")
 }
 for k in reaper.GetExtState(EXT, "cat_closed"):gmatch("[^,]+") do S.cat_closed[k] = true end
@@ -1161,11 +1162,19 @@ local function set_hidden(name, e, hide)
   end
 end
 
-local ANCHORS = {
-  { "Theme default", nil }, { "Left / top (fixed)", { 0, 0, 0, 0 } }, { "Follow right edge", { 1, 0, 1, 0 } },
-  { "Stretch with width", { 0, 0, 1, 0 } }, { "Follow bottom edge", { 0, 1, 0, 1 } }, { "Follow right + bottom", { 1, 1, 1, 1 } },
-  { "Stretch width + height", { 0, 0, 1, 1 } },
-}
+-- anchor presets per axis: name, attach of the first edge (left/top), attach of the second edge (right/bottom)
+local AX_H = { { "Left", 0, 0, "stays at the left, width stays" }, { "Center", 0.5, 0.5, "stays centered, width stays" },
+  { "Right", 1, 1, "moves with the right edge, width stays" }, { "Stretch", 0, 1, "gets wider with the panel" } }
+local AX_V = { { "Top", 0, 0, "stays at the top, height stays" }, { "Middle", 0.5, 0.5, "stays centered, height stays" },
+  { "Bottom", 1, 1, "moves with the bottom edge, height stays" }, { "Stretch", 0, 1, "gets taller with the panel" } }
+local function ax_name(list, a, b)
+  for _, p in ipairs(list) do if p[2] == a and p[3] == b then return p[1] end end
+  return ("%g/%g"):format(a, b)
+end
+local function att_label(a) -- a = { ls, ts, rs, bs }
+  if S.sec:find("mcp") then return ax_name(AX_V, a[2], a[4]) end -- strip width is fixed: only vertical matters
+  return ax_name(AX_H, a[1], a[3]) .. " · " .. ax_name(AX_V, a[2], a[4])
+end
 
 -- change edge attachment while keeping the element where it is at the current preview size
 local function set_anchor(name, e, att)
@@ -2229,6 +2238,98 @@ local function draw_rulers(dl, px, py, z, bottom)
   end
 end
 
+local function dashed(dl, x1, y1, x2, y2, col, th)
+  local dx, dy = x2 - x1, y2 - y1
+  local n = math.floor(math.sqrt(dx * dx + dy * dy) / 7)
+  if n < 1 then ImGui.DrawList_AddLine(dl, x1, y1, x2, y2, col, th or 1) return end
+  for i = 0, n - 1 do
+    local a, b = i / n, (i + 0.6) / n
+    ImGui.DrawList_AddLine(dl, x1 + dx * a, y1 + dy * a, x1 + dx * b, y1 + dy * b, col, th or 1)
+  end
+end
+local function dashed_rect(dl, l, t, r, b, col, th)
+  dashed(dl, l, t, r, t, col, th); dashed(dl, r, t, r, b, col, th)
+  dashed(dl, r, b, l, b, col, th); dashed(dl, l, b, l, t, col, th)
+end
+
+local GROW = 100 -- px the "Grow" preview adds to the panel
+
+-- selected element: a line from each edge to the spot it holds on to. An edge with attach a keeps its
+-- distance to the point at fraction a of the panel (0 = left/top border, 1 = right/bottom, 0.5 = middle).
+local function draw_pins(dl, v, sr, px, py, px2, py2, fixed_w)
+  local col, fs = C_.accent, ImGui.GetFontSize(ctx)
+  local function axis(a1, a2, e1, e2, p1, p2, c, horiz)
+    local function at(a) return p1 + (p2 - p1) * a end
+    local function line(from, s)
+      if math.abs(s - from) < 1 then return end
+      if horiz then
+        ImGui.DrawList_AddLine(dl, from, c, s, c, col, 1.5)
+        ImGui.DrawList_AddLine(dl, s, c - 4, s, c + 4, col, 1.5)
+      else
+        ImGui.DrawList_AddLine(dl, c, from, c, s, col, 1.5)
+        ImGui.DrawList_AddLine(dl, c - 4, s, c + 4, s, col, 1.5)
+      end
+    end
+    local function mark(a)
+      local s = at(a)
+      if horiz then
+        ImGui.DrawList_AddTriangleFilled(dl, s - 5, py - 8, s + 5, py - 8, s, py - 1, col)
+        if a > 0 and a < 1 then
+          dashed(dl, s, py, s, py2, with_alpha(col, 0x80), 1)
+          ImGui.DrawList_AddText(dl, s + 7, py - fs - 2, col, ("%g"):format(a))
+        end
+      else
+        ImGui.DrawList_AddTriangleFilled(dl, px - 8, s - 5, px - 8, s + 5, px - 1, s, col)
+        if a > 0 and a < 1 then
+          dashed(dl, px, s, px2, s, with_alpha(col, 0x80), 1)
+          ImGui.DrawList_AddText(dl, px - 10 - text_w(("%g"):format(a)), s - fs - 2, col, ("%g"):format(a))
+        end
+      end
+    end
+    if a1 == a2 then -- moves without resizing: one line from the nearer edge (none if the spot is inside)
+      local s = at(a1)
+      if s <= e1 then line(e1, s) elseif s >= e2 then line(e2, s) end
+      mark(a1)
+    else
+      line(e1, at(a1)); line(e2, at(a2))
+      mark(a1); mark(a2)
+    end
+  end
+  if not fixed_w then axis(v[5], v[7], sr.l, sr.r, px, px2, (sr.t + sr.b) / 2, true) end
+  axis(v[6], v[8], sr.t, sr.b, py, py2, (sr.l + sr.r) / 2, false)
+end
+
+-- "Grow" preview: dashed outline = where the element lands when the panel is GROW px bigger; static ones dimmed
+local function draw_grow(dl, L, rects, px, py, px2, py2, z, fixed_w)
+  local dW, dH = fixed_w and 0 or GROW, GROW
+  local ghosts = {}
+  for _, r in ipairs(rects) do
+    local v = L.vars[r.e]
+    if v then
+      local ml, mt, mr, mb = v[5] * dW * z, v[6] * dH * z, v[7] * dW * z, v[8] * dH * z
+      if ml == 0 and mt == 0 and mr == 0 and mb == 0 then
+        ImGui.DrawList_AddRectFilled(dl, r.l, r.t, r.r, r.b, with_alpha(C_.canvas, 0xB8))
+      else
+        ghosts[#ghosts + 1] = { r, r.l + ml, r.t + mt, r.r + mr, r.b + mb }
+      end
+    end
+  end
+  local gx2, gy2 = px2 + dW * z, py2 + dH * z
+  dashed_rect(dl, px, py, gx2, gy2, with_alpha(C_.text, 0x90), 1)
+  ImGui.DrawList_AddText(dl, gx2 + 6, gy2 - ImGui.GetFontSize(ctx), with_alpha(C_.text, 0xB0),
+    fixed_w and ("+%d px taller"):format(GROW) or ("+%d px"):format(GROW))
+  for _, g in ipairs(ghosts) do
+    local r = g[1]
+    ImGui.DrawList_AddRectFilled(dl, g[2], g[3], g[4], g[5], with_alpha(C_.accent, 0x22))
+    dashed_rect(dl, g[2], g[3], g[4], g[5], C_.accent, 1.5)
+    local cx1, cy1, cx2, cy2 = (r.l + r.r) / 2, (r.t + r.b) / 2, (g[2] + g[4]) / 2, (g[3] + g[5]) / 2
+    if math.abs(cx2 - cx1) + math.abs(cy2 - cy1) > 2 then
+      ImGui.DrawList_AddLine(dl, cx1, cy1, cx2, cy2, with_alpha(C_.accent, 0x90), 1)
+      ImGui.DrawList_AddCircleFilled(dl, cx2, cy2, 2.5, C_.accent)
+    end
+  end
+end
+
 local function draw_canvas(name, L, insp_h)
   if not ImGui.BeginChild(ctx, "canvas", 0, -(insp_h + 7), ImGui.ChildFlags_Borders, ImGui.WindowFlags_HorizontalScrollbar) then return end
   local dl = ImGui.GetWindowDrawList(ctx)
@@ -2256,6 +2357,10 @@ local function draw_canvas(name, L, insp_h)
     ch, v = ImGui.Checkbox(ctx, "Hints", S.hints)
     if ch then S.hints = v; save("hints", v) end
     tip("Show the mouse / keyboard hints in the bottom-right corner.")
+    ImGui.SameLine(ctx, 0, 12)
+    ch, v = ImGui.Checkbox(ctx, "Grow", S.grow)
+    if ch then S.grow = v; save("grow", v) end
+    tip("Show where every element lands when the track is 100 px bigger.\nHold Alt / Option for a quick look.")
     ImGui.SameLine(ctx, 0, 16)
     local pct = ("%d%%"):format(math.floor(P.zoom * 100 + 0.5))
     local mid_w = zoom_rect.mid_w
@@ -2279,7 +2384,7 @@ local function draw_canvas(name, L, insp_h)
     local fh = ImGui.GetFrameHeight(ctx)
     local mid_w = text_w("600%") + 16
     local snap_w = math.max(btn_w("Snap"), btn_w("Free"))
-    local zw = snap_w + 12 + check_w("Guides") + 12 + check_w("Hints") + 16 + fh * 2 + mid_w + 8
+    local zw = snap_w + 12 + check_w("Guides") + 12 + check_w("Hints") + 12 + check_w("Grow") + 16 + fh * 2 + mid_w + 8
     local zx = cwx + cww - 22 - zw
     zoom_rect = { zx, cwy + 10, zx + zw, cwy + 10 + fh, mid_w = mid_w, snap_w = snap_w }
   end
@@ -2333,6 +2438,8 @@ local function draw_canvas(name, L, insp_h)
       ImGui.DrawList_AddCircleFilled(dl, (a.l + a.r) / 2, (a.t + a.b) / 2, 3, C_.link)
     end
   end
+  local grow = S.grow or (hovered and (ImGui.GetKeyMods(ctx) & ImGui.Mod_Alt) ~= 0)
+  if grow and L then draw_grow(dl, L, rects, px, py, px2, py2, z, strip) end
 
   local mx, my = ImGui.GetMousePos(ctx)
   local sr = S.sel_elem and byname[S.sel_elem]
@@ -2374,6 +2481,8 @@ local function draw_canvas(name, L, insp_h)
       ImGui.DrawList_AddRectFilled(dl, p[1] - 3.5, p[2] - 3.5, p[1] + 3.5, p[2] + 3.5, 0xFFFFFFFF, 1)
       ImGui.DrawList_AddRect(dl, p[1] - 3.5, p[2] - 3.5, p[1] + 3.5, p[2] + 3.5, C_.sel, 1, 0, 1.5)
     end
+    local v = L and L.vars[S.sel_elem]
+    if v and not (S.drag and S.drag.kind == "elem") then draw_pins(dl, v, sr, px, py, px2, py2, strip) end
   end
   if hovered and h and not S.drag then
     ImGui.SetTooltip(ctx, ("%s\n%d × %d"):format(nice(h.e), math.floor((h.r - h.l) / z + 0.5), math.floor((h.b - h.t) / z + 0.5)))
@@ -2447,10 +2556,14 @@ local function draw_canvas(name, L, insp_h)
   local cwx, cwy = ImGui.GetWindowPos(ctx)
   local cww, cwh = ImGui.GetWindowSize(ctx)
   local fs = ImGui.GetFontSize(ctx)
-  local hints = {
+  local hints = grow and {
+    { "Dashed outline", ("where it lands when the track is %d px bigger"):format(GROW) },
+    { "Dimmed", "stays put" },
+  } or {
     { "Click", "select an element" }, { "Drag", "move  ·  edges / corners resize" },
     { "Shift + drag edge", "resize, keep proportions" },
     { "Arrows", "1 px  ·  Shift 10 px" }, { "Alt / Option + arrows", "resize" },
+    { "Hold Alt / Option", "what moves when the track grows" },
     { "Ctrl / Cmd + wheel", "zoom" }, { "Right-drag", "pan the view" }, { "Panel edges", "preview the track size" },
   }
   local lh = fs + 7
@@ -2468,7 +2581,7 @@ local function draw_canvas(name, L, insp_h)
   near = math.min(near, dist(px, py, px2, py2))
   for _, r in ipairs(rects) do near = math.min(near, dist(r.l, r.t, r.r, r.b)) end
   local a = math.max(0, math.min(1, (near - 8) / 70))
-  if S.hints and a > 0.01 then
+  if (S.hints or grow) and a > 0.01 then
     local ty = by1
     for _, hn in ipairs(hints) do
       ImGui.DrawList_AddText(dl, bx1 + kw - text_w(hn[1]), ty, with_alpha(C_.text, 0xB0 * a), hn[1])
@@ -2621,6 +2734,93 @@ local function draw_elements(name, L)
 end
 
 -- bottom inspector: fixed height, one row each (no jumping when an element hides/shows)
+-- Anchor picker: columns = horizontal behaviour, rows = vertical; each cell is a tiny panel diagram
+local function draw_anchor_grid(name, e, r, cur)
+  local strip = S.sec:find("mcp") ~= nil -- strip width is fixed: one column, horizontal attach kept as is
+  local cols = strip and { { "", cur and cur[1] or 0, cur and cur[3] or 0, "" } } or AX_H
+  local dl = ImGui.GetWindowDrawList(ctx)
+  local cs, gap = 32, 4
+  local fs = ImGui.GetFontSize(ctx)
+  local lw = 0
+  for _, v in ipairs(AX_V) do lw = math.max(lw, text_w(v[1])) end
+  lw = lw + 10
+  local x0, y0 = ImGui.GetCursorScreenPos(ctx)
+  local hh = strip and 0 or fs + 6
+  for i, h in ipairs(cols) do
+    ImGui.DrawList_AddText(dl, x0 + lw + (i - 1) * (cs + gap) + (cs - text_w(h[1])) / 2, y0, C_.dim, h[1])
+  end
+  local function span(a1, a2, p1, p2) -- block position inside the mini panel for one axis
+    local len, size = p2 - p1, (p2 - p1) * 0.38
+    if a1 == 0 and a2 == 1 then return p1 + 2, p2 - 2 end
+    if a1 == a2 then local s = p1 + 2 + (len - 4 - size) * a1; return s, s + size end
+    return p1 + 2 + (len - 4) * a1 * 0.5, p2 - 2 - (len - 4) * (1 - a2) * 0.5
+  end
+  for j, v in ipairs(AX_V) do
+    local y = y0 + hh + (j - 1) * (cs + gap)
+    ImGui.DrawList_AddText(dl, x0 + lw - 10 - text_w(v[1]), y + (cs - fs) / 2, C_.dim, v[1])
+    for i, h in ipairs(cols) do
+      local x = x0 + lw + (i - 1) * (cs + gap)
+      local att = { h[2], v[2], h[3], v[3] }
+      local on = cur and cur[1] == att[1] and cur[2] == att[2] and cur[3] == att[3] and cur[4] == att[4]
+      ImGui.SetCursorScreenPos(ctx, x, y)
+      if ImGui.InvisibleButton(ctx, "##anchor" .. i .. "_" .. j, cs, cs) then
+        set_anchor(name, e, att)
+        ImGui.CloseCurrentPopup(ctx)
+      end
+      local hov = ImGui.IsItemHovered(ctx)
+      if hov then
+        ImGui.SetTooltip(ctx, (strip and "%s%s\n%s" or "%s · %s\nWidth: %s\nHeight: %s"):format(
+          strip and "" or h[1], v[1], strip and v[4] or h[4], v[4]) .. ("\n\nattach %g %g %g %g"):format(att[1], att[2], att[3], att[4]))
+      end
+      local accent = on or hov
+      ImGui.DrawList_AddRectFilled(dl, x, y, x + cs, y + cs, hov and C_.frame_hi or C_.frame, 3)
+      ImGui.DrawList_AddRect(dl, x + 3, y + 3, x + cs - 3, y + cs - 3, on and C_.accent or with_alpha(C_.text, 0x50), 2, 0, 1)
+      local bx1, bx2 = span(att[1], att[3], x + 3, x + cs - 3)
+      local by1, by2 = span(att[2], att[4], y + 3, y + cs - 3)
+      if strip then bx1, bx2 = x + 8, x + cs - 8 end
+      ImGui.DrawList_AddRectFilled(dl, bx1, by1, bx2, by2, accent and C_.accent or with_alpha(C_.text, 0x90), 1)
+    end
+  end
+  local tw = lw + #cols * (cs + gap)
+  ImGui.SetCursorScreenPos(ctx, x0, y0 + hh + 4 * (cs + gap))
+  ImGui.Dummy(ctx, math.max(tw, 190), 2)
+  if not (r and r.mode == "abs") then -- an absolute element has no theme position to return to
+    if ImGui.Selectable(ctx, "Theme default", not (r and r.att)) then set_anchor(name, e, nil) end
+    tip("Use the theme's own attach values (which may be anything, e.g. 0.25)")
+  end
+  if cur then
+    local hit_any = false
+    for _, h in ipairs(cols) do for _, v in ipairs(AX_V) do
+      if cur[1] == h[2] and cur[3] == h[3] and cur[2] == v[2] and cur[4] == v[3] then hit_any = true end
+    end end
+    ImGui.TextDisabled(ctx, ("Now: attach %g %g %g %g%s"):format(cur[1], cur[2], cur[3], cur[4], hit_any and "" or "  (custom)"))
+  end
+end
+
+local function draw_behavior_help()
+  if not ImGui.BeginPopup(ctx, "behavior_help") then return end
+  ImGui.PushTextWrapPos(ctx, ImGui.GetCursorPosX(ctx) + 470)
+  local function h(t) ImGui.Spacing(ctx); ImGui.TextColored(ctx, C_.accent, t) end
+  local function p(t) ImGui.TextWrapped(ctx, t) end
+  h("ANCHOR: what happens when the track gets bigger")
+  p("Every element follows the panel in two directions. Pick one cell in the Anchor grid:")
+  p("  Width:  Left · Center · Right · Stretch")
+  p("  Height:  Top · Middle · Bottom · Stretch")
+  p("Stretch = the element grows with the panel. The others keep their size and only move.")
+  h("ATTACH NUMBERS  (left  top  right  bottom)")
+  p("This is what Anchor writes. Each number says how far that edge travels when the panel grows: 0 = stays, 1 = moves all the way, 0.5 = moves half. Any value works. Themes often use 0.5 to keep something centered or to split the space between two elements.")
+  p("Panel 100 px wider:")
+  p("  0 0 0 0  →  doesn't move\n  1 0 1 0  →  moves 100 px right\n  0 0 1 0  →  gets 100 px wider\n  0.5 0 0.5 0  →  moves 50 px, stays centered\n  0 0 0.5 0  →  gets 50 px wider")
+  h("LINK TO")
+  p("The element keeps a fixed distance from another element's top-left corner. Move the target and this one follows. While linked, Anchor is greyed out: it copies the target's left / top attach.")
+  p("It doesn't follow the target's right edge. If the target stretches, link to the element on its right, or use Anchor instead.")
+  h("ON THE CANVAS")
+  p("Selected element: lines show what each edge holds on to. A small triangle on the panel border marks the spot; a dashed line marks a fraction such as 0.5.")
+  p("Hold Alt / Option, or turn on 'Grow' in the canvas toolbar: dashed outlines show where everything lands when the track is 100 px bigger. Elements that stay put are dimmed.")
+  ImGui.PopTextWrapPos(ctx)
+  ImGui.EndPopup(ctx)
+end
+
 local function draw_inspector(name, L)
   if not ImGui.BeginChild(ctx, "inspector", 0, 0, ImGui.ChildFlags_Borders, ImGui.WindowFlags_HorizontalScrollbar) then return end
   insp_row = 0
@@ -2655,7 +2855,16 @@ local function draw_inspector(name, L)
   if l then
     local vv = L.vars[e]
     note = ("attach %g %g %g %g"):format(vv[5], vv[6], vv[7], vv[8])
-    note_tip = "Edge attachment, read-only (set it with Anchor).\nLeft, top, right, bottom: how far each edge moves when the panel\ngets bigger than the theme's base size. 0 = stays, 1 = follows fully, 0.5 = half."
+    note_tip = "Attach: left, top, right, bottom edge. Set it with Anchor.\n" ..
+      "How far each edge travels when the panel grows (any value works):\n" ..
+      "  0 = stays    1 = moves all the way    0.5 = moves half\n\n" ..
+      "Panel 100 px wider:\n" ..
+      "  0 0 0 0        doesn't move\n" ..
+      "  1 0 1 0        moves 100 px right\n" ..
+      "  0 0 1 0        gets 100 px wider\n" ..
+      "  0.5 0 0.5 0   moves 50 px (stays centered)\n" ..
+      "  0 0 0.5 0     gets 50 px wider (shares the space)\n\n" ..
+      "Hold Alt / Option over the canvas to see it."
   elseif e and r and W.has_rules(r) then
     note, note_tip = "hidden by rule", "Hidden by a hide rule at this preview size / state"
   elseif e then
@@ -2679,29 +2888,23 @@ local function draw_inspector(name, L)
   -- row 2: behavior (anchor + link)
   row_label("BEHAVIOR")
   local linked = r and r.mode == "link"
-  local cur_label = "Custom"
-  local att = r and r.att
-  if not att then cur_label = "Theme default" else
-    for _, a in ipairs(ANCHORS) do
-      if a[2] and a[2][1] == att[1] and a[2][2] == att[2] and a[2][3] == att[3] and a[2][4] == att[4] then cur_label = a[1] end
-    end
-  end
+  local vv = l and L.vars[e]
+  local cur = vv and { vv[5], vv[6], vv[7], vv[8] } -- attach in effect right now
+  local cur_label = not cur and "-" or (r and r.att) and att_label(cur) or "Theme: " .. att_label(cur)
   ImGui.BeginDisabled(ctx, not l or linked == true) -- nil would mean "disabled" to ReaImGui
   ImGui.AlignTextToFramePadding(ctx)
   ImGui.TextDisabled(ctx, "Anchor")
   ImGui.SameLine(ctx)
-  local combo_w = math.max(150, btn_w("Theme default") + ImGui.GetFrameHeight(ctx))
+  local fh = ImGui.GetFrameHeight(ctx)
+  local combo_w = math.max(150, text_w(linked and "Follows link" or cur_label) + fh + 18)
   ImGui.SetNextItemWidth(ctx, combo_w)
-  if ImGui.BeginCombo(ctx, "##anchor", linked and "Follows link" or cur_label) then
-    for _, a in ipairs(ANCHORS) do
-      if not (a[2] == nil and r and r.mode == "abs") then
-        if ImGui.Selectable(ctx, a[1], a[1] == cur_label) then set_anchor(name, e, a[2]) end
-      end
-    end
+  if ImGui.BeginCombo(ctx, "##anchor", linked and "Follows link" or cur_label, ImGui.ComboFlags_HeightLargest) then
+    draw_anchor_grid(name, e, r, cur)
     ImGui.EndCombo(ctx)
   end
   ImGui.EndDisabled(ctx)
-  tip("How the element moves when the track panel gets wider/taller than the theme's base size.\nDrag the panel edges in the preview to see it.")
+  tip("How the element moves when the track panel gets wider / taller than the theme's base size.\n" ..
+    "Hold Alt / Option over the canvas to see where everything goes.")
   ImGui.SameLine(ctx, 0, 18)
   ImGui.BeginDisabled(ctx, not l)
   ImGui.AlignTextToFramePadding(ctx)
@@ -2718,7 +2921,12 @@ local function draw_inspector(name, L)
     ImGui.EndCombo(ctx)
   end
   ImGui.EndDisabled(ctx)
-  tip("Linked elements keep their distance: move the target and this one follows.")
+  tip("Keeps a fixed distance from the target's top-left corner: move the target and this one follows.\n" ..
+    "It follows the target's left / top edge only. If the target stretches, link to the element on its right instead.")
+  ImGui.SameLine(ctx, 0, 10)
+  if ImGui.Button(ctx, "?##behavior_help", fh, fh) then ImGui.OpenPopup(ctx, "behavior_help") end
+  tip("How Anchor, attach and Link work")
+  draw_behavior_help()
 
 
   -- rows 3-4: hide rules (size rules, then state rules)

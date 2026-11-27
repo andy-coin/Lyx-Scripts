@@ -298,7 +298,7 @@ function FUNC.draw_midi_editor_toolbar(c, total_w)
     ImGui.InvisibleButton(ctx, "##mez_"..axis.."_"..label..c.id, btn_sz, btn_sz)
     local hov = ImGui.IsItemHovered(ctx)
     local clk = ImGui.IsItemClicked(ctx)
-    local bg_n = FUNC.rgba(50, 50, 70)
+    local bg_n = C.btn
     local bg_h = FUNC.rgba(75, 75, 105)
     ImGui.DrawList_AddRectFilled(dl, bx, by, bx + btn_sz, by + btn_sz, FUNC.dim_c(hov and bg_h or bg_n), 3)
     local tw, th = ImGui.CalcTextSize(ctx, label, 0, 0)
@@ -347,7 +347,7 @@ function FUNC.draw_midi_editor(c, dl, x, y, w, h)
   -- 背景 -- bg frame
   local bg = C.wf_bg or FUNC.rgba(30, 30, 38)
   ImGui.DrawList_AddRectFilled(dl, x, y, x + w, y + h, bg, 4)
-  ImGui.DrawList_AddRect(dl, x, y, x + w, y + h, FUNC.dim_c(FUNC.rgba(60, 60, 80)), 4, 0, 1)
+  ImGui.DrawList_AddRect(dl, x, y, x + w, y + h, FUNC.dim_c(C.line2), 4, 0, 1)
 
   -- 幾何 -- geometry
   local pad = FUNC.sz(4)
@@ -416,10 +416,11 @@ function FUNC.draw_midi_editor(c, dl, x, y, w, h)
       local key_col = is_black and FUNC.rgba(38, 38, 46) or FUNC.rgba(215, 215, 220)
       local txt_col = is_black and FUNC.rgba(210, 210, 210) or FUNC.rgba(30, 30, 35)
       ImGui.DrawList_AddRectFilled(dl, piano_x1, ky, piano_x2, ky2 - 1, key_col, 2)
-      if view.show_note_name and note_h >= FUNC.sz(9) then
+      -- 字級跟琴鍵高度走，最大 11，不會溢出琴鍵 -- label size follows key height (max 11) so it never spills
+      local lbl_fsz = math.min(FUNC.sz(11), note_h - 2)
+      if view.show_note_name and lbl_fsz >= FUNC.sz(7) then
         local lbl = note_names[nn + 1] .. tostring(oct)
-        local _, tth = ImGui.CalcTextSize(ctx, lbl, 0, 0)
-        ImGui.DrawList_AddText(dl, piano_x1 + FUNC.sz(4), ky + (note_h - tth) * 0.5, txt_col, lbl)
+        ImGui.DrawList_AddTextEx(dl, FONT, lbl_fsz, piano_x1 + FUNC.sz(4), ky + (note_h - lbl_fsz) * 0.5, txt_col, lbl)
       end
     end
   end
@@ -1085,6 +1086,7 @@ function FUNC.midi_editor_handle_wheel(c, L, hovered)
   local wheel_v, wheel_h = ImGui.GetMouseWheel(ctx)
   local wheel = wheel_v ~= 0 and wheel_v or wheel_h
   if wheel == 0 then return end
+  FUNC.wheel_taken = true  -- edit 面板就不要再水平捲動 -- edit panel won't also h-scroll
   local view = c.midi_view
   local hs = ImGui.IsKeyDown(ctx, ImGui.Mod_Shift())
   local hc = ImGui.IsKeyDown(ctx, ImGui.Mod_Ctrl())

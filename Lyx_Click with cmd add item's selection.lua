@@ -3,9 +3,7 @@
     package.path = package.path..";"..script_path.."?.lua"
     local r=require("_lib._Lyx_HOME")
     
-    reaper.BR_GetMouseCursorContext()
-    
-    item=reaper.BR_GetMouseCursorContext_Item()
+    item=api.mci()
     
      if  item then
         
@@ -24,8 +22,7 @@
     
     --[[trackzzz=r.SaveTracks()
 
-    reaper.BR_GetMouseCursorContext()
-    local tr = reaper.BR_GetMouseCursorContext_Track()
+    local tr = api.mct()
 
     r.RestoreTracks(trackzzz)
     if  tr then

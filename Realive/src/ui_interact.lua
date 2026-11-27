@@ -133,7 +133,7 @@ function FUNC.vdrag(label, val, speed, lo, hi, fmt, parse_fn, fixed_w)
   local sx, sy = ImGui.GetCursorScreenPos(ctx)
   local wdl = ImGui.GetWindowDrawList(ctx)
   local hov = ImGui.IsMouseHoveringRect(ctx, sx, sy, sx+w, sy+h)
-  local bg = hov and FUNC.rgba(65,65,80) or FUNC.rgba(50,50,62)
+  local bg = hov and C.btn_h or C.field
   ImGui.DrawList_AddRectFilled(wdl, sx, sy, sx+w, sy+h, bg, 3)
   local tw, th = ImGui.CalcTextSize(ctx, txt, 0, 0)
   ImGui.DrawList_AddText(wdl, sx + (w-tw)*0.5, sy + (h-th)*0.5, C.text, txt)

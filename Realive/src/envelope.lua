@@ -1115,7 +1115,7 @@ function FUNC.env_draw(c, dl, wf_info, mode, fe)
     if mode == "vol" then tip_str = tip_str .. " dB"
     elseif mode == "pan" then tip_str = tip_str .. "%" end
     ImGui.PushStyleVar(ctx, ImGui.StyleVar_WindowPadding(), FUNC.sz(6), FUNC.sz(3))
-    ImGui.PushStyleColor(ctx, ImGui.Col_PopupBg(), FUNC.rgba(30, 30, 30, 230))
+    ImGui.PushStyleColor(ctx, ImGui.Col_PopupBg(), C.chrome)
     ImGui.PushStyleColor(ctx, ImGui.Col_Border(), env_color)
     ImGui.BeginTooltip(ctx)
     ImGui.Text(ctx, tip_str)

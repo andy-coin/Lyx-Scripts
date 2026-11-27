@@ -7,8 +7,7 @@
 
         --local trackzzz=r.SaveTracks()
 
-        reaper.BR_GetMouseCursorContext()
-        local tr = reaper.BR_GetMouseCursorContext_Track()
+        local tr = api.mct()
 
         --r.RestoreTracks(trackzzz)
         if  tr then

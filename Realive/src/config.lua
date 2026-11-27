@@ -6,13 +6,20 @@
 -- PREFS
 ---------------------------------------------------------------------
 prefs = {
-  scale=125, col_bg=0x00081825, col_panel=0x00FFFFFF, col_header=0x00121665,col_column_title=0xE8A240,
-  col_text=0x00EBEBEB, col_text_dim=0x0082828C, col_accent=0x00125273,
-  col_go=0x00198C28, col_row=0x001C1C24, col_border=0x00464655, master_vol=0.0,
-  col_trim=0x00E08030,
-  col_wf=0x0050AAF0,
-  col_prewait=0x00F0BE32, col_postwait=0x00F0BE32,  -- pre/post wait進度條顏色 -- progress bar colors (bright)
-  col_duration=0x0019A028, col_wf_bg=0x0014141E,    -- duration進度條+波形背景 -- duration bar + waveform bg
+  -- 配色（v2 原生深色）：全部可在 Preferences 改 -- palette v2 (native dark), all editable in Preferences
+  scale=125, col_bg=0x000C1E21, col_panel=0x0011292C, col_header=0x0011292C, col_column_title=0x008FA3A5,
+  col_text=0x00ECEFEF, col_text_dim=0x008FA3A5, col_accent=0x00137085,
+  col_go=0x00137085, col_row=0x000E2225, col_border=0x002A4446, master_vol=0.0,
+  col_gold=0x00F5A623,    -- 重點色（Next、播放中、BPM）-- highlight (next, playing, bpm)
+  col_danger=0x00D9472F,  -- PANIC / Stop
+  col_field=0x0009171A,   -- 輸入框、凹槽 -- input fields, wells
+  col_btn=0x001A3A3E,     -- 一般按鈕 -- neutral buttons
+  col_card=0x00163236,    -- edit 面板卡片 -- edit panel cards
+  theme_ver=0,            -- 配色版本：<2 時一次性升級成 v2 -- palette version; <2 migrates once
+  col_trim=0x00F5A623,
+  col_wf=0x004BBCC6,
+  col_prewait=0x00F5A623, col_postwait=0x00F5A623,  -- pre/post wait進度條顏色 -- progress bar colors (bright)
+  col_duration=0x002FA0A8, col_wf_bg=0x0009171A,    -- duration進度條+波形背景 -- duration bar + waveform bg
   col_env=0x00FFB432,
   col_pan_env=0x0050D080,  -- panning envelope綠色
   col_ruler=0x00C8C8D0,  -- waveform ruler刻度+文字顏色
@@ -36,6 +43,7 @@ prefs = {
   edit_vis_wf=1,     -- Waveform標籤頁可見: 1=顯示, 0=隱藏 -- Waveform tab visible
   edit_vis_route=1,  -- Route標籤頁可見: 1=顯示, 0=隱藏 -- Route tab visible
   edit_sec_meter=1,  -- Meter section展開: 1=開, 0=收合 -- Meter section expanded
+  edit_sec_wb=0, edit_sec_wn=0, edit_sec_ww=0, edit_sec_wr=0, edit_sec_wm=0,  -- 各面板寬度px（0=未設定：b/n/w 從舊ratio遷移，route/meter用自動寬度）-- section widths, 0=unset
   edit_vis_meter=1,  -- Meter標籤頁可見: 1=顯示, 0=隱藏 -- Meter tab visible
   vol_min=-72,   -- per-project volume floor (range: -120~0)
   vol_max=12,    -- per-project volume ceiling (range: 0~+36, default +12)
@@ -51,6 +59,7 @@ PROJ_PREF_KEYS = {
   edit_open=true, edit_ratio=true, edit_sec_order=true,
   edit_sec_basic=true, edit_sec_notes=true, edit_sec_wf=true, edit_sec_route=true, edit_sec_meter=true,
   edit_sec_rb=true, edit_sec_rn=true, edit_sec_rw=true,
+  edit_sec_wb=true, edit_sec_wn=true, edit_sec_ww=true, edit_sec_wr=true, edit_sec_wm=true,
   edit_vis_basic=true, edit_vis_notes=true, edit_vis_wf=true, edit_vis_route=true, edit_vis_meter=true,
 }
 
@@ -90,6 +99,39 @@ function FUNC.save_prefs(proj)
   if proj ~= false then reaper.SetProjExtState(proj or 0, EXT.PREFS, "proj_data", table.concat(p,";")) end
 end
 FUNC.load_prefs()
+
+-- 配色 v2 一次性升級：舊版存的藍色系配色換成新預設（另存的主題檔不受影響）
+-- one-time palette v2 migration: replace saved legacy colors with new defaults (saved theme files untouched)
+THEME_V2 = {
+  col_bg=0x00161618, col_panel=0x00222225, col_header=0x00222225, col_column_title=0x008D8D93,
+  col_text=0x00ECECEE, col_text_dim=0x008D8D93, col_accent=0x001D7A75, col_go=0x001D7A75,
+  col_row=0x001B1B1E, col_border=0x0038383C, col_gold=0x00F5A623, col_danger=0x00D9472F,
+  col_field=0x00141416, col_btn=0x00323236, col_card=0x00222226, col_trim=0x00F5A623,
+  col_wf=0x004FB8AE, col_prewait=0x00F5A623, col_postwait=0x00F5A623, col_duration=0x002FA0A8, col_wf_bg=0x0009171A,
+}
+if (prefs.theme_ver or 0) < 2 then
+  for k, v in pairs(THEME_V2) do prefs[k] = v end
+  prefs.theme_ver = 2
+  FUNC.save_prefs(false)
+end
+-- v4：改用設計稿 C 的實際底色（只改這幾個底色）-- v4: exact base colors from mockup C
+if prefs.theme_ver < 4 then
+  for _, k in ipairs({"col_bg","col_panel","col_header","col_row","col_field","col_btn","col_card"}) do prefs[k] = THEME_V2[k] end
+  prefs.theme_ver = 4
+  FUNC.save_prefs(false)
+end
+-- v5：改成設計稿 B（深湖）藍綠底色，主色湖水綠加深偏藍 -- v5: mockup B (deep lagoon) teal-blue bases, deeper bluer primary
+THEME_V5 = {
+  col_bg=0x000C1E21, col_panel=0x0011292C, col_header=0x0011292C, col_row=0x000E2225, col_field=0x0009171A,
+  col_btn=0x001A3A3E, col_card=0x00163236, col_border=0x002A4446, col_accent=0x00137085, col_go=0x00137085,
+  col_text=0x00ECEFEF, col_text_dim=0x008FA3A5, col_column_title=0x008FA3A5,
+  col_wf=0x004BBCC6, col_duration=0x002FA0A8, col_wf_bg=0x0009171A,
+}
+if prefs.theme_ver < 5 then
+  for k, v in pairs(THEME_V5) do prefs[k] = v end
+  prefs.theme_ver = 5
+  FUNC.save_prefs(false)
+end
 
 ---------------------------------------------------------------------
 -- OUTPUT MAP — per-project hw output channel mapping
@@ -214,7 +256,8 @@ local THEME_SECTION = "Realive_Themes"
 local THEME_KEYS = {  -- 只儲存顏色相關的pref key -- only color-related keys
   "col_bg","col_panel","col_header","col_column_title","col_text","col_text_dim",
   "col_accent","col_go","col_row","col_border","col_trim","col_wf",
-  "col_env","col_pan_env","col_ruler","col_guide","col_prewait","col_postwait","col_duration","col_wf_bg"
+  "col_env","col_pan_env","col_ruler","col_guide","col_prewait","col_postwait","col_duration","col_wf_bg",
+  "col_gold","col_danger","col_field","col_btn","col_card",  -- v2
 }
 function FUNC.get_theme_list()
   local idx = reaper.GetExtState(THEME_SECTION, "__index__")
@@ -504,8 +547,279 @@ function FUNC.upd_colors()
   C.tb_fade=FUNC.rgba(150,100,30);C.tb_fade_h=FUNC.rgba(180,120,40)
   C.tb_grp=FUNC.rgba(90,60,130);C.tb_grp_h=FUNC.rgba(110,75,160)
   C.tb_midi=FUNC.rgba(35,100,85);C.tb_midi_h=FUNC.rgba(45,125,105)
+
+  -- ═══ v2 風格 token（所有新元件只用這些）═══ -- v2 style tokens (all new widgets use only these)
+  local function mix(hex, to, f)  -- hex 往 to 混 f（0~1）-- blend hex toward `to` by f
+    local r = ((hex>>16)&255)*(1-f) + ((to>>16)&255)*f
+    local g = ((hex>>8)&255)*(1-f) + ((to>>8)&255)*f
+    local b = (hex&255)*(1-f) + (to&255)*f
+    return (math.floor(r)<<16)|(math.floor(g)<<8)|math.floor(b)
+  end
+  local W = 0xFFFFFF
+  C.chrome = FUNC.col2im(prefs.col_panel)                       -- 標題列/工具列/底列 -- bars
+  C.field  = FUNC.col2im(prefs.col_field)                       -- 輸入框/凹槽 -- wells
+  C.card   = FUNC.col2im(prefs.col_card)                        -- edit 卡片 -- cards
+  C.edit_bg = FUNC.col2im(mix(prefs.col_bg, 0, 0.25))           -- edit 面板底：比表格再深一階 -- edit panel base, a step darker than the table
+  C.card_hdr = FUNC.col2im(mix(prefs.col_card, W, 0.07))       -- 卡片標題列（比卡片亮一階）-- card header, a step lighter
+  C.line   = FUNC.rgba(255,255,255,22)                          -- 細分隔線 -- hairline
+  C.line2  = FUNC.rgba(255,255,255,40)                          -- 較明顯外框 -- stronger outline
+  C.seg    = FUNC.col2im(mix(prefs.col_panel, 0, 0.18))         -- 分段按鈕凹槽（略深於工具列）-- segmented well, a shade below the bar
+  C.btn    = FUNC.col2im(prefs.col_btn)
+  C.btn_h  = FUNC.col2im(mix(prefs.col_btn, W, 0.08))
+  C.btn_a  = FUNC.col2im(mix(prefs.col_btn, W, 0.15))
+  C.ghost_h = FUNC.rgba(255,255,255,18)                         -- 透明按鈕 hover -- ghost hover
+  C.ghost_a = FUNC.rgba(255,255,255,30)
+  C.primary    = FUNC.col2im(prefs.col_accent)
+  C.primary_h  = FUNC.col2im(mix(prefs.col_accent, W, 0.12))
+  C.primary_hi = FUNC.col2im(mix(prefs.col_accent, W, 0.28))    -- 亮版主色：文字/meter/勾選 -- bright primary
+  C.primary_soft = FUNC.col2im(mix(prefs.col_accent, W, 0.28), 52)  -- 選取底色 -- selection fill
+  C.go_h   = FUNC.col2im(mix(prefs.col_go, W, 0.12))
+  C.gold   = FUNC.col2im(prefs.col_gold)
+  C.gold_soft = FUNC.col2im(prefs.col_gold, 56)
+  C.danger   = FUNC.col2im(prefs.col_danger)
+  C.danger_h = FUNC.col2im(mix(prefs.col_danger, W, 0.12))
+  C.knob   = FUNC.rgba(242,242,244)                             -- fader/slider 把手 -- knob
+  C.cb_line = FUNC.rgba(255,255,255,46)                         -- checkbox 外框 -- checkbox outline
 end
 FUNC.upd_colors()
+
+-- 圓角三級（跟縮放）-- radius scale (follows UI scale)
+function FUNC.rad(k) return FUNC.sz(k == "s" and 4 or k == "l" and 10 or 6) end
+
+---------------------------------------------------------------------
+-- 向量圖示（DrawList 畫，跟縮放、不靠字型符號）-- vector icons drawn with DrawList
+-- name: play note stop pause fade group ungroup left right gear eye up down
+---------------------------------------------------------------------
+function FUNC.icon(dl, name, cx, cy, s, col)
+  local h = s * 0.5
+  local th = math.max(1, s / 10)
+  if name == "play" then
+    ImGui.DrawList_AddTriangleFilled(dl, cx - h*0.55, cy - h*0.75, cx + h*0.75, cy, cx - h*0.55, cy + h*0.75, col)
+  elseif name == "stop" then
+    ImGui.DrawList_AddRectFilled(dl, cx - h*0.6, cy - h*0.6, cx + h*0.6, cy + h*0.6, col, s*0.12)
+  elseif name == "pause" then
+    ImGui.DrawList_AddRectFilled(dl, cx - h*0.6, cy - h*0.65, cx - h*0.15, cy + h*0.65, col, s*0.08)
+    ImGui.DrawList_AddRectFilled(dl, cx + h*0.15, cy - h*0.65, cx + h*0.6, cy + h*0.65, col, s*0.08)
+  elseif name == "note" then
+    ImGui.DrawList_AddCircleFilled(dl, cx - h*0.35, cy + h*0.45, h*0.32, col)
+    ImGui.DrawList_AddLine(dl, cx - h*0.05, cy + h*0.45, cx - h*0.05, cy - h*0.7, col, th)
+    ImGui.DrawList_AddLine(dl, cx - h*0.05, cy - h*0.7, cx + h*0.6, cy - h*0.4, col, th)
+  elseif name == "fade" then
+    ImGui.DrawList_AddBezierCubic(dl, cx - h*0.8, cy + h*0.55, cx, cy + h*0.55, cx, cy - h*0.55, cx + h*0.8, cy - h*0.55, col, th)
+  elseif name == "group" then
+    ImGui.DrawList_AddRect(dl, cx - h*0.75, cy - h*0.6, cx + h*0.75, cy + h*0.6, col, s*0.12, 0, th)
+    ImGui.DrawList_AddLine(dl, cx - h*0.4, cy - h*0.12, cx + h*0.4, cy - h*0.12, col, th)
+    ImGui.DrawList_AddLine(dl, cx - h*0.4, cy + h*0.22, cx + h*0.15, cy + h*0.22, col, th)
+  elseif name == "ungroup" then
+    ImGui.DrawList_AddRect(dl, cx - h*0.75, cy - h*0.6, cx + h*0.25, cy + h*0.2, col, s*0.1, 0, th)
+    ImGui.DrawList_AddRect(dl, cx - h*0.25, cy - h*0.2, cx + h*0.75, cy + h*0.6, col, s*0.1, 0, th)
+  elseif name == "left" or name == "right" then
+    local d = (name == "left") and -1 or 1
+    ImGui.DrawList_AddLine(dl, cx - d*h*0.25, cy - h*0.55, cx + d*h*0.3, cy, col, th*1.2)
+    ImGui.DrawList_AddLine(dl, cx + d*h*0.3, cy, cx - d*h*0.25, cy + h*0.55, col, th*1.2)
+  elseif name == "up" or name == "down" then
+    local d = (name == "up") and -1 or 1
+    ImGui.DrawList_AddLine(dl, cx - h*0.55, cy - d*h*0.25, cx, cy + d*h*0.3, col, th*1.2)
+    ImGui.DrawList_AddLine(dl, cx, cy + d*h*0.3, cx + h*0.55, cy - d*h*0.25, col, th*1.2)
+  elseif name == "undo" or name == "redo" then
+    -- 彎箭頭 ↶ / ↷：上半圓弧 + 起點朝下的箭頭 -- curved arrow: top arc + downward head at the start
+    local d = (name == "undo") and -1 or 1
+    local acx, acy, r = cx, cy + h*0.2, h*0.55
+    if d < 0 then
+      ImGui.DrawList_PathArcTo(dl, acx, acy, r, math.pi, math.pi * 2)
+    else
+      ImGui.DrawList_PathArcTo(dl, acx, acy, r, 0, -math.pi)
+    end
+    ImGui.DrawList_PathStroke(dl, col, 0, th * 1.2)
+    local tx = acx + d * r
+    ImGui.DrawList_AddTriangleFilled(dl, tx - h*0.3, acy - h*0.05, tx + h*0.3, acy - h*0.05, tx, acy + h*0.4, col)
+  elseif name == "gear" then
+    -- 粗環 + 6 個貼著環的方齒，看起來是齒輪而不是太陽 -- thick ring with attached square teeth (reads as a gear, not a sun)
+    ImGui.DrawList_AddCircle(dl, cx, cy, h*0.48, col, 0, h*0.32)
+    for i = 0, 5 do
+      local a = i * math.pi / 3 + math.pi / 6
+      ImGui.DrawList_AddLine(dl, cx + math.cos(a)*h*0.55, cy + math.sin(a)*h*0.55, cx + math.cos(a)*h*0.9, cy + math.sin(a)*h*0.9, col, h*0.36)
+    end
+  end
+end
+
+---------------------------------------------------------------------
+-- 統一按鈕（v2）-- unified button
+-- kind: "neutral"（灰底）| "ghost"（透明，hover 才顯示）| "primary"（主色實心）| "danger"（紅色實心）
+-- opts: icon, w, h, font, fsz, disabled, active(按下狀態/切換中), tip, radius
+---------------------------------------------------------------------
+-- 按鈕尺寸（ui_btn 與 ui_seg 共用）-- button metrics shared by ui_btn / ui_seg
+local function btn_metrics(label, opts)
+  local font, fsz = opts.font or FONT, opts.fsz or FUNC.sz(13)
+  local isz = opts.isz or math.floor(fsz * 1.05)
+  local gap = (opts.icon and label ~= "") and FUNC.sz(6) or 0
+  ImGui.PushFont(ctx, font, fsz)
+  local tw = (label ~= "") and ImGui.CalcTextSize(ctx, label, 0, 0) or 0
+  ImGui.PopFont(ctx)
+  local cw = (opts.icon and isz or 0) + gap + tw
+  local w = opts.w or (cw + FUNC.sz(opts.icon and label == "" and 14 or 20))
+  return w, cw, font, fsz, isz, gap
+end
+
+function FUNC.ui_btn(id, label, kind, opts)
+  opts = opts or {}
+  local h = opts.h or FUNC.sz(28)
+  local w, cw, font, fsz, isz, gap = btn_metrics(label, opts)
+  local x, y = ImGui.GetCursorScreenPos(ctx)
+  local clicked = ImGui.InvisibleButton(ctx, id, w, h)
+  local hov, act = ImGui.IsItemHovered(ctx), ImGui.IsItemActive(ctx)
+  local dis = opts.disabled
+  local bg, fg
+  if kind == "primary" then
+    bg = (act and C.primary_hi) or (hov and C.primary_h) or C.primary; fg = FUNC.rgba(255,255,255)
+  elseif kind == "go" then
+    bg = (act and C.primary_hi) or (hov and C.go_h) or C.go; fg = FUNC.rgba(255,255,255)
+  elseif kind == "danger" then
+    bg = (act and C.danger_h) or (hov and C.danger_h) or C.danger; fg = FUNC.rgba(255,255,255)
+  elseif kind == "seg" then
+    bg = opts.active and C.primary_soft or (act and C.btn_a) or (hov and C.btn_h) or C.btn; fg = opts.active and C.primary_hi or C.text
+  elseif kind == "ghost" then
+    bg = opts.active and C.primary_soft or (act and C.ghost_a) or (hov and C.ghost_h) or 0; fg = opts.active and C.primary_hi or C.text
+  else
+    bg = opts.active and C.primary_soft or (act and C.btn_a) or (hov and C.btn_h) or C.btn; fg = opts.active and C.primary_hi or C.text
+  end
+  if dis then bg = (kind == "ghost") and 0 or ((C.btn & 0xFFFFFF00) | 110); fg = (fg & 0xFFFFFF00) | 90 end
+  local dl = ImGui.GetWindowDrawList(ctx)
+  local rad = opts.radius or (kind == "seg" and FUNC.rad("s") or FUNC.rad("m"))
+  if bg ~= 0 then ImGui.DrawList_AddRectFilled(dl, x, y, x + w, y + h, FUNC.dim_c(bg), rad) end
+  if kind == "neutral" or kind == nil then  -- 頂部細高光 + 外框 -- subtle top highlight + outline
+    ImGui.DrawList_AddRect(dl, x, y, x + w, y + h, FUNC.dim_c(C.line), rad, 0, 1)
+  elseif kind == "primary" or kind == "go" or kind == "danger" then
+    ImGui.DrawList_AddLine(dl, x + rad, y + 1, x + w - rad, y + 1, FUNC.rgba(255,255,255,30), 1)  -- 極淡頂部光 -- faint top sheen
+  end
+  local sx = x + math.floor((w - cw) / 2)
+  if opts.icon then
+    FUNC.icon(dl, opts.icon, sx + isz / 2, y + h / 2, isz, FUNC.dim_c(fg))
+    sx = sx + isz + gap
+  end
+  if label ~= "" then
+    ImGui.DrawList_AddTextEx(dl, font, fsz, sx, y + math.floor((h - fsz) / 2) - 1, FUNC.dim_c(fg), label)
+  end
+  if opts.tip and hov then ImGui.SetTooltip(ctx, opts.tip) end
+  return clicked and not dis
+end
+
+-- 分段按鈕組：一個凹槽底 + 一排透明按鈕 -- segmented group: one well + ghost buttons
+-- items: {{id=, label=, icon=, disabled=, tip=, active=}}; 回傳被按下的 index -- returns clicked index
+function FUNC.ui_seg(items, opts)
+  opts = opts or {}
+  local h = opts.h or FUNC.sz(28)
+  local pad = FUNC.sz(2)
+  local x, y = ImGui.GetCursorScreenPos(ctx)
+  local dl = ImGui.GetWindowDrawList(ctx)
+  local gap = FUNC.sz(1)
+  -- 先算總寬畫凹槽，再畫按鈕 -- measure total width, draw the well, then the buttons
+  local bopts = {}
+  local total = pad * 2 - gap
+  for i, it in ipairs(items) do
+    bopts[i] = {icon=it.icon, h=h - pad*2, disabled=it.disabled, tip=it.tip, active=it.active, fsz=opts.fsz}
+    total = total + btn_metrics(it.label or "", bopts[i]) + gap
+  end
+  local rad = FUNC.rad("m") + pad
+  ImGui.DrawList_AddRectFilled(dl, x, y, x + total, y + h, FUNC.dim_c(C.seg), rad)
+  ImGui.DrawList_AddRect(dl, x, y, x + total, y + h, FUNC.dim_c(C.line2), rad, 0, 1)
+  -- 每顆按鈕自己定位：用 SameLine 的話，這組前面若有 SameLine，第 2 顆起會少算 pad 而上浮
+  -- position each button explicitly: SameLine after an outer SameLine drops the pad, so later buttons float up
+  local hit
+  local bx = x + pad
+  for i, it in ipairs(items) do
+    ImGui.SetCursorScreenPos(ctx, bx, y + pad)
+    if FUNC.ui_btn(it.id, it.label or "", "ghost", bopts[i]) then hit = i end
+    bx = bx + btn_metrics(it.label or "", bopts[i]) + gap
+  end
+  -- 讓版面認得整組的外框高度 -- register full group height for layout
+  ImGui.SetCursorScreenPos(ctx, x, y); ImGui.Dummy(ctx, total, h)
+  return hit
+end
+
+-- macOS 風格小勾選框：回傳 changed, new_value -- small macOS-style checkbox: returns changed, new_value
+function FUNC.ui_check(id, val, sz)
+  sz = sz or FUNC.sz(14)
+  local fh = ImGui.GetFrameHeight(ctx)
+  ImGui.SetCursorPosY(ctx, ImGui.GetCursorPosY(ctx) + math.floor((fh - sz) / 2))  -- 垂直置中 -- vertical center
+  local x, y = ImGui.GetCursorScreenPos(ctx)
+  local clicked = ImGui.InvisibleButton(ctx, id, sz, sz)
+  local hov = ImGui.IsItemHovered(ctx)
+  local dl = ImGui.GetWindowDrawList(ctx)
+  local r = FUNC.sz(3.5)
+  if val then
+    ImGui.DrawList_AddRectFilled(dl, x, y, x + sz, y + sz, FUNC.dim_c(hov and C.primary_h or C.primary), r)
+    local th = math.max(1.5, sz / 7)
+    ImGui.DrawList_AddLine(dl, x + sz*0.25, y + sz*0.52, x + sz*0.43, y + sz*0.70, FUNC.rgba(255,255,255), th)
+    ImGui.DrawList_AddLine(dl, x + sz*0.43, y + sz*0.70, x + sz*0.76, y + sz*0.32, FUNC.rgba(255,255,255), th)
+  else
+    ImGui.DrawList_AddRectFilled(dl, x, y, x + sz, y + sz, FUNC.dim_c(C.field), r)
+    ImGui.DrawList_AddRect(dl, x, y, x + sz, y + sz, FUNC.dim_c(hov and C.line2 or C.cb_line), r, 0, 1)
+  end
+  if clicked then return true, not val end
+  return false, val
+end
+
+-- 卡片外框（edit 面板各區塊）-- card frame for edit sections
+function FUNC.ui_card(dl, x1, y1, x2, y2)
+  ImGui.DrawList_AddRectFilled(dl, x1, y1, x2, y2, FUNC.dim_c(C.card), FUNC.rad("l"))
+  ImGui.DrawList_AddRect(dl, x1, y1, x2, y2, FUNC.dim_c(C.line), FUNC.rad("l"), 0, 1)  -- 只留極淡外框，靠底色差分區 -- faint outline; contrast comes from fill
+end
+
+-- edit 各區塊預設識別色（右鍵可改）-- default identity color per edit section (right-click to change)
+SEC_DEF_COL = {basic=0x002E9C9A, notes=0x00C9A23A, waveform=0x004A7FD6, route=0x008B6FD6, meter=0x003FA66B}
+
+-- 讓淡底色不發灰：拉高飽和度＋略提亮（0x00RRGGBB 進出）-- keep soft tints lively: boost saturation + a bit of brightness
+function FUNC.vivid(hex)
+  local r, g, b = (hex>>16)&255, (hex>>8)&255, hex&255
+  local m = (r + g + b) / 3
+  local function f(v) return math.floor(FUNC.clamp((m + (v - m) * 1.6) * 1.25, 0, 255)) end  -- 飽和 ×1.6、亮度 ×1.25 -- saturation x1.6, brightness x1.25
+  return (f(r)<<16)|(f(g)<<8)|f(b)
+end
+
+-- meter 填色：由下往上 主色→亮主色→金→紅 漸層，上下圓角（Route / Master 共用）
+-- meter fill: bottom-up gradient primary→bright→gold→red with rounded ends (shared by Route / Master)
+-- 圓角做法：上下兩端各畫一個圓角小塊，中間用 2px 橫條逐段上色 -- rounded caps + 2px gradient slices in between
+function FUNC.draw_meter_fill(dl, x1, x2, fy, fh, pk_db)
+  local lo, hi = prefs.vol_min, prefs.vol_max
+  if pk_db <= lo or hi <= lo then return end
+  local inset = math.max(1, math.floor((x2 - x1) * 0.12))
+  x1, x2 = x1 + inset, x2 - inset
+  local bot = fy + fh - inset
+  local span = fh - inset * 2
+  local top = math.floor(bot - span * FUNC.clamp((pk_db - lo) / (hi - lo), 0, 1))
+  if bot - top < 1 then return end
+  local function lerp(c1, c2, t)
+    local o = 0
+    for sh = 0, 24, 8 do
+      local a, b = (c1 >> sh) & 255, (c2 >> sh) & 255
+      o = o | (math.floor(a + (b - a) * t) << sh)
+    end
+    return o
+  end
+  local stops = {{lo, C.primary}, {-12, C.primary_hi}, {-6, C.gold}, {-1, C.danger}, {hi, C.danger}}
+  local function col_at(y)  -- 螢幕 y → 該高度代表的 dB 顏色 -- color for the dB level at screen y
+    local db = lo + (bot - y) / span * (hi - lo)
+    for i = 1, #stops - 1 do
+      local a, b = FUNC.clamp(stops[i][1], lo, hi), FUNC.clamp(stops[i+1][1], lo, hi)
+      if db <= b and b > a then return lerp(stops[i][2], stops[i+1][2], FUNC.clamp((db - a) / (b - a), 0, 1)) end
+    end
+    return C.danger
+  end
+  local r = math.min(FUNC.sz(3), (x2 - x1) / 2, (bot - top) / 2)
+  if bot - top <= r * 2 + 2 then
+    ImGui.DrawList_AddRectFilled(dl, x1, top, x2, bot, col_at(top), r)
+    return
+  end
+  ImGui.DrawList_AddRectFilled(dl, x1, bot - r * 2, x2, bot, col_at(bot), r, ImGui.DrawFlags_RoundCornersBottom())
+  ImGui.DrawList_AddRectFilled(dl, x1, top, x2, top + r * 2, col_at(top), r, ImGui.DrawFlags_RoundCornersTop())
+  local y = bot - r
+  while y > top + r do
+    local y2 = math.max(top + r, y - 2)
+    ImGui.DrawList_AddRectFilled(dl, x1, y2, x2, y, col_at(y2))
+    y = y2
+  end
+end
 
 -- 10 group border colors (avoid Play/Stop/Pause/Fade hues)
 GRP_COLS={
@@ -546,7 +860,8 @@ CUE_COLORS = {
 TYPE_COL = {}
 TYPE_SHORT = {}
 function FUNC.upd_types()
-  TYPE_COL={PLAY=C.t_play,STOP=C.t_stop,PAUSE=C.t_pause,FADE=C.t_fade,GROUP=C.t_group,SPACER=C.dim,MIDI=C.t_midi}
+  -- v2：類型色收斂到主色/金/紅系，彩度降低 -- v2: type colors folded into the palette, lower chroma
+  TYPE_COL={PLAY=C.primary_hi,STOP=C.danger,PAUSE=FUNC.rgba(201,170,90),FADE=C.gold,GROUP=C.dim,SPACER=C.dim,MIDI=FUNC.rgba(176,143,224)}
   TYPE_SHORT={PLAY="▶ Audio",STOP="■ Stop",PAUSE="‖ Pause",FADE="≈ Fade",GROUP="▣ Group",SPACER="—",MIDI="♪ MIDI"}
 end; FUNC.upd_types()
 -- cue 狀態機 + timer tag：值仍為字串（不破壞序列化），常數只是讀取入口避免 typo

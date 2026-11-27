@@ -8,7 +8,7 @@
       if tr_n==0 then return end
       
       if tr_n==1 then
-         tr=reaper.BR_TrackAtMouseCursor()
+         tr=reaper.GetTrackFromPoint(reaper.GetMousePosition())
          if tr then
             reaper.SetMediaTrackInfo_Value(tr,"D_PAN",0)
             return

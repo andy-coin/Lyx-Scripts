@@ -109,7 +109,6 @@
                         chunk = chunk:gsub('LANEHEIGHT (%d-) 0','LANEHEIGHT 80 0')
                     
                     elseif envelope_lane == 2 then
-                        api.mcw()
                         if  track == api.mct() then
                             chunk = chunk:gsub('VIS [01] [01] 1','VIS 1 1 1')
                             chunk = chunk:gsub('LANEHEIGHT (%d-) 0','LANEHEIGHT 160 0')

@@ -211,12 +211,17 @@ function M.wrap(name, fn)
         R.MB("This script needs the SWS extension (install via ReaPack / sws-extension.org).", "Lyx Scripts", 0)
         return
     end
+    -- with auto-crossfade OFF, "Trim content behind media items when editing"
+    -- cuts the overlaps we build; ON makes REAPER keep them. Restore afterwards.
+    local xfade_was_off = R.GetToggleCommandState(40041) ~= 1
+    if xfade_was_off then R.Main_OnCommand(41118, 0) end -- enable auto-crossfade
     R.Undo_BeginBlock()
     R.PreventUIRefresh(1)
     local ok, err = pcall(fn)
     R.PreventUIRefresh(-1)
     R.UpdateArrange()
     R.Undo_EndBlock(name, -1)
+    if xfade_was_off then R.Main_OnCommand(41119, 0) end -- disable auto-crossfade
     if not ok then error(err, 0) end
 end
 

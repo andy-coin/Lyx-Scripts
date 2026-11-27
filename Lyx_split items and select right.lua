@@ -29,7 +29,7 @@
   local function main()
       
       reaper.BR_GetMouseCursorContext()
-      item=reaper.BR_GetMouseCursorContext_Item()
+      item=api.mci()
       if not item then return end
       
       api.ubb()

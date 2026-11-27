@@ -45,7 +45,7 @@ end
 
 -- inline版：下方面板，兩個標籤頁(Basic/Waveform) -- inline edit panel with 2 tabs
 function FUNC.draw_edit_panel_inline()
-  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameRounding(), 3)  -- edit panel用較小圓角 -- smaller rounding for edit panel
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameRounding(), FUNC.rad("s"))  -- v2 統一小圓角 -- unified small radius
   popup.edit_text_active = false
   local valid = FUNC.sel_list()
   if #valid == 0 then
@@ -73,7 +73,7 @@ function FUNC.draw_edit_panel_inline()
     end
   end
   local dim_txt = FUNC.rgba(100,100,110)
-  local dim_bg = FUNC.rgba(35,35,45)
+  local dim_bg = C.field
   local function begin_disabled()
     ImGui.PushStyleColor(ctx, ImGui.Col_Text(), dim_txt)
     ImGui.PushStyleColor(ctx, ImGui.Col_FrameBg(), dim_bg)
@@ -101,30 +101,71 @@ function FUNC.draw_edit_panel_inline()
     or (c.type == "SPACER"
       and ("Spacer"..(c.notes ~= "" and ("  —  "..c.notes) or ""))
       or ("Q."..c.cue_number.." ["..c.type.."]"..(c.name ~= "" and ("  "..c.name) or "")))
-  local ep_title_col = TYPE_COL[c.type] or C.text
+  local ep_title_col = C.text  -- v2：標題用一般文字色 -- v2: plain text color for the title
   local ep_dl = ImGui.GetWindowDrawList(ctx)
   local ep_tx, ep_ty = ImGui.GetCursorScreenPos(ctx)
   local ep_tw_avail = ImGui.GetContentRegionAvail(ctx)
-  local ep_th = FUNC.sz(15)
-  local eye_w = FUNC.sz(20)  -- 眼睛按鈕寬度 -- eye button width
-  FUNC.draw_marquee(ep_dl, FONT_B, FUNC.sz(13), title, ep_title_col, ep_tx, ep_ty, ep_tw_avail - eye_w, ep_th, "ep_t"..valid[1])
-  ImGui.Dummy(ctx, ep_tw_avail - eye_w, ep_th)
+  local ep_th = FUNC.sz(22)  -- 標題列高（原 15）-- title row height (was 15)
+  -- 右側「Tabs」膠囊鈕：眼睛 + 文字，比單獨小眼睛顯眼 -- right "Tabs" pill: eye + label, easier to spot than a bare eye
+  local eye_lbl = "Tabs"
+  ImGui.PushFont(ctx, FONT, FUNC.sz(11)); local eye_lw = ImGui.CalcTextSize(ctx, eye_lbl, 0, 0); ImGui.PopFont(ctx)
+  local eye_w = FUNC.sz(10) + FUNC.sz(14) + FUNC.sz(5) + eye_lw + FUNC.sz(10)
+  -- 標題列底帶：工具列色 + 下緣細線，跟較深的 edit 內容區分開 -- title band: bar color + bottom hairline, set apart from the darker body
+  do
+    local wx, wy = ImGui.GetWindowPos(ctx)
+    local ww = ImGui.GetWindowWidth(ctx)
+    local band_b = ep_ty + ep_th + (ep_ty - wy)  -- 上下留白相同，內容垂直置中 -- equal top/bottom margin, content centered
+    ImGui.DrawList_AddRectFilled(ep_dl, wx, wy, wx + ww, band_b, FUNC.dim_c(C.chrome))
+    ImGui.DrawList_AddLine(ep_dl, wx, band_b, wx + ww, band_b, FUNC.dim_c(C.line), 1)
+  end
+  -- v2：色塊 + 名稱 + 「TYPE · Q#」小標籤 -- color chip + name + "TYPE · Q#" badge
+  local ep_x = ep_tx
+  if not multi and c.type ~= "SPACER" then
+    local chip = (c.cue_color and c.cue_color > 0) and FUNC.col2im(c.cue_color)
+      or ((c.type == "GROUP") and FUNC.get_grp_color(c.id)) or (TYPE_COL[c.type] or C.dim)
+    local cs = FUNC.sz(9)
+    ImGui.DrawList_AddRectFilled(ep_dl, ep_x, ep_ty + (ep_th - cs) / 2, ep_x + cs, ep_ty + (ep_th + cs) / 2, FUNC.dim_c((chip & 0xFFFFFF00) | 0xFF), FUNC.sz(2.5))
+    ep_x = ep_x + cs + FUNC.sz(8)
+    title = (c.name ~= "" and c.name) or "(unnamed)"
+  end
+  local badge = (not multi and c.type ~= "SPACER") and (c.type .. " · Q" .. ((c.cue_number ~= "" and c.cue_number) or "?")) or nil
+  local badge_w = 0
+  if badge then
+    ImGui.PushFont(ctx, FONT, FUNC.sz(10)); badge_w = ImGui.CalcTextSize(ctx, badge, 0, 0) + FUNC.sz(14); ImGui.PopFont(ctx)
+  end
+  ImGui.PushFont(ctx, FONT_B, FUNC.sz(13)); local title_w = ImGui.CalcTextSize(ctx, title, 0, 0); ImGui.PopFont(ctx)
+  local title_room = math.max(0, ep_tw_avail - eye_w - (ep_x - ep_tx) - badge_w - FUNC.sz(10))
+  local title_show = math.min(title_w, title_room)
+  -- draw_marquee 把字畫在框頂，所以自己算置中的 y -- draw_marquee draws at the box top, so center it here
+  local t_fsz = FUNC.sz(13)
+  local t_y = ep_ty + math.floor((ep_th - t_fsz) / 2)
+  FUNC.draw_marquee(ep_dl, FONT_B, t_fsz, title, ep_title_col, ep_x, t_y, title_room, t_fsz + FUNC.sz(3), "ep_t"..valid[1])
+  if badge then
+    local bx = ep_x + title_show + FUNC.sz(10)
+    local bh = FUNC.sz(16)
+    local by = ep_ty + (ep_th - bh) / 2
+    ImGui.DrawList_AddRectFilled(ep_dl, bx, by, bx + badge_w, by + bh, FUNC.dim_c(C.btn), bh / 2)
+    ImGui.DrawList_AddTextEx(ep_dl, FONT, FUNC.sz(10), bx + FUNC.sz(7), by + math.floor((bh - FUNC.sz(10)) / 2), FUNC.dim_c(C.dim), badge)
+  end
+  ImGui.Dummy(ctx, ep_tw_avail - eye_w - FUNC.sz(2), ep_th)
   -- 眼睛icon：DrawList畫眼睛形狀 -- eye icon: DrawList eye shape
   ImGui.SameLine(ctx, 0, 0)
   local eye_sx, eye_sy = ImGui.GetCursorScreenPos(ctx)
-  ImGui.PushStyleColor(ctx, ImGui.Col_Button(), 0)
-  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(255,255,255,25))
-  ImGui.PushStyleColor(ctx, ImGui.Col_ButtonActive(), FUNC.rgba(255,255,255,40))
-  if ImGui.Button(ctx, "##ep_eye", eye_w, ep_th) then
+  local pill_h = FUNC.sz(20)
+  local pill_y = eye_sy + math.floor((ep_th - pill_h) / 2)
+  ImGui.SetCursorScreenPos(ctx, eye_sx, pill_y)
+  if ImGui.InvisibleButton(ctx, "##ep_eye", eye_w, pill_h) then
     ImGui.OpenPopup(ctx, "##ep_tab_vis")
   end
-  ImGui.PopStyleColor(ctx, 3)
-  -- DrawList畫眼睛：橢圓外框+圓形瞳孔 -- draw eye: ellipse outline + circle pupil
-  local eye_cx = eye_sx + eye_w * 0.5
-  local eye_cy = eye_sy + ep_th * 0.5
-  local eye_rx, eye_ry = FUNC.sz(6), FUNC.sz(3.5)
   local eye_hov = ImGui.IsItemHovered(ctx)
-  local eye_col = eye_hov and C.text or C.dim
+  ImGui.DrawList_AddRectFilled(ep_dl, eye_sx, pill_y, eye_sx + eye_w, pill_y + pill_h, FUNC.dim_c(eye_hov and C.btn_h or C.btn), pill_h / 2)
+  ImGui.DrawList_AddRect(ep_dl, eye_sx, pill_y, eye_sx + eye_w, pill_y + pill_h, FUNC.dim_c(C.line), pill_h / 2, 0, 1)
+  -- DrawList畫眼睛：橢圓外框+圓形瞳孔 -- draw eye: ellipse outline + circle pupil
+  local eye_cx = eye_sx + FUNC.sz(10) + FUNC.sz(7)
+  local eye_cy = pill_y + pill_h * 0.5
+  local eye_rx, eye_ry = FUNC.sz(7), FUNC.sz(4.2)
+  local eye_col = eye_hov and FUNC.rgba(255,255,255) or C.text
+  ImGui.DrawList_AddTextEx(ep_dl, FONT, FUNC.sz(11), eye_cx + eye_rx + FUNC.sz(5), eye_cy - math.floor(FUNC.sz(11) / 2), FUNC.dim_c(eye_col), eye_lbl)
   -- 上下弧線組成眼形 -- upper/lower arcs forming eye shape
   local n = 12
   for i = 0, n - 1 do
@@ -132,14 +173,19 @@ function FUNC.draw_edit_panel_inline()
     local a2 = math.pi * (i + 1) / n
     -- 上弧 -- upper arc
     ImGui.DrawList_AddLine(ep_dl, eye_cx + math.cos(a1)*eye_rx, eye_cy - math.sin(a1)*eye_ry,
-      eye_cx + math.cos(a2)*eye_rx, eye_cy - math.sin(a2)*eye_ry, eye_col, FUNC.sz(1))
+      eye_cx + math.cos(a2)*eye_rx, eye_cy - math.sin(a2)*eye_ry, eye_col, FUNC.sz(1.4))
     -- 下弧 -- lower arc
     ImGui.DrawList_AddLine(ep_dl, eye_cx + math.cos(a1)*eye_rx, eye_cy + math.sin(a1)*eye_ry,
-      eye_cx + math.cos(a2)*eye_rx, eye_cy + math.sin(a2)*eye_ry, eye_col, FUNC.sz(1))
+      eye_cx + math.cos(a2)*eye_rx, eye_cy + math.sin(a2)*eye_ry, eye_col, FUNC.sz(1.4))
   end
   -- 瞳孔 -- pupil
-  ImGui.DrawList_AddCircleFilled(ep_dl, eye_cx, eye_cy, FUNC.sz(2), eye_col)
+  ImGui.DrawList_AddCircleFilled(ep_dl, eye_cx, eye_cy, FUNC.sz(2.2), eye_col)
   if eye_hov then ImGui.SetTooltip(ctx, "Show/Hide Tabs") end
+  do  -- 回到標題帶下緣再留 6px 才接卡片 -- go to the band's bottom edge, then 6px gap before the cards
+    local _, wy0 = ImGui.GetWindowPos(ctx)
+    ImGui.SetCursorScreenPos(ctx, ep_tx, ep_ty + ep_th)
+    ImGui.Dummy(ctx, 0, (ep_ty - wy0) + FUNC.sz(6) - select(2, ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing())))
+  end
   -- 右鍵flag觸發（上幀設的flag，這幀打開popup） -- right-click flag trigger (set last frame, open this frame)
   if popup._ep_tab_vis_rclick then
     ImGui.OpenPopup(ctx, "##ep_tab_vis")
@@ -251,9 +297,9 @@ function FUNC.draw_edit_panel_inline()
 
   -- ═══ Horizontal Collapsible Sections ═══ -- 水平可摺疊區塊
   local total_w, total_h = ImGui.GetContentRegionAvail(ctx)
-  local header_h = FUNC.sz(18)
-  local collapsed_w = FUNC.sz(18)
-  local divider_w = FUNC.sz(3)
+  local header_h = FUNC.sz(24)     -- v2：卡片標題列 -- card header
+  local collapsed_w = FUNC.sz(22)  -- 摺疊窄卡 -- collapsed narrow card
+  local divider_w = FUNC.sz(8)     -- v2：卡片間距＝拖曳區 -- card gap doubles as the resize grip
 
   -- section order: 1234 = basic,notes,waveform,route (1=basic 2=notes 3=waveform 4=route)
   local SEC_ID = {[1]="basic",[2]="notes",[3]="waveform",[4]="route",[5]="meter"}
@@ -304,20 +350,17 @@ function FUNC.draw_edit_panel_inline()
 
   -- 計算寬度：絕對像素寬度，只在總和超過視窗時才擠壓
   -- width calc: absolute pixel widths, only squeeze when sum exceeds window
-  local n_exp, n_col = 0, 0
-  for _,sid in ipairs(sec_order) do
-    if sec_exp[sid] then n_exp=n_exp+1 else n_col=n_col+1 end
-  end
+  -- 最窄寬度：拖曳到比這更窄 = 摺疊 -- min width: dragging narrower than this collapses the section
   local min_w = {
-    basic = math.floor(total_w / 6),
-    notes = math.floor(total_w / 10),
-    waveform = math.floor(total_w / 2),
+    basic = FUNC.sz(180),
+    notes = FUNC.sz(120),
+    waveform = FUNC.sz(320),
+    route = FUNC.sz(80),
+    meter = FUNC.sz(80),
   }
-  local max_w = {
-    basic = math.floor(total_w / 6),
-    notes = math.floor(total_w / 7),
-    waveform = total_w,
-  }
+  -- 最寬：一般面板不限；route/meter 上限 = 自動寬度（下方填入）-- max: unlimited; route/meter capped at auto width
+  local max_w = {basic=math.huge, notes=math.huge, waveform=math.huge}
+  local sec_w_key = {basic="edit_sec_wb", notes="edit_sec_wn", waveform="edit_sec_ww", route="edit_sec_wr", meter="edit_sec_wm"}
   -- route/meter: 自動寬度，僅在selection或channel數變化時重算
   -- route/meter: auto-width, only recompute on selection or channel count change
   if not _aw_cache then _aw_cache = {sel_id=-1, route_ch=-1, meter_ch=-1, route_w=0, meter_w=0} end
@@ -342,7 +385,7 @@ function FUNC.draw_edit_panel_inline()
   local meter_ch_count = 0
   local _mt_ch_set = {}
   for _, q in ipairs(cues) do
-    if q.type == "PLAY" and q.route_hw then
+    if (q.type == "PLAY" or q.type == "MIDI") and q.route_hw then
       for _, hw in ipairs(q.route_hw) do
         if hw and hw.ch and hw.ch >= 0 then _mt_ch_set[hw.ch] = true end
       end
@@ -360,12 +403,13 @@ function FUNC.draw_edit_panel_inline()
   end
   local auto_w_route = aw.route_w
   local auto_w_meter = aw.meter_w
-  local auto_w_secs = {route=true, meter=true}
+  max_w.route = auto_w_route
+  max_w.meter = auto_w_meter
 
   -- 絕對像素寬度（首次從舊ratio遷移）-- absolute pixel widths (migrate from old ratios on first use)
   local n_dividers = math.max(0, #sec_order - 1)
   local abs_w = {}
-  if prefs.edit_sec_wb then
+  if (prefs.edit_sec_wb or 0) > 0 then
     abs_w = {basic=prefs.edit_sec_wb, notes=prefs.edit_sec_wn, waveform=prefs.edit_sec_ww, route=auto_w_route, meter=auto_w_meter}
   else
     local rat = {basic=prefs.edit_sec_rb or 22, notes=prefs.edit_sec_rn or 18, waveform=prefs.edit_sec_rw or 60}
@@ -382,25 +426,14 @@ function FUNC.draw_edit_panel_inline()
     prefs.edit_sec_wb = abs_w.basic; prefs.edit_sec_wn = abs_w.notes; prefs.edit_sec_ww = abs_w.waveform
     FUNC.save_prefs()
   end
-  -- route/meter每幀強制更新為自動寬度 -- force auto-width every frame
-  abs_w.route = auto_w_route
-  abs_w.meter = auto_w_meter
+  -- route/meter：使用者拉過的寬度（0=沒拉過→自動寬度）-- user width, 0 = auto
+  abs_w.route = ((prefs.edit_sec_wr or 0) > 0) and prefs.edit_sec_wr or auto_w_route
+  abs_w.meter = ((prefs.edit_sec_wm or 0) > 0) and prefs.edit_sec_wm or auto_w_meter
 
-  local avail_w = math.max(0, total_w - n_dividers*divider_w - n_col*collapsed_w)
   local sec_w = {}
-  if n_exp > 0 then
-    local exp_list = {}
-    for _,sid in ipairs(sec_order) do
-      if sec_exp[sid] then exp_list[#exp_list+1] = sid end
-    end
-    local total_used = 0
-    for _,sid in ipairs(exp_list) do
-      if auto_w_secs[sid] then
-        sec_w[sid] = abs_w[sid]  -- 自動寬度，不clamp -- auto-width, no clamp
-      else
-        sec_w[sid] = FUNC.clamp(abs_w[sid], min_w[sid], max_w[sid])
-      end
-      total_used = total_used + sec_w[sid]
+  for _,sid in ipairs(sec_order) do
+    if sec_exp[sid] then
+      sec_w[sid] = FUNC.clamp(abs_w[sid], min_w[sid], math.max(min_w[sid], max_w[sid]))
     end
   end
 
@@ -412,13 +445,6 @@ function FUNC.draw_edit_panel_inline()
   end
 
   -- header 客製顏色（右鍵叫出色盤）-- per-section header color (right-click palette)
-  local function sec_hdr_col(sid, hov)
-    local cc = prefs["edit_sec_col_"..sid]
-    if cc and cc ~= -1 then
-      return FUNC.dim_c(FUNC.col2im(cc, hov and 255 or 200))
-    end
-    return hov and FUNC.dim_c(FUNC.rgba(45, 110, 100)) or FUNC.dim_c(FUNC.rgba(30, 80, 75))
-  end
   local function sec_hdr_rclick(sid)
     if ImGui.IsItemHovered(ctx) and ImGui.IsMouseClicked(ctx, ImGui.MouseButton_Right()) then
       ImGui.OpenPopup(ctx, "##sec_col_"..sid)
@@ -514,7 +540,7 @@ function FUNC.draw_edit_panel_inline()
   end
 
   -- ═══ 間距設定（改這裡全局生效）═══ -- spacing config (change here to affect all sections)
-  local EDGE_PAD = 8   -- 邊界padding(px) -- edge padding in px
+  local EDGE_PAD = 12  -- 邊界padding(px)（原 8，照 C 稿卡片內距）-- edge padding in px (was 8)
   local ELEM_SPC = 4   -- 元素間距(px) -- element spacing in px
 
   -- FADE target "from" 解析（需跨section共享）-- fade from values shared across sections
@@ -559,17 +585,17 @@ function FUNC.draw_edit_panel_inline()
   local needs_hscroll = content_w > total_w
   local sec_area_h = total_h  -- scrollbar隱藏，不預留空間 -- scrollbar hidden, no reserved space
   -- 隱藏scrollbar但允許滾動（滾輪手動處理） -- hide scrollbar but allow scroll (wheel handled manually)
-  local hsc_flags = ImGui.WindowFlags_NoScrollbar()
-  ImGui.BeginChild(ctx, "##ep_hscroll", total_w, total_h, ImGui.ChildFlags_None(), hsc_flags)
+  local hsc_flags = ImGui.WindowFlags_NoScrollbar() | ImGui.WindowFlags_NoScrollWithMouse()  -- 滾輪全部手動處理 -- wheel fully manual
+  -- BeginChild回false（被裁掉）時不可呼叫EndChild -- must not EndChild when BeginChild returns false
+  if not ImGui.BeginChild(ctx, "##ep_hscroll", total_w, total_h, ImGui.ChildFlags_None(), hsc_flags) then
+    ImGui.PopStyleVar(ctx, 1)  -- FrameRounding
+    return
+  end
   total_h = sec_area_h  -- 內部使用扣除scrollbar後的高度 -- inner sections use height minus scrollbar
-  -- 手動水平滾輪：Shift+滾輪 或 直接滾輪（child內無垂直scroll） -- manual h-scroll: shift+wheel or wheel (no v-scroll in child)
-  if ImGui.IsWindowHovered(ctx, ImGui.HoveredFlags_ChildWindows()) then
-    local wheel = ({ImGui.GetMouseWheel(ctx)})[2] or 0  -- wheel_y
-    if wheel ~= 0 then
-      local cur_x = ImGui.GetScrollX(ctx)
-      local step = FUNC.sz(40)
-      ImGui.SetScrollX(ctx, cur_x - wheel * step)
-    end
+  FUNC.wheel_taken = false  -- 波形 / MIDI 用掉滾輪時會設 true -- set by waveform / MIDI editor when they consume the wheel
+  do  -- 記下可見範圍，Notes 原生輸入框要裁到這裡 -- visible rect, Notes native editor is clipped to it
+    local hx, hy = ImGui.GetWindowPos(ctx)
+    FUNC.ep_clip = {hx, hy, hx + total_w, hy + total_h}
   end
 
   -- ═══ Section context（傳給拆出去的section函式）═══ -- shared context for split section funcs
@@ -582,74 +608,86 @@ function FUNC.draw_edit_panel_inline()
     vdrag=vdrag,
   }
 
+  -- ═══ 分隔條：調整左邊面板寬度，跟著滑鼠絕對X ═══ -- divider: resizes the section on its left, follows absolute mouse X
+  -- 按下時記住抓取點偏移；寬度 = 滑鼠X − 抓取偏移 − 左面板左緣。
+  -- 拉到比 min_w 窄就摺疊，同一次拖曳中拉回來會再展開；放開後已摺疊的面板不能再用拖曳拉開（只能點標題列）。
+  -- grab offset stored on press; narrower than min_w collapses; a collapsed section can't be drag-opened in a new drag.
+  local function draw_divider(id, left_sid)
+    local dv_x, dv_y = ImGui.GetCursorScreenPos(ctx)
+    ImGui.InvisibleButton(ctx, id, divider_w, total_h)
+    local dv_hov = ImGui.IsItemHovered(ctx)
+    local dv_act = ImGui.IsItemActive(ctx)
+    local mx = ImGui.GetMousePos(ctx)
+    if ImGui.IsItemActivated(ctx) then
+      sec_drag = sec_exp[left_sid] and {id=id, grab=mx - dv_x} or false
+    end
+    local mine = sec_drag and sec_drag.id == id
+    local can_drag = sec_exp[left_sid] or mine
+    if can_drag and (dv_hov or dv_act) then ImGui.SetMouseCursor(ctx, ImGui.MouseCursor_ResizeEW()) end
+    if mine and dv_act then
+      local left_x = dv_x - (sec_exp[left_sid] and sec_w[left_sid] or collapsed_w)  -- 左面板左緣 -- left section's left edge
+      local new_w = math.floor(mx - sec_drag.grab - left_x)
+      local want_exp = new_w >= min_w[left_sid]
+      if want_exp ~= sec_exp[left_sid] then
+        prefs[sec_pref_key[left_sid]] = want_exp and 1 or 0
+        if left_sid == "waveform" and not want_exp then FUNC.wf_sel_clear() end
+      end
+      if want_exp then prefs[sec_w_key[left_sid]] = math.min(new_w, max_w[left_sid]) end
+    elseif mine then
+      sec_drag = false; FUNC.save_prefs()
+    end
+    -- v2：平常是空白間距；hover/拖曳時中間出現一條主色細線 -- v2: blank gap; a thin primary line on hover/drag
+    if can_drag and (dv_hov or dv_act) then
+      local ddl = ImGui.GetWindowDrawList(ctx)
+      local lx = dv_x + divider_w / 2
+      local lcol = dv_act and C.primary_hi or ((C.primary_hi & 0xFFFFFF00) | 140)
+      ImGui.DrawList_AddLine(ddl, lx, dv_y + FUNC.sz(10), lx, dv_y + total_h - FUNC.sz(10), lcol, FUNC.sz(2))
+    end
+  end
+
   -- ═══ 繪製水平區塊 ═══ -- render horizontal sections
   for si, sid in ipairs(sec_order) do
-    -- divider（第2、3個section前）-- divider before 2nd and 3rd sections
+    -- divider：調整前一個 section 的寬度 -- divider resizes the previous section
     if si > 1 then
       ImGui.SameLine(ctx, 0, 0)
-      local prev_sid = sec_order[si - 1]
-      local dv_x, dv_y = ImGui.GetCursorScreenPos(ctx)
-      ImGui.InvisibleButton(ctx, "##sec_dv"..si, divider_w, total_h)
-      -- route/meter自動寬度，不可拖曳調整 -- auto-width sections are not draggable
-      local prev_auto = auto_w_secs[prev_sid]
-      local cur_auto = auto_w_secs[sid]
-      local can_drag = (sec_exp[prev_sid] or sec_exp[sid]) and not (prev_auto and cur_auto)
-      -- 若左邊是auto-width，divider不能調左邊；若右邊收合且左邊是auto也不行
-      local dv_hov = ImGui.IsItemHovered(ctx)
-      local dv_act = ImGui.IsItemActive(ctx)
-      if can_drag and (dv_hov or dv_act) then ImGui.SetMouseCursor(ctx, ImGui.MouseCursor_ResizeEW()) end
-      if can_drag and dv_act then
-        local mouse_dx = ImGui.GetMouseDelta(ctx)
-        if mouse_dx ~= 0 then
-          if not sec_exp[prev_sid] and not sec_exp[sid] then
-            -- 兩邊都收合：no-op
-          elseif not sec_exp[prev_sid] then
-            -- 左邊收合：no-op
-          elseif not sec_exp[sid] then
-            -- 右邊收合：調左邊（跳過auto-width）
-            if not prev_auto then
-              abs_w[prev_sid] = FUNC.clamp(math.floor(abs_w[prev_sid] + mouse_dx), min_w[prev_sid], max_w[prev_sid])
-            end
-          else
-            -- 兩邊都展開：只調左邊（跳過auto-width）
-            if not prev_auto then
-              abs_w[prev_sid] = FUNC.clamp(math.floor(abs_w[prev_sid] + mouse_dx), min_w[prev_sid], max_w[prev_sid])
-            end
-          end
-          prefs.edit_sec_wb = abs_w.basic; prefs.edit_sec_wn = abs_w.notes; prefs.edit_sec_ww = abs_w.waveform
-        end
-        sec_drag = si
-      elseif sec_drag == si then
-        sec_drag = false; FUNC.save_prefs()
-      end
-      local ddl = ImGui.GetWindowDrawList(ctx)
-      local dcol = (can_drag and dv_act) and FUNC.rgba(180,180,210) or (can_drag and dv_hov) and FUNC.rgba(150,150,180) or FUNC.rgba(55,55,70)
-      ImGui.DrawList_AddRectFilled(ddl, dv_x, dv_y, dv_x + divider_w, dv_y + total_h, dcol, 1)
+      draw_divider("##sec_dv"..si, sec_order[si - 1])
       ImGui.SameLine(ctx, 0, 0)
     end
 
     local sw = sec_exp[sid] and (sec_w[sid] or 100) or collapsed_w
+    do  -- v2：卡片底 -- card background
+      local kx, ky = ImGui.GetCursorScreenPos(ctx)
+      FUNC.ui_card(ImGui.GetWindowDrawList(ctx), kx, ky, kx + sw, ky + total_h)
+    end
     if ImGui.BeginChild(ctx, "##sec_"..sid, sw, total_h, ImGui.ChildFlags_None(), ImGui.WindowFlags_NoScrollbar() | ImGui.WindowFlags_NoScrollWithMouse()) then
       local sx, sy = ImGui.GetCursorScreenPos(ctx)
       local sdl = ImGui.GetWindowDrawList(ctx)
 
       if sec_exp[sid] then
-        -- ─── 展開header ─── -- expanded header bar
+        -- ─── 卡片標題：⌄ + 小字大寫標籤（自訂色 = 小圓點）─── -- card header: chevron + small caps label (custom color = dot)
         ImGui.InvisibleButton(ctx, "##sh_"..sid, sw, header_h)
         local sh_hov = ImGui.IsItemHovered(ctx)
         sec_hdr_rclick(sid)
-        local hdr_col = sec_hdr_col(sid, sh_hov)
-        ImGui.DrawList_AddRectFilled(sdl, sx, sy, sx + sw, sy + header_h, hdr_col, 3)
-        ImGui.PushFont(ctx, FONT, FUNC.sz(11))
-        local tri = "\xE2\x96\xB6"  -- ▶ 展開狀態 -- expanded state
-        local tw_, th_ = ImGui.CalcTextSize(ctx, tri, 0, 0)
-        ImGui.DrawList_AddText(sdl, sx + FUNC.sz(6), sy + (header_h - th_) / 2, FUNC.dim_c(C.text), tri)
-        local ltw_, lth_ = ImGui.CalcTextSize(ctx, sec_labels[sid], 0, 0)
-        ImGui.DrawList_AddText(sdl, sx + FUNC.sz(6) + tw_ + FUNC.sz(4), sy + (header_h - lth_) / 2, FUNC.dim_c(C.text), sec_labels[sid])
-        ImGui.PopFont(ctx)
+        -- 標題列常駐淡識別色帶 + 底線；hover 再亮一點 -- always-on tinted band + hairline; brighter on hover
+        local cc = prefs["edit_sec_col_"..sid]
+        local idc = (cc and cc ~= -1) and cc or SEC_DEF_COL[sid]
+        ImGui.DrawList_AddRectFilled(sdl, sx, sy, sx + sw, sy + header_h, FUNC.dim_c(C.card_hdr), FUNC.rad("l"), ImGui.DrawFlags_RoundCornersTop())  -- 標題列比卡片亮一階 -- header a step lighter than card
+        ImGui.DrawList_AddRectFilled(sdl, sx, sy, sx + sw, sy + header_h, FUNC.dim_c(FUNC.col2im(idc, sh_hov and 64 or 40)), FUNC.rad("l"), ImGui.DrawFlags_RoundCornersTop())
+        ImGui.DrawList_AddLine(sdl, sx, sy + header_h, sx + sw, sy + header_h, FUNC.dim_c(C.line2), 1)
+        local hcol = sh_hov and FUNC.rgba(255,255,255) or C.text
+        local hx = sx + FUNC.sz(10)
+        FUNC.icon(sdl, "down", hx + FUNC.sz(4), sy + header_h / 2, FUNC.sz(9), FUNC.dim_c(hcol))
+        hx = hx + FUNC.sz(14)
+        ImGui.DrawList_AddCircleFilled(sdl, hx + FUNC.sz(3), sy + header_h / 2, FUNC.sz(3), FUNC.dim_c(FUNC.col2im(idc)))
+        hx = hx + FUNC.sz(11)
+        ImGui.DrawList_AddTextEx(sdl, FONT_B, FUNC.sz(11), hx, sy + math.floor((header_h - FUNC.sz(11)) / 2) - 1, FUNC.dim_c(hcol), sec_labels[sid]:upper())
         sec_dragdrop(sid, sx, sy, sw, total_h)
 
         -- ─── Section content ───
+        -- 統一字級 13、行距加大（原本 15 字、輸入框上下相貼）-- unified 13px text, roomier rows (was 15px, fields touching)
+        ImGui.PushFont(ctx, FONT, FUNC.sz(13))
+        local isx = ImGui.GetStyleVar(ctx, ImGui.StyleVar_ItemSpacing())
+        ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing(), isx, FUNC.sz(6))
         local cw_s, ch_s = ImGui.GetContentRegionAvail(ctx)
 
         -- ═══════════════════════════════════════════════════════
@@ -667,25 +705,29 @@ function FUNC.draw_edit_panel_inline()
           FUNC.draw_edit_section_meter()
 
         end -- sid == "basic" / "notes" / "waveform" / "route" / "meter"
+        ImGui.PopStyleVar(ctx, 1)
+        ImGui.PopFont(ctx)
 
       else
-        -- ─── 收合窄條 ─── -- collapsed strip
+        -- ─── 摺疊窄卡：› + 直排標籤 ─── -- collapsed card: chevron + vertical label
         ImGui.InvisibleButton(ctx, "##sh_"..sid, collapsed_w, total_h)
         local sh_hov = ImGui.IsItemHovered(ctx)
         sec_hdr_rclick(sid)
-        local hdr_col = sec_hdr_col(sid, sh_hov)
-        ImGui.DrawList_AddRectFilled(sdl, sx, sy, sx + collapsed_w, sy + total_h, hdr_col, 3)
-        ImGui.PushFont(ctx, FONT, FUNC.sz(11))
-        local tri = "\xE2\x96\xBC"  -- ▼ 收合狀態 -- collapsed state
-        local tw_, th_ = ImGui.CalcTextSize(ctx, tri, 0, 0)
-        ImGui.DrawList_AddText(sdl, sx + (collapsed_w - tw_) / 2, sy + FUNC.sz(4), FUNC.dim_c(C.text), tri)
-        -- 垂直文字 -- vertical text
-        local lbl = sec_labels[sid]
-        local vy = sy + FUNC.sz(4) + th_ + FUNC.sz(6)
+        local cc = prefs["edit_sec_col_"..sid]
+        local idc = (cc and cc ~= -1) and cc or SEC_DEF_COL[sid]
+        ImGui.DrawList_AddRectFilled(sdl, sx, sy, sx + collapsed_w, sy + total_h, FUNC.dim_c(FUNC.col2im(idc, sh_hov and 80 or 52)), FUNC.rad("l"))
+        local hcol = sh_hov and FUNC.rgba(255,255,255) or C.text
+        FUNC.icon(sdl, "right", sx + collapsed_w / 2, sy + header_h / 2, FUNC.sz(9), FUNC.dim_c(hcol))
+        local vy = sy + header_h + FUNC.sz(2)
+        ImGui.DrawList_AddCircleFilled(sdl, sx + collapsed_w / 2, vy + FUNC.sz(3), FUNC.sz(3), FUNC.dim_c(FUNC.col2im(idc)))
+        vy = vy + FUNC.sz(12)
+        -- 直排文字 -- vertical text
+        local lbl = sec_labels[sid]:upper()
+        ImGui.PushFont(ctx, FONT_B, FUNC.sz(11))
         for ci = 1, math.min(#lbl, 10) do
           local ch_c = lbl:sub(ci, ci)
           local chtw, chth = ImGui.CalcTextSize(ctx, ch_c, 0, 0)
-          ImGui.DrawList_AddText(sdl, sx + (collapsed_w - chtw) / 2, vy, FUNC.dim_c(C.text), ch_c)
+          ImGui.DrawList_AddText(sdl, sx + (collapsed_w - chtw) / 2, vy, FUNC.dim_c(hcol), ch_c)
           vy = vy + chth + FUNC.sz(1)
         end
         ImGui.PopFont(ctx)
@@ -701,30 +743,7 @@ function FUNC.draw_edit_panel_inline()
     local last_sid = sec_order[#sec_order]
     if last_sid then
       ImGui.SameLine(ctx, 0, 0)
-      local dv_x, dv_y = ImGui.GetCursorScreenPos(ctx)
-      ImGui.InvisibleButton(ctx, "##sec_dv_tail", divider_w, total_h)
-      local dv_hov = ImGui.IsItemHovered(ctx)
-      local dv_act = ImGui.IsItemActive(ctx)
-      local can_resize_tail = sec_exp[last_sid] and not auto_w_secs[last_sid]
-      if can_resize_tail and (dv_hov or dv_act) then ImGui.SetMouseCursor(ctx, ImGui.MouseCursor_ResizeEW()) end
-      if can_resize_tail and dv_act then
-        local mouse_dx = ImGui.GetMouseDelta(ctx)
-        if mouse_dx ~= 0 then
-          local others = 0
-          for _,s in ipairs(sec_order) do
-            if sec_exp[s] and s ~= last_sid then others = others + abs_w[s] end
-          end
-          local max_w = avail_w - others
-          abs_w[last_sid] = FUNC.clamp(math.floor(abs_w[last_sid] + mouse_dx), min_w[last_sid], math.max(min_w[last_sid], max_w))
-          prefs.edit_sec_wb = abs_w.basic; prefs.edit_sec_wn = abs_w.notes; prefs.edit_sec_ww = abs_w.waveform
-        end
-        sec_drag = 99
-      elseif sec_drag == 99 then
-        sec_drag = false; FUNC.save_prefs()
-      end
-      local ddl = ImGui.GetWindowDrawList(ctx)
-      local dcol = (can_resize_tail and dv_act) and FUNC.rgba(180,180,210) or (can_resize_tail and dv_hov) and FUNC.rgba(150,150,180) or FUNC.rgba(55,55,70)
-      ImGui.DrawList_AddRectFilled(ddl, dv_x, dv_y, dv_x + divider_w, dv_y + total_h, dcol, 1)
+      draw_divider("##sec_dv_tail", last_sid)
     end
   end
   -- 所有section處理完後才重置drag flag，避免source提前清除導致target誤toggle
@@ -745,6 +764,25 @@ function FUNC.draw_edit_panel_inline()
   -- A6: 追蹤 edit panel focus，離焦時清除（例：點 ui_table 同一 cue 不變 selection）
   -- A6: track focus; clear when focus leaves edit panel
   _ep_focused_now = ImGui.IsWindowFocused(ctx, ImGui.FocusedFlags_ChildWindows())
+  -- 手動水平捲動（放最後，讓波形 / MIDI 先決定要不要用滾輪）-- manual h-scroll, last so waveform / MIDI get first claim
+  -- 水平滾輪（含 Shift+滾輪）一律捲面板；一般滾輪只在面板空白處才捲 -- horizontal wheel always; vertical only on blank area
+  local max_x = ImGui.GetScrollMaxX(ctx)
+  if max_x > 0 and not FUNC.wheel_taken and ImGui.IsWindowHovered(ctx, ImGui.HoveredFlags_ChildWindows()) then
+    local wv, wh = ImGui.GetMouseWheel(ctx)
+    local wheel = (wh ~= 0) and wh or ((ImGui.IsKeyDown(ctx, ImGui.Mod_Shift()) or not ImGui.IsAnyItemHovered(ctx)) and wv or 0)
+    if wheel ~= 0 then
+      ImGui.SetScrollX(ctx, FUNC.clamp(ImGui.GetScrollX(ctx) - wheel * FUNC.sz(40), 0, max_x))
+    end
+  end
+  -- 有超出時，底部畫一條細捲動指示 -- thin scroll indicator along the bottom when content overflows
+  if max_x > 0 then
+    local hx, hy = ImGui.GetWindowPos(ctx)
+    local ww, wh2 = ImGui.GetWindowSize(ctx)
+    local thumb = math.max(FUNC.sz(30), ww * ww / (ww + max_x))
+    local tx = hx + (ww - thumb) * (ImGui.GetScrollX(ctx) / max_x)
+    local bar_y = hy + wh2 - FUNC.sz(3)
+    ImGui.DrawList_AddRectFilled(ImGui.GetWindowDrawList(ctx), tx, bar_y, tx + thumb, bar_y + FUNC.sz(2), FUNC.dim_c(C.line2), FUNC.sz(1))
+  end
   ImGui.EndChild(ctx)  -- ##ep_hscroll 水平捲動容器 -- h-scroll container
   -- edit panel空白處右鍵：設flag下幀開popup（同眼睛icon） -- right-click on empty area: flag to open popup next frame
   if ImGui.IsWindowHovered(ctx, ImGui.HoveredFlags_ChildWindows()) and ImGui.IsMouseClicked(ctx, ImGui.MouseButton_Right()) and not ImGui.IsAnyItemHovered(ctx) then
@@ -768,7 +806,7 @@ function FUNC.draw_midi_message_table(c, apply)
   local sel = c._midi_msg_sel
   local btn_sz = ImGui.GetFrameHeight(ctx)
 
-  if FUNC.draw_pm_btn("##msrc_add", "+", btn_sz, FUNC.rgba(50,80,60), FUNC.rgba(60,110,80), FUNC.rgba(70,140,100)) then
+  if FUNC.draw_pm_btn("##msrc_add", "+", btn_sz, C.primary, C.primary_h, C.primary_hi) then
     FUNC.push_undo()
     c.midi_msgs[#c.midi_msgs+1] = {type="note", event=60, value=100, msg="on", ch_mask=1, press_ms=100}
   end
@@ -777,7 +815,7 @@ function FUNC.draw_midi_message_table(c, apply)
   local has_sel = false
   for _, v in pairs(sel) do if v then has_sel = true; break end end
   local del_col = has_sel and C.text or FUNC.rgba(80,80,80)
-  if FUNC.draw_pm_btn("##msrc_del", "-", btn_sz, FUNC.rgba(100,50,50), FUNC.rgba(140,60,60), FUNC.rgba(170,70,70), del_col) and has_sel then
+  if FUNC.draw_pm_btn("##msrc_del", "-", btn_sz, C.btn, C.danger, C.danger_h, del_col) and has_sel then
     FUNC.push_undo()
     local to_del = {}
     for idx, v in pairs(sel) do if v then to_del[#to_del+1] = idx end end
@@ -1166,7 +1204,7 @@ function FUNC.draw_midi_message_table(c, apply)
     -- selected row outline matching Route style; X from table rect
     if #sel_rects > 0 then
       local sdl = ImGui.GetWindowDrawList(ctx)
-      local sel_col = FUNC.rgba(255, 200, 80)
+      local sel_col = C.gold
       for _, r in ipairs(sel_rects) do
         ImGui.DrawList_AddRect(sdl, _tx1 + 1, r[1], _tx2 - 1, r[2], sel_col, 3, 0, FUNC.sz(2.5))
       end

@@ -192,8 +192,9 @@ api = {
         mcw  = reaper.BR_GetMouseCursorContext,
         mcp  = reaper.BR_GetMouseCursorContext_Position,
         mce  = reaper.BR_GetMouseCursorContext_Envelope,
-        mct  = reaper.BR_GetMouseCursorContext_Track,
-        mci  = reaper.BR_GetMouseCursorContext_Item,
+        -- 原生 API 用螢幕座標判斷，支援 Pin tracks to top；不需先呼叫 mcw()
+        mct  = function() local x,y = reaper.GetMousePosition() return (reaper.GetTrackFromPoint(x,y)) end,
+        mci  = function() local x,y = reaper.GetMousePosition() return (reaper.GetItemFromPoint(x,y,true)) end,
         check= reaper.ValidatePtr2,--{"MediaTrack*","MediaItem*","MediaItem_Take*","TrackEnvelope*","PCM_source*","ReaProject*","MediaItem_TakePool*","MediaSample*"
       }       
 

@@ -17,22 +17,45 @@
     ---------------
     data = api.load("Item Editor","midi editor window position")
     edge={}
-    for value in data:gmatch("(%d*)|") do
-        edge[#edge+1] = value
+    for value in data:gmatch("(-?%d+)|") do -- keep the minus: other screens have negative coords
+        edge[#edge+1] = tonumber(value)
     end
+
+    -- default window position as a ratio of the main screen (0 = left/bottom edge, 1 = right/top edge)
+    local default_ratio = { left = 0.055, top = 0.7, right = 0.915, bottom = 0 }
+    local sl, st, sr, sb = reaper.JS_Window_GetViewportFromRect(0, 0, 1, 1, false)
+    local SX, SY = math.min(sl, sr), math.min(st, sb)
+    local SW, SH = math.abs(sr - sl), math.abs(sb - st)
+    local default = {
+        left   = math.floor(SX + SW * default_ratio.left),
+        top    = math.floor(SY + SH * default_ratio.top),
+        right  = math.floor(SX + SW * default_ratio.right),
+        bottom = math.floor(SY + SH * default_ratio.bottom),
+    }
 
     local midi_editor = {
                     screen_height = TCP_max,                    -- zoomed tracks share the arrange view height
-                    single_zoom   = math.floor(TCP_max*0.45),   --single item vertical zoom pixel
-                    bound_limit   = true,                     -- zoom in media item with limit
-                    bound=10,                               -- limit left edge to right edge to setting seconds
+                    single_zoom   = math.floor(TCP_max*0.45),   -- single item vertical zoom pixel
+                    bound_limit   = true,                       -- zoom in media item with limit
+                    bound=10,                                   -- limit left edge to right edge to setting seconds
                     --midi editor window position
                     fix    = true,
-                    left   = edge[1] or 110,
-                    top    = edge[2] or 595,
-                    right  = edge[3] or 1753,
-                    bottom = edge[4] or 0,
+                    left   = edge[1] or default.left,
+                    top    = edge[2] or default.top,
+                    right  = edge[3] or default.right,
+                    bottom = edge[4] or default.bottom,
                  }
+
+    -- saved position on a screen that is not connected now -> fall back to the main-screen default
+    do
+        local me = midi_editor
+        local vl, vt, vr, vb = reaper.JS_Window_GetViewportFromRect(me.left, me.top, me.right, me.bottom, false)
+        local overlapX = math.min(me.right, vr) - math.max(me.left, vl)
+        local overlapY = math.min(math.max(me.top, me.bottom), math.max(vt, vb)) - math.max(math.min(me.top, me.bottom), math.min(vt, vb))
+        if  overlapX <= 0 or overlapY <= 0 then
+            me.left, me.top, me.right, me.bottom = default.left, default.top, default.right, default.bottom
+        end
+    end
 
     -- How a press is decided (state is kept per project):
     --   1. the arrange view (all track heights, vertical scroll, horizontal view) is saved only from idle
@@ -161,7 +184,7 @@
 
         reaper.BR_GetMouseCursorContext()
         mouse = reaper.BR_GetMouseCursorContext_Position()
-        mouse_item = reaper.BR_GetMouseCursorContext_Item()
+        mouse_item = api.mci()
         cur = reaper.GetCursorPosition()
 
         m = math.huge
@@ -213,7 +236,7 @@
             return (f >= 0 and f <= 1) and f or 0.5
         end
         reaper.BR_GetMouseCursorContext()
-        local mouse_item, mouse = reaper.BR_GetMouseCursorContext_Item(), reaper.BR_GetMouseCursorContext_Position()
+        local mouse_item, mouse = api.mci(), reaper.BR_GetMouseCursorContext_Position()
         local cur = reaper.GetCursorPosition()
         local anchor, f
         for i = 1, #itemz do if itemz[i] == mouse_item then anchor = mouse end end

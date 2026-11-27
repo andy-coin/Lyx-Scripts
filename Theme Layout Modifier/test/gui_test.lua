@@ -143,3 +143,30 @@ S.sel_elem = "trans.play"; frame(2)
 P.tflags = 0; T.dirty_eval = true; frame(1); P.tflags = 6; T.dirty_eval = true; frame(1)
 for k, v in pairs(SIM.bal) do assert(v == 0, "unbalanced " .. k .. " " .. v) end
 print("TRANS OK")
+-- behavior visuals: Grow preview + pins on TCP and MCP, anchor grid sets attach, labels read presets
+local draw_inspector = up(draw_edit, "draw_inspector")
+local grid = up(draw_inspector, "draw_anchor_grid")
+local att_label = up(draw_inspector, "att_label")
+for _, sec in ipairs({ "tcp", "mcp" }) do
+  S.page = "main"; switch_section(sec); frame(1)
+  S.page, S.sel_layout = "edit", (T.C.layouts[sec] or {})[1] or ""
+  S.sel_elem = sec .. ".mute"; S.grow = true; frame(2)
+  S.grow = false; SIM.mods = ImGui_Mod_Alt or 0; SIM.hover = true; frame(1); SIM.mods = 0
+  grid(S.sel_layout, S.sel_elem, nil, { 0.5, 0, 0.5, 0 })
+  for k, v in pairs(SIM.bal) do assert(v == 0, sec .. " unbalanced " .. k .. " " .. v) end
+end
+S.sec = "tcp"
+assert(att_label({ 0.5, 0, 0.5, 0 }) == "Center · Top", att_label({ 0.5, 0, 0.5, 0 }))
+assert(att_label({ 0, 0, 1, 1 }) == "Stretch · Stretch")
+assert(att_label({ 0.25, 0, 1, 0 }) == "0.25/1 · Top")
+local set_anchor = up(grid, "set_anchor")
+S.page = "main"; switch_section("tcp"); frame(1); S.page = "edit"; S.sel_layout = T.C.layouts.tcp[1] or ""; frame(1)
+P.W, P.H = 700, 80; T.dirty_eval = true; evaluate(true) -- wider than the 500 px base, so attach matters
+local before = { erect(LS(S.sel_layout), "tcp.mute") }
+assert(before[1], "tcp.mute not placed in " .. S.sel_layout)
+set_anchor(S.sel_layout, "tcp.mute", { 0.5, 0, 0.5, 0 }); evaluate(true)
+local v = LS(S.sel_layout).vars["tcp.mute"]
+assert(v[5] == 0.5 and v[7] == 0.5, "anchor not applied: " .. v[5] .. " " .. v[7])
+local after = { erect(LS(S.sel_layout), "tcp.mute") }
+assert(before[1] == after[1] and before[3] == after[3], ("anchor change moved the element %d->%d"):format(before[1], after[1]))
+print("BEHAVIOR OK")

@@ -8,9 +8,8 @@
 ]]
 local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_path .. "?.lua"
-require("_lib._Lyx_HOME")
-local F = require("_lib._Lyx_Fade")
-local R = reaper
+local r = require("_lib._Lyx_HOME")
+local F = require("_lib._Lyx_Fade") -- fade engine (lanes, crossover math)
 
 -- split an overlapping pair at the crossing point and clear both fades
 local function remove_crossfade(a, b)
@@ -53,17 +52,18 @@ end
 
 local function normal()
     local m, M = F.view()
-    local items, done = {}, {}
+    local items = {}
     for _, it in ipairs(F.selected_items()) do
         local pos, ep = F.bounds(it)
         if ep > m and pos < M and F.visible_y(it) then items[#items + 1] = it end
     end
 
+    -- no "done" bookkeeping: once split, a pair no longer overlaps, so
+    -- remove_crossfade skips it. (Marking items done used to block 2|3 after 1|2.)
     local function try_pair(a, b)
-        if done[a] or done[b] then return end
         local _, a_end = F.bounds(a)
         local b_pos = F.bounds(b)
-        if a_end > m and b_pos < M and remove_crossfade(a, b) then done[a], done[b] = true, true end
+        if a_end > m and b_pos < M then remove_crossfade(a, b) end
     end
     for _, it in ipairs(items) do
         local prev, nxt = F.neighbor(it, -1), F.neighbor(it, 1)
@@ -78,7 +78,7 @@ F.wrap("Remove fade/crossfade to selected items", function()
     local areas = F.razor_areas()
     if #areas > 0 then
         for _, a in ipairs(areas) do razor_area(a) end
-        R.Main_OnCommand(42406, 0) -- clear razor edits
+        api.cmd(42406, 0) -- clear razor edits
     else
         normal()
     end

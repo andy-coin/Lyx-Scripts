@@ -7,7 +7,6 @@
     local function main()
 
         local item,track,lane_n
-        api.mcw()
         item = api.mci()
         
         if not item then return end

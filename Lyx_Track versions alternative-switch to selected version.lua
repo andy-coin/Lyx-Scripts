@@ -24,7 +24,6 @@
 
     if ... then return SwitchVersion end -- loaded with require by another script
 
-    reaper.BR_GetMouseCursorContext()
     reaper.Undo_BeginBlock()
-    SwitchVersion(reaper.BR_GetMouseCursorContext_Track())
+    SwitchVersion(api.mct())
     reaper.Undo_EndBlock("Switch to selected track version",-1)

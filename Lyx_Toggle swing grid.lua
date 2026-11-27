@@ -1,5 +1,8 @@
   
   r=reaper
+  local script_path = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+  package.path = package.path..";"..script_path.."?.lua"
+  local DEFAULT_SWING=require("_lib._Lyx_SwingDefault")
   
   local function main()
       
@@ -14,7 +17,7 @@
       local _,grid,swing,swingamt = reaper.GetSetProjectGrid(0,false)
       
       if swingamt ==0 then 
-         swingamt=0.6
+         swingamt=DEFAULT_SWING
       end
       
       if swing ==1 then 

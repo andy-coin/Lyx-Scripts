@@ -14,7 +14,7 @@ package.path = package.path .. ";" .. script_path .. "?.lua"
 local r = reaper and require("_lib._Lyx_HOME")
 
 -----CUSTOM-----
-lane_name_position = 1
+lane_name_position = 0
     -- lane name in the track name: -1 = hidden, 0 = at the start, 1 = at the end
     -- (saved for all Lyx scripts: switch version, Play-Stop, Record, Render ...)
 lane_name_style = "｜"
@@ -142,8 +142,7 @@ local function main()
     local tr = R.GetSelectedTrack(0, 0)
     if not tr then return end
 
-    R.BR_GetMouseCursorContext()
-    local item = R.BR_GetMouseCursorContext_Item()
+    local item = api.mci()
     local collapsed = R.GetMediaTrackInfo_Value(tr, "C_LANESCOLLAPSED") == 1
     local is_audio_input = R.GetMediaTrackInfo_Value(tr, "I_RECINPUT") < 4096
 

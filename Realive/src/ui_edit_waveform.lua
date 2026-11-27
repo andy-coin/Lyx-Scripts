@@ -16,7 +16,9 @@ function FUNC.draw_edit_section_waveform(ectx)
           -- ═══ MIDI Source: left=Track FX list (envelope-style), right=reserved for Phase 2B ═══
           local mtab_w, mtab_h = ImGui.GetContentRegionAvail(ctx)
           local mepad = FUNC.sz(EDGE_PAD)
-          local mleft_w = FUNC.sz(160) + mepad
+          -- 左欄寬度跟著面板伸縮：佔 28%，限 160~240 -- left column flexes: 28% of width, 160~240
+          local mleft_core = FUNC.clamp(math.floor(mtab_w * 0.28), FUNC.sz(160), FUNC.sz(240))
+          local mleft_w = mleft_core + mepad
           local mright_w = mtab_w - mleft_w
 
           -- ─── Left column: FX chain ─── matches envelope section layout
@@ -33,7 +35,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             local mfx_dl   = ImGui.GetWindowDrawList(ctx)
             local mfx_row_h = ImGui.GetFrameHeight(ctx) - FUNC.sz(3)
             local mfx_fsz  = FUNC.sz(13)
-            local mfx_lbl_w = FUNC.sz(135)
+            local mfx_lbl_w = mleft_core - FUNC.sz(25)  -- 原本 160→135 -- was 135 at 160
             local mfx_btn_sz = FUNC.sz(16)
 
             -- local icon button (same look as env_icon_btn) -- 與 env 區塊同樣的小按鈕
@@ -92,8 +94,8 @@ function FUNC.draw_edit_section_waveform(ectx)
                 -- 畫 clock 或 note 圖示切換鈕（借用 audio q 的樣式）
                 -- draw clock/note icon toggle mirroring audio q's draw_timing_row button
                 local function draw_unit_toggle(uid)
-                  local btn_col = is_qn and FUNC.rgba(120,90,30) or FUNC.rgba(50,50,62)
-                  local btn_hov = is_qn and FUNC.rgba(140,110,40) or FUNC.rgba(65,65,80)
+                  local btn_col = is_qn and FUNC.rgba(120,90,30) or C.field
+                  local btn_hov = is_qn and FUNC.rgba(140,110,40) or C.btn_h
                   local bx, by = ImGui.GetCursorScreenPos(ctx)
                   local clicked = ImGui.InvisibleButton(ctx, uid, icon_sz_t, icon_sz_t)
                   local hov_b = ImGui.IsItemHovered(ctx)
@@ -176,7 +178,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             ImGui.AlignTextToFramePadding(ctx)
             ImGui.Text(ctx, "Track FX")
             ImGui.SameLine(ctx, 0, FUNC.sz(8))
-            if mfx_btn("##mfx_add", "+", FUNC.rgba(50,80,60), FUNC.rgba(60,110,80), FUNC.rgba(70,140,100)) then
+            if mfx_btn("##mfx_add", "+", C.primary, C.primary_h, C.primary_hi) then
               if tr then
                 reaper.SetOnlyTrackSelected(tr)
                 reaper.Main_OnCommand(40271, 0)  -- Track: View FX chain
@@ -187,7 +189,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             local any_sel = false
             for _ in pairs(sel_set) do any_sel = true; break end
             local del_col = any_sel and FUNC.dim_c(C.text) or FUNC.rgba(80,80,80)
-            if mfx_btn("##mfx_del", "-", FUNC.rgba(100,50,50), FUNC.rgba(140,60,60), FUNC.rgba(170,70,70), del_col) and any_sel and tr then
+            if mfx_btn("##mfx_del", "-", C.btn, C.danger, C.danger_h, del_col) and any_sel and tr then
               local to_del = {}
               for k in pairs(sel_set) do to_del[#to_del+1] = k end
               table.sort(to_del, function(a,b) return a>b end)  -- 倒序刪除保留 index -- desc to preserve idx
@@ -346,7 +348,9 @@ function FUNC.draw_edit_section_waveform(ectx)
         local all_group = not multi and c.type == "GROUP"
         local has_display = (not multi and all_play) or (not multi and all_fade) or all_group
         local epad = FUNC.sz(EDGE_PAD)
-        local left_w = FUNC.sz(160) + epad  -- 固定寬度（含WindowPadding左右）-- fixed width (incl WindowPadding)
+        -- 左欄寬度跟著面板伸縮：佔 28%，限 160~240 -- left column flexes: 28% of width, 160~240
+        local left_core = FUNC.clamp(math.floor(tab_w * 0.28), FUNC.sz(160), FUNC.sz(240))
+        local left_w = left_core + epad  -- 含WindowPadding -- incl WindowPadding
         local right_w = tab_w - left_w  -- 圖表區延伸到section邊界，epad在內部扣 -- chart area extends to section edge, epad subtracted inside
 
         -- ─── 控制區：Trim + Env ─── -- controls: trim + envelope dropdown
@@ -516,7 +520,7 @@ function FUNC.draw_edit_section_waveform(ectx)
           local env_dl = ImGui.GetWindowDrawList(ctx)
           local row_h = ImGui.GetFrameHeight(ctx) - FUNC.sz(3)
           local fsz = FUNC.sz(13)
-          local lbl_w = FUNC.sz(135)
+          local lbl_w = left_core - FUNC.sz(25)  -- 原本 160→135 -- was 135 at 160
 
           -- Envelope title + add/remove buttons (route-style) -- 標題 + 加減按鈕
           local env_btn_sz = FUNC.sz(18)        -- 頂部 envelope +/- 較大
@@ -532,7 +536,7 @@ function FUNC.draw_edit_section_waveform(ectx)
           local cue_tr = FUNC.get_tr(c.track_idx)
           -- 頂部固定：管理 Track FX(+/-)，× 已移除（pending 取消改點下方提示列）
           -- + : open REAPER FX chain (FX browser) on this cue's track
-          if env_icon_btn("##fxe_fx_add", "+", FUNC.rgba(50,80,60), FUNC.rgba(60,110,80), FUNC.rgba(70,140,100)) then
+          if env_icon_btn("##fxe_fx_add", "+", C.primary, C.primary_h, C.primary_hi) then
             if cue_tr then
               reaper.SetOnlyTrackSelected(cue_tr)
               reaper.Main_OnCommand(40271, 0)  -- Track: View FX chain
@@ -559,7 +563,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             end
           end
           local del_col_fx = can_del_fx and FUNC.dim_c(C.text) or FUNC.rgba(80, 80, 80)
-          if env_icon_btn("##fxe_fx_del", "-", FUNC.rgba(100,50,50), FUNC.rgba(140,60,60), FUNC.rgba(170,70,70), del_col_fx) and can_del_fx then
+          if env_icon_btn("##fxe_fx_del", "-", C.btn, C.danger, C.danger_h, del_col_fx) and can_del_fx then
             local fx_guid = reaper.TrackFX_GetFXGUID(cue_tr, focused_fx_idx)
             reaper.TrackFX_Delete(cue_tr, focused_fx_idx)
             if fx_guid then
@@ -747,7 +751,7 @@ function FUNC.draw_edit_section_waveform(ectx)
               end
             end
             ImGui.SameLine(ctx, 0, FUNC.sz(4))
-            if env_icon_btn("##"..key.."_add", "+", FUNC.rgba(50,80,60), FUNC.rgba(60,110,80), FUNC.rgba(70,140,100), nil, env_btn_sz_fx) then
+            if env_icon_btn("##"..key.."_add", "+", C.primary, C.primary_h, C.primary_hi, nil, env_btn_sz_fx) then
               FUNC.fx_env_begin_pending(c)
             end
             if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, "Add envelope (touch an FX param)") end
@@ -758,7 +762,7 @@ function FUNC.draw_edit_section_waveform(ectx)
                                      and c.fx_envs[fx_env_edit_idx].fx_guid == fx_guid) and fx_env_edit_idx or nil
             local can_del_h = (#sel_under > 0) or (fallback_active ~= nil)
             local del_col_h = can_del_h and FUNC.dim_c(C.text) or FUNC.rgba(80, 80, 80)
-            if env_icon_btn("##"..key.."_del", "-", FUNC.rgba(100,50,50), FUNC.rgba(140,60,60), FUNC.rgba(170,70,70), del_col_h, env_btn_sz_fx) and can_del_h then
+            if env_icon_btn("##"..key.."_del", "-", C.btn, C.danger, C.danger_h, del_col_h, env_btn_sz_fx) and can_del_h then
               local victims = (#sel_under > 0) and sel_under or { fallback_active }
               if #victims == 1 then
                 FUNC.fx_env_remove(c, victims[1])
@@ -938,7 +942,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             local _, txt_h = ImGui.CalcTextSize(ctx, ptxt, 0, 0)
             local ty = ly + math.max(0, math.floor((row_h - txt_h) * 0.5))
             ImGui.DrawList_PushClipRect(env_dl, lx, ly, lx + pw, ly + row_h, true)
-            FUNC.draw_marquee(env_dl, FONT, fsz, ptxt, FUNC.rgba(255, 200, 80),
+            FUNC.draw_marquee(env_dl, FONT, fsz, ptxt, C.gold,
               lx + FUNC.sz(4), ty, pw - FUNC.sz(8), txt_h, "fxe_pending_b"..c.id,
               {auto = true, speed = FUNC.sz(28), gap = 6})
             ImGui.PopFont(ctx)
@@ -1089,8 +1093,8 @@ function FUNC.draw_edit_section_waveform(ectx)
                 ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), ft[3])
                 ImGui.PushStyleColor(ctx, ImGui.Col_Text(), FUNC.rgba(0,0,0))
               else
-                ImGui.PushStyleColor(ctx, ImGui.Col_Button(), FUNC.rgba(40,40,55))
-                ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), FUNC.rgba(55,55,70))
+                ImGui.PushStyleColor(ctx, ImGui.Col_Button(), C.field)
+                ImGui.PushStyleColor(ctx, ImGui.Col_ButtonHovered(), C.btn)
                 ImGui.PushStyleColor(ctx, ImGui.Col_Text(), ft[3])
               end
               if fi > 1 then ImGui.SameLine(ctx, 0, FUNC.sz(ELEM_SPC)) end  -- tab間距=ELEM_SPC -- tab spacing
@@ -1208,7 +1212,7 @@ function FUNC.draw_edit_section_waveform(ectx)
               if c.env_enabled and env_edit_mode == "vol" then FUNC.env_draw(c, wf_dl, wf_info, "vol") end
               FUNC.fx_env_draw_all(c, wf_dl, wf_info)
               -- waveform外框：固定灰色（env active不再加彩色外框）-- waveform border: always default grey
-              ImGui.DrawList_AddRect(wf_dl, wf_info.cx, wf_info.wy, wf_info.cx + wf_info.cw, wf_info.wy + wf_info.wh, FUNC.dim_c(FUNC.rgba(60, 60, 80)), 4, 0, 1)
+              ImGui.DrawList_AddRect(wf_dl, wf_info.cx, wf_info.wy, wf_info.cx + wf_info.cw, wf_info.wy + wf_info.wh, FUNC.dim_c(C.line2), 4, 0, 1)
             end
           elseif not multi and all_fade then
             local fc_w_full = ImGui.GetContentRegionAvail(ctx) - epad  -- 右側留epad給scrollbar -- right epad margin for scrollbar
@@ -1253,7 +1257,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             local rc_y = fc_sy + vpad; local rc_h = math.max(FUNC.sz(60), fc_avail_h - vpad * 2 - pbar_h - ruler_h)
             -- 背景+邊框（同waveform）-- bg + border matching waveform style
             ImGui.DrawList_AddRectFilled(fc_dl, rc_x, rc_y, rc_x + rc_w, rc_y + rc_h, C.wf_bg, 4)
-            ImGui.DrawList_AddRect(fc_dl, rc_x, rc_y, rc_x + rc_w, rc_y + rc_h, FUNC.dim_c(FUNC.rgba(60, 60, 80)), 4, 0, 1)
+            ImGui.DrawList_AddRect(fc_dl, rc_x, rc_y, rc_x + rc_w, rc_y + rc_h, FUNC.dim_c(C.line2), 4, 0, 1)
             local hover_params = {} -- 提到外層供播放圓點共用 -- outer scope for playback dot
             -- 防重疊工具：收集{y,h}後由上到下推開 -- anti-overlap: push labels apart top-to-bottom
             local function resolve_overlaps(items, y_min, y_max)
@@ -1499,7 +1503,7 @@ function FUNC.draw_edit_section_waveform(ectx)
             if has_any_fade then
               local pb_y = rc_y + rc_h
               local pb_x, pb_w = rc_x, rc_w
-              ImGui.DrawList_AddRectFilled(fc_dl, pb_x, pb_y, pb_x + pb_w, pb_y + pbar_h, FUNC.rgba(40, 40, 55), 1)
+              ImGui.DrawList_AddRectFilled(fc_dl, pb_x, pb_y, pb_x + pb_w, pb_y + pbar_h, C.field, 1)
               if c.state == STATE.RUNNING and c.play_t0 > 0 and c.fade_time > 0 then
                 local elapsed = reaper.time_precise() - c.play_t0
                 local prog = FUNC.clamp(elapsed / c.fade_time, 0, 1)
@@ -1567,14 +1571,15 @@ function FUNC.draw_edit_section_waveform(ectx)
               -- B3：滾動 child 只包 lanes；end handle + ruler 由外部釘底
               -- B3: scroll child holds lanes only; end handle + ruler pinned externally
               local child_h = gw_avail_h - sticky_total
-              ImGui.BeginChild(ctx, "##gw_scroll", gw_w_full, child_h, ImGui.ChildFlags_None(),
-                ImGui.WindowFlags_NoScrollbar())
-              gw_w = ImGui.GetContentRegionAvail(ctx) - epad
-              local gw_x, gw_y = ImGui.GetCursorScreenPos(ctx)
-              local gw_dl = ImGui.GetWindowDrawList(ctx)
-              FUNC.draw_group_waveform(c, gw_dl, gw_x, gw_y, gw_w, need_h, true)  -- skip_ruler=true
-              ImGui.InvisibleButton(ctx, "##gw_area", gw_w, need_h)
-              ImGui.EndChild(ctx)
+              if ImGui.BeginChild(ctx, "##gw_scroll", gw_w_full, child_h, ImGui.ChildFlags_None(),
+                ImGui.WindowFlags_NoScrollbar()) then
+                gw_w = ImGui.GetContentRegionAvail(ctx) - epad
+                local gw_x, gw_y = ImGui.GetCursorScreenPos(ctx)
+                local gw_dl = ImGui.GetWindowDrawList(ctx)
+                FUNC.draw_group_waveform(c, gw_dl, gw_x, gw_y, gw_w, need_h, true)  -- skip_ruler=true
+                ImGui.InvisibleButton(ctx, "##gw_area", gw_w, need_h)
+                ImGui.EndChild(ctx)
+              end
               -- 釘底：ruler + end handle 同 y（與非 scroll 模式相同對齊）
               local sx, sy = ImGui.GetCursorScreenPos(ctx)
               local s_dl = ImGui.GetWindowDrawList(ctx)

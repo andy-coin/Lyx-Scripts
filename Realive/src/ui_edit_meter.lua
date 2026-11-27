@@ -1,6 +1,21 @@
 -- ui_edit_meter.lua — Edit panel: Meter tab
 -- 所有cue用到的hw output channels總覽 -- master meter for all routed hw channels
 
+-- fader 依可用寬度縮放（Route / Master 共用）-- fit faders to available width (shared by Route / Master)
+-- 夠寬：22px fader + 10px 間距；不夠：先按比例縮（間距約 30%），最窄 10px + 3px；再不夠就藏掉左側 dB 刻度
+-- roomy: 22 + 10 gap; tighter: shrink proportionally (gap ~30%), floor 10 + 3; still too tight: drop the dB scale
+function FUNC.fit_faders(n, avail_w, scale_w)
+  local fw, gap = FUNC.sz(22), FUNC.sz(10)
+  n = math.max(1, n)
+  if (avail_w - scale_w) / n >= fw + gap then return fw, gap, scale_w end
+  local min_fw, min_gap = FUNC.sz(10), FUNC.sz(3)
+  if (avail_w - scale_w) / n < min_fw + min_gap then scale_w = 0 end
+  local per = (avail_w - scale_w) / n
+  gap = math.max(min_gap, math.floor(per * 0.3))
+  fw = math.max(min_fw, math.floor(per - gap))
+  return fw, gap, scale_w
+end
+
 function FUNC.draw_edit_section_meter()
   -- SECTION: MASTER METER — 所有cue用到的hw output channels總覽
   -- ═══════════════════════════════════════════════════════
@@ -40,7 +55,7 @@ function FUNC.draw_edit_section_meter()
     -- 佈局參數（同Route PLAY fader）-- layout params (same as Route PLAY fader)
     local fader_w = FUNC.sz(22)
     local fader_gap = FUNC.sz(10)
-    local label_h = FUNC.sz(14)
+    local label_h = FUNC.sz(28)  -- 兩行：dB 數字 + channel 編號 -- two lines: dB value + channel number
     local fader_area_h = math.floor(mt_h - label_h - FUNC.sz(8))
     local fader_h = math.max(FUNC.sz(32), fader_area_h)
     local handle_h = FUNC.sz(3)
@@ -81,19 +96,20 @@ function FUNC.draw_edit_section_meter()
     local stw3 = ImGui.CalcTextSize(ctx, scale_zero_txt)
     local scale_tw = math.max(stw1, stw2, stw3)
     local scale_w = scale_tw + FUNC.sz(6)
+    fader_w, fader_gap, scale_w = FUNC.fit_faders(#ch_list, mt_w - mt_pad * 2, scale_w)
     local scale_x = mt_sx + mt_pad
     local scale_col = FUNC.rgba(120, 120, 130)
     local txt_h = FUNC.sz(11)
     local fx = mt_sx + mt_pad + scale_w
     local fy = mt_sy
 
-    ImGui.DrawList_AddText(mt_dl, scale_x, fy, scale_col, scale_top_txt)
-    ImGui.DrawList_AddText(mt_dl, scale_x, fy + fader_h - txt_h, scale_col, scale_bot_txt)
+    if scale_w > 0 then ImGui.DrawList_AddText(mt_dl, scale_x, fy, scale_col, scale_top_txt) end
+    if scale_w > 0 then ImGui.DrawList_AddText(mt_dl, scale_x, fy + fader_h - txt_h, scale_col, scale_bot_txt) end
     if prefs.vol_min < 0 and prefs.vol_max > 0 then
       local zero_frac = -prefs.vol_min / (prefs.vol_max - prefs.vol_min)
       local zero_label_y = fy + fader_h - math.floor(fader_h * zero_frac) - math.floor(txt_h * 0.5)
       if zero_label_y > fy + txt_h + FUNC.sz(2) and zero_label_y < fy + fader_h - txt_h * 2 - FUNC.sz(2) then
-        ImGui.DrawList_AddText(mt_dl, scale_x, zero_label_y, scale_col, scale_zero_txt)
+        if scale_w > 0 then ImGui.DrawList_AddText(mt_dl, scale_x, zero_label_y, scale_col, scale_zero_txt) end
       end
     end
 
@@ -111,26 +127,11 @@ function FUNC.draw_edit_section_meter()
       if pk_db > 0 then h.clip = true end
 
       -- fader背景 -- fader background
-      ImGui.DrawList_AddRectFilled(mt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(15, 15, 22), 3)
+      ImGui.DrawList_AddRectFilled(mt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.dim_c(C.field), FUNC.rad("m"))  -- v2 凹槽 -- v2 well
 
-      -- 分段meter填充（同route fader）-- segmented meter fill (same as route fader)
+      -- 漸層 meter 填色 -- gradient meter fill
       local vr = prefs.vol_max - prefs.vol_min
-      local segs = {
-        {lo=prefs.vol_min, hi=-6,  col=FUNC.rgba(30, 160, 60, 200)},
-        {lo=-6,  hi=-3,  col=FUNC.rgba(200, 200, 40, 200)},
-        {lo=-3,  hi=prefs.vol_max,  col=FUNC.rgba(220, 50, 30, 200)},
-      }
-      for _, seg in ipairs(segs) do
-        if pk_db > seg.lo then
-          local s_lo = FUNC.clamp((math.max(seg.lo, prefs.vol_min) - prefs.vol_min) / vr, 0, 1)
-          local s_hi = FUNC.clamp((math.min(pk_db, seg.hi) - prefs.vol_min) / vr, 0, 1)
-          local y_bot = fy + fader_h - math.floor(fader_h * s_lo)
-          local y_top = fy + fader_h - math.floor(fader_h * s_hi)
-          if y_top < y_bot then
-            ImGui.DrawList_AddRectFilled(mt_dl, fx + 1, y_top, fx + fader_w - 1, y_bot, seg.col)
-          end
-        end
-      end
+      FUNC.draw_meter_fill(mt_dl, fx, fx + fader_w, fy, fader_h, pk_db)
 
       -- peak hold線 -- peak hold line
       if h.hold > prefs.vol_min + 1 then
@@ -152,13 +153,13 @@ function FUNC.draw_edit_section_meter()
       elseif mt_omap_im then
         ImGui.DrawList_AddRect(mt_dl, fx, fy, fx + fader_w, fy + fader_h, mt_omap_im, 3, 0, FUNC.sz(1.5))
       else
-        ImGui.DrawList_AddRect(mt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.rgba(60, 60, 80), 3, 0, 1)
+        ImGui.DrawList_AddRect(mt_dl, fx, fy, fx + fader_w, fy + fader_h, FUNC.dim_c(C.line), FUNC.rad("m"), 0, 1)
       end
 
       -- dB文字（fader內底部）-- dB text at fader bottom
       local vol_txt = pk_db <= prefs.vol_min and "-inf" or string.format("%.0f", pk_db)
       local vtw = ImGui.CalcTextSize(ctx, vol_txt)
-      ImGui.DrawList_AddText(mt_dl, fx + (fader_w - vtw) * 0.5, fy + fader_h - FUNC.sz(13), C.text, vol_txt)
+      if vtw <= fader_w + fader_gap then ImGui.DrawList_AddText(mt_dl, fx + (fader_w - vtw) * 0.5, fy + fader_h + FUNC.sz(3), C.dim, vol_txt) end  -- 放柱子下方；太擠就不顯示 -- below the bar; hidden when too tight
 
       -- 互動區（點擊clip清除）-- interaction area (click to clear clip)
       ImGui.SetCursorScreenPos(ctx, fx, fy)
@@ -168,10 +169,10 @@ function FUNC.draw_edit_section_meter()
 
       -- channel編號（底部，置中）-- channel number at bottom, centered
       local ch_num_str = tostring(FUNC.omap_num(ch))
-      local lbl_y = fy + fader_h + FUNC.sz(2)
+      local lbl_y = fy + fader_h + FUNC.sz(16)
       local lbl_fsz = ImGui.GetFontSize(ctx)
       ImGui.SetCursorScreenPos(ctx, fx, lbl_y)
-      ImGui.InvisibleButton(ctx, "##mt_lbl_"..ch, fader_w, label_h)
+      ImGui.InvisibleButton(ctx, "##mt_lbl_"..ch, fader_w, FUNC.sz(14))
       local lhov = ImGui.IsItemHovered(ctx)
       local cntw = ImGui.CalcTextSize(ctx, ch_num_str)
       ImGui.DrawList_AddTextEx(mt_dl, FONT, lbl_fsz, fx + math.max(0, (fader_w - cntw) * 0.5), lbl_y, C.text, ch_num_str)

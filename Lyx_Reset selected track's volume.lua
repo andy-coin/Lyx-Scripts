@@ -9,7 +9,7 @@
       
       if tr_n==1 then
          cur_tr=reaper.GetSelectedTrack(0,0)
-         tr=reaper.BR_TrackAtMouseCursor()
+         tr=reaper.GetTrackFromPoint(reaper.GetMousePosition())
          if tr then
             reaper.SetOnlyTrackSelected(tr)
          end
